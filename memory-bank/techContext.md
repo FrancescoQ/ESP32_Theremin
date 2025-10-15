@@ -33,6 +33,7 @@
 - Built-in library manager
 - Serial monitor integration
 - Superior to Arduino IDE for professional development
+- **Installation Path:** `/Users/fquagliati/.platformio/penv/bin/pio`
 
 **Framework: Arduino**
 - Familiar, well-documented API
@@ -40,12 +41,13 @@
 - Simplifies ESP32 peripheral access
 - Good balance of ease-of-use and control
 
-**Simulation: Wokwi Simulator**
-- VSCode plugin with active license required
+**Simulation: Wokwi Simulator** ✅ IMPLEMENTED
+- VSCode plugin with active license
 - Virtual circuit testing before hardware assembly
 - Interactive debugging
-- Component library includes ESP32
-- Limitations: May not have VL53L0X (use HC-SR04 for logic testing)
+- Component library includes ESP32, potentiometers, buzzer
+- **Strategy:** Use potentiometers to simulate VL53L0X distance sensors
+- **Benefit:** Tests audio synthesis logic without sensor dependencies
 
 ### Key Libraries
 
@@ -193,7 +195,7 @@ GND            →  Buzzer (-)
 
 ## Development Setup
 
-### Initial PlatformIO Configuration
+### PlatformIO Configuration - Dual Environment
 
 **platformio.ini:**
 ```ini
@@ -202,38 +204,116 @@ platform = espressif32
 board = esp32dev
 framework = arduino
 lib_deps =
-    adafruit/Adafruit VL53L0X@^1.2.0
+    adafruit/Adafruit_VL53L0X@^1.2.0
 monitor_speed = 115200
 upload_speed = 921600
+
+; New simulation-specific environment
+[env:esp32dev-wokwi]
+platform = espressif32
+board = esp32dev
+framework = arduino
+build_flags =
+    -DWOKWI_SIMULATION
+monitor_speed = 115200
+upload_speed = 921600
+; Note: VL53L0X library omitted - not needed for simulation
 ```
 
-**Alternative boards:**
-- `esp32doit-devkit-v1`
-- `esp32-wroom-32`
-- `lolin32`
-(Choose based on actual hardware)
+**Key Features:**
+- Two environments from single configuration
+- `-DWOKWI_SIMULATION` flag enables conditional compilation
+- Simulation build omits VL53L0X library (faster compile)
+- Same board target for both modes
 
-### Wokwi Configuration
+### Wokwi Configuration - Implemented
 
-**diagram.json (example):**
+**wokwi.toml:**
+```toml
+[wokwi]
+version = 1
+
+# PlatformIO builds firmware to these locations
+firmware = '.pio/build/esp32dev-wokwi/firmware.bin'
+elf = '.pio/build/esp32dev-wokwi/firmware.elf'
+
+# Optional: Enable RFC2217 serial port forwarding
+rfc2217ServerPort = 4000
+```
+
+**diagram.json:**
 ```json
 {
   "version": 1,
-  "author": "Theremin Project",
+  "author": "ESP32 Theremin Project",
   "editor": "wokwi",
   "parts": [
-    { "type": "wokwi-esp32-devkit-v1", "id": "esp32", "top": 0, "left": 0 },
-    { "type": "wokwi-hc-sr04", "id": "sensor1", "top": 100, "left": -100 },
-    { "type": "wokwi-hc-sr04", "id": "sensor2", "top": 100, "left": 100 },
-    { "type": "wokwi-buzzer", "id": "bz1", "top": 200, "left": 0 }
+    {
+      "type": "wokwi-esp32-devkit-v1",
+      "id": "esp32",
+      "top": 0,
+      "left": 0,
+      "attrs": {}
+    },
+    {
+      "type": "wokwi-potentiometer",
+      "id": "pitch_pot",
+      "top": -100,
+      "left": -150,
+      "attrs": {
+        "label": "Pitch (Distance)"
+      }
+    },
+    {
+      "type": "wokwi-potentiometer",
+      "id": "volume_pot",
+      "top": -100,
+      "left": 100,
+      "attrs": {
+        "label": "Volume (Distance)"
+      }
+    },
+    {
+      "type": "wokwi-buzzer",
+      "id": "buzzer",
+      "top": 200,
+      "left": 0,
+      "attrs": {
+        "volume": "0.5"
+      }
+    },
+    {
+      "type": "wokwi-resistor",
+      "id": "r1",
+      "top": 150,
+      "left": 50,
+      "attrs": {
+        "value": "220"
+      }
+    }
   ],
   "connections": [
-    // ... connections defined here
+    ["pitch_pot:SIG", "esp32:GPIO34", "green", ["h0"]],
+    ["pitch_pot:GND", "esp32:GND.1", "black", ["h0"]],
+    ["pitch_pot:VCC", "esp32:3V3", "red", ["h0"]],
+
+    ["volume_pot:SIG", "esp32:GPIO35", "blue", ["h0"]],
+    ["volume_pot:GND", "esp32:GND.2", "black", ["h0"]],
+    ["volume_pot:VCC", "esp32:3V3", "red", ["h0"]],
+
+    ["esp32:GPIO25", "r1:1", "purple", ["h0"]],
+    ["r1:2", "buzzer:1", "purple", ["h0"]],
+    ["buzzer:2", "esp32:GND.3", "black", ["h0"]]
   ]
 }
 ```
 
-**Note:** If VL53L0X not available, use HC-SR04 for simulation and migrate code to VL53L0X on real hardware.
+**Simulation Strategy:**
+- Potentiometers replace VL53L0X sensors
+- ADC input (0-4095) mapped to distance (mm)
+- Identical audio synthesis logic to hardware
+- GPIO34/35 for ADC (ADC1 channels, compatible with WiFi)
+- GPIO25 for PWM buzzer output
 
 ### Serial Communication
 
@@ -254,49 +334,56 @@ upload_speed = 921600
 
 ## Tool Usage Patterns
 
-### Development Workflow
+### Development Workflow - Dual Mode
 
 1. **Write Code in VSCode**
-   - Edit src/main.cpp
+   - Edit src/main.cpp (single file for both modes)
    - PlatformIO IntelliSense for autocomplete
+   - Use `#ifdef WOKWI_SIMULATION` for mode-specific code
 
-2. **Build Project**
-   - Command: `pio run`
-   - Or: Click PlatformIO build button
-   - Checks compilation errors
+2. **Build for Simulation**
+   - Command: `/Users/fquagliati/.platformio/penv/bin/pio run -e esp32dev-wokwi`
+   - Builds with `-DWOKWI_SIMULATION` flag
+   - Output: `.pio/build/esp32dev-wokwi/firmware.bin`
 
-3. **Upload to ESP32**
-   - Command: `pio run --target upload`
-   - Or: Click PlatformIO upload button
+3. **Build for Hardware**
+   - Command: `/Users/fquagliati/.platformio/penv/bin/pio run -e esp32dev`
+   - Builds without simulation flag
+   - Output: `.pio/build/esp32dev/firmware.bin`
+
+4. **Start Wokwi Simulation**
+   - Press F1 (or Cmd+Shift+P)
+   - Type "Wokwi: Start Simulator"
+   - Interact with potentiometers to control pitch/volume
+   - Monitor serial output
+
+5. **Upload to Real Hardware** (when ready)
+   - Command: `/Users/fquagliati/.platformio/penv/bin/pio run -e esp32dev -t upload`
    - Auto-detects COM port
+   - No code changes needed
 
-4. **Monitor Serial Output**
-   - Command: `pio device monitor`
-   - Or: Click PlatformIO monitor button
-   - Exit: Ctrl+C
-
-5. **Wokwi Simulation**
-   - Open diagram.json
-   - Press F1 → "Wokwi: Start Simulation"
-   - Interact with virtual components
+6. **Monitor Serial Output**
+   - Command: `/Users/fquagliati/.platformio/penv/bin/pio device monitor`
+   - Baud rate: 115200
+   - Shows distance → frequency/volume mapping
 
 ### Common Commands
 
 ```bash
-# Initialize new PlatformIO project
-pio project init --board esp32dev
+# Build simulation firmware
+/Users/fquagliati/.platformio/penv/bin/pio run -e esp32dev-wokwi
 
-# Install library
-pio lib install "Adafruit VL53L0X"
+# Build hardware firmware
+/Users/fquagliati/.platformio/penv/bin/pio run -e esp32dev
 
-# Build and upload
-pio run -t upload
+# Upload to hardware
+/Users/fquagliati/.platformio/penv/bin/pio run -e esp32dev -t upload
 
-# Clean build
-pio run -t clean
+# Clean build artifacts
+/Users/fquagliati/.platformio/penv/bin/pio run -t clean
 
-# Update platforms and libraries
-pio update
+# Monitor serial output
+/Users/fquagliati/.platformio/penv/bin/pio device monitor
 ```
 
 ## Dependencies
