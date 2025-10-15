@@ -42,11 +42,16 @@ Frequency/Volume Mapping → PWM Generation → Buzzer Output
 
 ### Code Strategy
 
-Use **conditional compilation** to maintain two versions:
+Use **conditional compilation with clean helper functions** in a single `main.cpp`:
 - `WOKWI_SIMULATION` defined: Use analog input from potentiometers
 - `WOKWI_SIMULATION` undefined: Use VL53L0X I2C sensors (hardware)
 
-This keeps both implementations in the same codebase without conflicts.
+**Architecture Benefits**:
+- ✅ Single source file - no duplication
+- ✅ Clean helper functions: `simulationSetup()`, `hardwareSetup()`, `simulationReadPitch()`, etc.
+- ✅ Shared audio synthesis logic in `processAndPlayAudio()`
+- ✅ Crystal clear `setup()` and `loop()` functions (~10 lines each)
+- ✅ Easy maintenance - change audio logic once, affects both builds
 
 ---
 
@@ -211,146 +216,221 @@ pio run -e esp32dev
 
 ---
 
-### Step 4: Create Simulation Code
+### Step 4: Refactor `main.cpp` with Clean Architecture
 
-**Location**: `src/main_wokwi.cpp` (new file)
+**Location**: `src/main.cpp` (modify existing file)
 
-**Purpose**: Simulation-specific code using potentiometers
+**Purpose**: Single file with conditional compilation and clean helper functions
 
 **Complete Implementation**:
 
 ```cpp
 /*
- * ESP32 Theremin - Wokwi Simulation Version
+ * ESP32 Theremin - Clean Architecture
  *
- * This version uses potentiometers instead of VL53L0X sensors
- * to simulate distance readings and test audio synthesis logic.
+ * Single file supporting both Wokwi simulation and hardware via conditional compilation.
+ * Uses WOKWI_SIMULATION macro to switch between potentiometers (simulation) and VL53L0X sensors (hardware).
  *
- * Hardware (Simulated):
- * - ESP32 Dev Board
- * - 2x Potentiometers (analog inputs)
- * - 1x Passive Piezoelectric Buzzer
- *
- * Connections:
- * - Pitch Pot: GPIO34 (ADC1_CH6)
- * - Volume Pot: GPIO35 (ADC1_CH7)
- * - Buzzer: GPIO25 via 220Ω resistor
+ * Build Commands:
+ * - Simulation: pio run -e esp32dev-wokwi
+ * - Hardware:   pio run -e esp32dev
  */
 
 #include <Arduino.h>
 
 // ============================================================================
-// Pin Definitions
+// CONDITIONAL INCLUDES & DEFINITIONS
 // ============================================================================
-#define PITCH_POT_PIN 34    // ADC1_CH6 - Pitch control potentiometer
-#define VOLUME_POT_PIN 35   // ADC1_CH7 - Volume control potentiometer
-#define BUZZER_PIN 25       // PWM output to buzzer
+#ifdef WOKWI_SIMULATION
+  // Simulation mode: potentiometers via ADC
+  #define PITCH_INPUT_PIN 34    // ADC1_CH6
+  #define VOLUME_INPUT_PIN 35   // ADC1_CH7
+
+  // Helper to convert ADC to distance
+  int adcToDistance(int adc, int minDist, int maxDist) {
+    return map(adc, 0, 4095, minDist, maxDist);
+  }
+#else
+  // Hardware mode: VL53L0X sensors via I2C
+  #include <Wire.h>
+  #include "Adafruit_VL53L0X.h"
+
+  #define SDA_PIN 21
+  #define SCL_PIN 22
+  #define XSHUT_PIN_1 16
+  #define XSHUT_PIN_2 17
+  #define SENSOR_ADDR_1 0x30
+  #define SENSOR_ADDR_2 0x29
+
+  Adafruit_VL53L0X pitchSensor = Adafruit_VL53L0X();
+  Adafruit_VL53L0X volumeSensor = Adafruit_VL53L0X();
+  VL53L0X_RangingMeasurementData_t pitchMeasure;
+  VL53L0X_RangingMeasurementData_t volumeMeasure;
+#endif
 
 // ============================================================================
-// Audio Configuration
+// SHARED CONFIGURATION (same for both modes)
 // ============================================================================
-#define PWM_CHANNEL 0       // ESP32 PWM channel (0-15 available)
-#define PWM_RESOLUTION 8    // 8-bit resolution (0-255 duty cycle)
-#define PWM_FREQUENCY 2000  // Base PWM frequency (overridden by ledcWriteTone)
+#define BUZZER_PIN 25
+#define PWM_CHANNEL 0
+#define PWM_RESOLUTION 8
+#define PWM_FREQUENCY 2000
+
+#define PITCH_MIN_DIST 50
+#define PITCH_MAX_DIST 400
+#define VOLUME_MIN_DIST 50
+#define VOLUME_MAX_DIST 300
+
+#define MIN_FREQUENCY 100
+#define MAX_FREQUENCY 2000
+#define MIN_DUTY_CYCLE 0
+#define MAX_DUTY_CYCLE 128
+
+#define SAMPLES 5
+int pitchReadings[SAMPLES];
+int volumeReadings[SAMPLES];
+int pitchIndex = 0;
+int volumeIndex = 0;
 
 // ============================================================================
-// Distance Simulation Ranges (in millimeters)
+// FORWARD DECLARATIONS
 // ============================================================================
-// These ranges simulate the VL53L0X sensor operating ranges
-#define PITCH_MIN_DIST 50     // 5cm - closest hand position
-#define PITCH_MAX_DIST 400    // 40cm - farthest hand position
-#define VOLUME_MIN_DIST 50    // 5cm - closest hand position
-#define VOLUME_MAX_DIST 300   // 30cm - farthest hand position
+#ifdef WOKWI_SIMULATION
+  void simulationSetup();
+  int simulationReadPitch();
+  int simulationReadVolume();
+#else
+  void hardwareSetup();
+  int hardwareReadPitch();
+  int hardwareReadVolume();
+#endif
+
+void sharedSetup();
+void processAndPlayAudio(int pitchDistance, int volumeDistance);
+int smoothReading(int readings[], int &index, int newReading);
 
 // ============================================================================
-// Audio Output Ranges
-// ============================================================================
-#define MIN_FREQUENCY 100     // Lowest note (Hz)
-#define MAX_FREQUENCY 2000    // Highest note (Hz)
-#define MIN_DUTY_CYCLE 0      // Silent
-#define MAX_DUTY_CYCLE 128    // Half duty cycle (loudest for square wave)
-
-// ============================================================================
-// Smoothing Configuration
-// ============================================================================
-#define SAMPLES 5             // Number of samples for moving average
-int pitchReadings[SAMPLES];   // Circular buffer for pitch readings
-int volumeReadings[SAMPLES];  // Circular buffer for volume readings
-int pitchIndex = 0;           // Current position in pitch buffer
-int volumeIndex = 0;          // Current position in volume buffer
-
-// ============================================================================
-// Setup Function
+// SETUP (Clean & Simple)
 // ============================================================================
 void setup() {
-  // Initialize serial communication
   Serial.begin(115200);
   delay(100);
-  Serial.println("\n\n=== ESP32 Theremin Wokwi Simulation ===");
-  Serial.println("Version: Potentiometer-based simulation");
 
-  // Configure analog input pins
-  pinMode(PITCH_POT_PIN, INPUT);
-  pinMode(VOLUME_POT_PIN, INPUT);
-  Serial.println("[INIT] Analog input pins configured");
+  #ifdef WOKWI_SIMULATION
+    Serial.println("\n=== ESP32 Theremin [SIMULATION] ===");
+    simulationSetup();
+  #else
+    Serial.println("\n=== ESP32 Theremin [HARDWARE] ===");
+    hardwareSetup();
+  #endif
 
-  // Configure PWM for buzzer
+  sharedSetup();
+  Serial.println("=== Ready! ===\n");
+}
+
+// ============================================================================
+// MAIN LOOP (Clean & Simple)
+// ============================================================================
+void loop() {
+  int pitchDistance, volumeDistance;
+
+  #ifdef WOKWI_SIMULATION
+    pitchDistance = simulationReadPitch();
+    volumeDistance = simulationReadVolume();
+  #else
+    pitchDistance = hardwareReadPitch();
+    volumeDistance = hardwareReadVolume();
+  #endif
+
+  processAndPlayAudio(pitchDistance, volumeDistance);
+  delay(20);
+}
+
+// ============================================================================
+// SIMULATION-SPECIFIC FUNCTIONS
+// ============================================================================
+#ifdef WOKWI_SIMULATION
+
+void simulationSetup() {
+  pinMode(PITCH_INPUT_PIN, INPUT);
+  pinMode(VOLUME_INPUT_PIN, INPUT);
+  Serial.println("[INIT] Analog inputs configured (GPIO34, GPIO35)");
+}
+
+int simulationReadPitch() {
+  int adc = analogRead(PITCH_INPUT_PIN);
+  return adcToDistance(adc, PITCH_MIN_DIST, PITCH_MAX_DIST);
+}
+
+int simulationReadVolume() {
+  int adc = analogRead(VOLUME_INPUT_PIN);
+  return adcToDistance(adc, VOLUME_MIN_DIST, VOLUME_MAX_DIST);
+}
+
+#endif
+
+// ============================================================================
+// HARDWARE-SPECIFIC FUNCTIONS
+// ============================================================================
+#ifndef WOKWI_SIMULATION
+
+void hardwareSetup() {
+  Wire.begin(SDA_PIN, SCL_PIN);
+  Serial.println("[INIT] I2C initialized");
+
+  pinMode(XSHUT_PIN_1, OUTPUT);
+  pinMode(XSHUT_PIN_2, OUTPUT);
+  digitalWrite(XSHUT_PIN_1, LOW);
+  digitalWrite(XSHUT_PIN_2, LOW);
+  delay(10);
+
+  // Initialize pitch sensor at 0x30
+  digitalWrite(XSHUT_PIN_1, HIGH);
+  delay(10);
+  if (!pitchSensor.begin(SENSOR_ADDR_1)) {
+    Serial.println("[ERROR] Pitch sensor failed!");
+    while(1);
+  }
+  Serial.println("[INIT] Pitch sensor initialized at 0x30");
+
+  // Initialize volume sensor at 0x29
+  digitalWrite(XSHUT_PIN_2, HIGH);
+  delay(10);
+  if (!volumeSensor.begin(SENSOR_ADDR_2)) {
+    Serial.println("[ERROR] Volume sensor failed!");
+    while(1);
+  }
+  Serial.println("[INIT] Volume sensor initialized at 0x29");
+}
+
+int hardwareReadPitch() {
+  pitchSensor.rangingTest(&pitchMeasure, false);
+  return (pitchMeasure.RangeStatus != 4) ? pitchMeasure.RangeMilliMeter : PITCH_MAX_DIST;
+}
+
+int hardwareReadVolume() {
+  volumeSensor.rangingTest(&volumeMeasure, false);
+  return (volumeMeasure.RangeStatus != 4) ? volumeMeasure.RangeMilliMeter : VOLUME_MAX_DIST;
+}
+
+#endif
+
+// ============================================================================
+// SHARED FUNCTIONS (used by both modes)
+// ============================================================================
+
+void sharedSetup() {
   ledcSetup(PWM_CHANNEL, PWM_FREQUENCY, PWM_RESOLUTION);
   ledcAttachPin(BUZZER_PIN, PWM_CHANNEL);
-  Serial.println("[INIT] PWM configured for buzzer");
-  Serial.print("       Channel: ");
-  Serial.println(PWM_CHANNEL);
-  Serial.print("       Resolution: ");
-  Serial.print(PWM_RESOLUTION);
-  Serial.println(" bits");
+  Serial.println("[INIT] PWM configured");
 
-  // Initialize smoothing arrays to zero
   for (int i = 0; i < SAMPLES; i++) {
     pitchReadings[i] = 0;
     volumeReadings[i] = 0;
   }
-  Serial.print("[INIT] Smoothing filter initialized (");
-  Serial.print(SAMPLES);
-  Serial.println(" samples)");
-
-  // Print operating ranges
-  Serial.println("\n[CONFIG] Operating Ranges:");
-  Serial.print("  Pitch Distance: ");
-  Serial.print(PITCH_MIN_DIST);
-  Serial.print("-");
-  Serial.print(PITCH_MAX_DIST);
-  Serial.println("mm");
-  Serial.print("  Volume Distance: ");
-  Serial.print(VOLUME_MIN_DIST);
-  Serial.print("-");
-  Serial.print(VOLUME_MAX_DIST);
-  Serial.println("mm");
-  Serial.print("  Frequency Range: ");
-  Serial.print(MIN_FREQUENCY);
-  Serial.print("-");
-  Serial.print(MAX_FREQUENCY);
-  Serial.println("Hz");
-
-  Serial.println("\n=== Initialization Complete ===\n");
-  Serial.println("🎵 Adjust potentiometers to play!");
-  Serial.println("   Left pot  = Pitch (frequency)");
-  Serial.println("   Right pot = Volume (amplitude)\n");
+  Serial.println("[INIT] Smoothing filter initialized");
 }
 
-// ============================================================================
-// Helper Function: Convert ADC Reading to Simulated Distance
-// ============================================================================
-// Maps 12-bit ADC reading (0-4095) to distance in millimeters
-// This simulates what the VL53L0X sensor would return
-int adcToDistance(int adcValue, int minDist, int maxDist) {
-  return map(adcValue, 0, 4095, minDist, maxDist);
-}
-
-// ============================================================================
-// Helper Function: Apply Moving Average Smoothing
-// ============================================================================
-// Reduces jitter by averaging last N readings
-// Uses circular buffer for efficiency
 int smoothReading(int readings[], int &index, int newReading) {
   readings[index] = newReading;
   index = (index + 1) % SAMPLES;
@@ -362,83 +442,42 @@ int smoothReading(int readings[], int &index, int newReading) {
   return sum / SAMPLES;
 }
 
-// ============================================================================
-// Main Loop
-// ============================================================================
-void loop() {
-  // --------------------------------------------------------------------------
-  // 1. Read Potentiometers (12-bit ADC: 0-4095)
-  // --------------------------------------------------------------------------
-  int pitchRaw = analogRead(PITCH_POT_PIN);
-  int volumeRaw = analogRead(VOLUME_POT_PIN);
-
-  // --------------------------------------------------------------------------
-  // 2. Convert to Simulated Distances (mm)
-  // --------------------------------------------------------------------------
-  int pitchDistance = adcToDistance(pitchRaw, PITCH_MIN_DIST, PITCH_MAX_DIST);
-  int volumeDistance = adcToDistance(volumeRaw, VOLUME_MIN_DIST, VOLUME_MAX_DIST);
-
-  // --------------------------------------------------------------------------
-  // 3. Apply Smoothing Filter
-  // --------------------------------------------------------------------------
+void processAndPlayAudio(int pitchDistance, int volumeDistance) {
+  // Apply smoothing
   int pitchSmooth = smoothReading(pitchReadings, pitchIndex, pitchDistance);
   int volumeSmooth = smoothReading(volumeReadings, volumeIndex, volumeDistance);
 
-  // --------------------------------------------------------------------------
-  // 4. Map to Audio Parameters
-  // --------------------------------------------------------------------------
-  // PITCH: Closer distance = higher frequency (inverse relationship)
-  // Like a real theremin, moving hand closer increases pitch
+  // Map to audio parameters (inverse: closer = higher/louder)
   int frequency = map(pitchSmooth, PITCH_MIN_DIST, PITCH_MAX_DIST,
                       MAX_FREQUENCY, MIN_FREQUENCY);
-
-  // VOLUME: Closer distance = louder volume (inverse relationship)
-  // Moving hand closer to volume antenna increases amplitude
   int dutyCycle = map(volumeSmooth, VOLUME_MIN_DIST, VOLUME_MAX_DIST,
                       MAX_DUTY_CYCLE, MIN_DUTY_CYCLE);
 
-  // --------------------------------------------------------------------------
-  // 5. Constrain Values to Valid Ranges
-  // --------------------------------------------------------------------------
+  // Constrain to valid ranges
   frequency = constrain(frequency, MIN_FREQUENCY, MAX_FREQUENCY);
   dutyCycle = constrain(dutyCycle, MIN_DUTY_CYCLE, MAX_DUTY_CYCLE);
 
-  // --------------------------------------------------------------------------
-  // 6. Generate Audio Output
-  // --------------------------------------------------------------------------
-  if (dutyCycle > 5) {  // Threshold to avoid noise when nearly silent
-    ledcWriteTone(PWM_CHANNEL, frequency);  // Set frequency
-    ledcWrite(PWM_CHANNEL, dutyCycle);      // Set amplitude
+  // Generate audio
+  if (dutyCycle > 5) {
+    ledcWriteTone(PWM_CHANNEL, frequency);
+    ledcWrite(PWM_CHANNEL, dutyCycle);
   } else {
-    ledcWriteTone(PWM_CHANNEL, 0);  // Complete silence
+    ledcWriteTone(PWM_CHANNEL, 0);
   }
 
-  // --------------------------------------------------------------------------
-  // 7. Debug Output (throttled to reduce serial spam)
-  // --------------------------------------------------------------------------
+  // Debug output (throttled)
   static int loopCount = 0;
-  if (loopCount++ % 10 == 0) {  // Print every 10th loop
-    Serial.print("[PITCH]  ADC: ");
-    Serial.print(pitchRaw);
-    Serial.print(" → Dist: ");
+  if (loopCount++ % 10 == 0) {
+    Serial.print("[PITCH] ");
     Serial.print(pitchSmooth);
-    Serial.print("mm → Freq: ");
+    Serial.print("mm → ");
     Serial.print(frequency);
-    Serial.print("Hz  |  ");
-
-    Serial.print("[VOLUME] ADC: ");
-    Serial.print(volumeRaw);
-    Serial.print(" → Dist: ");
+    Serial.print("Hz  |  [VOLUME] ");
     Serial.print(volumeSmooth);
-    Serial.print("mm → Duty: ");
+    Serial.print("mm → ");
     Serial.print(dutyCycle);
-    Serial.println("/255");
+    Serial.println();
   }
-
-  // --------------------------------------------------------------------------
-  // 8. Loop Timing
-  // --------------------------------------------------------------------------
-  delay(20);  // ~50Hz update rate (matches typical sensor read speed)
 }
 ```
 
@@ -640,8 +679,7 @@ theremin/
 ├── WOKWI_SIMULATION_PLAN.md # This document [NEW]
 │
 ├── src/
-│   ├── main.cpp           # Hardware code (VL53L0X sensors)
-│   └── main_wokwi.cpp     # Simulation code (potentiometers) [NEW]
+│   └── main.cpp           # ⭐ SINGLE unified file (hardware + simulation)
 │
 ├── include/
 │   └── README
@@ -662,6 +700,8 @@ theremin/
         ├── esp32dev/              # Hardware build
         └── esp32dev-wokwi/        # Simulation build [NEW]
 ```
+
+**Key Difference**: Single `main.cpp` file uses conditional compilation (`#ifdef WOKWI_SIMULATION`) to support both builds from one source.
 
 ---
 
@@ -704,7 +744,7 @@ theremin/
 ### Phase 1: Setup (Immediate)
 - [ ] Create `wokwi.toml` in project root
 - [ ] Create `diagram.json` in project root
-- [ ] Create `src/main_wokwi.cpp` with simulation code
+- [ ] Refactor `src/main.cpp` with clean architecture and conditional compilation
 - [ ] Update `platformio.ini` with `esp32dev-wokwi` environment
 
 ### Phase 2: Testing (Same Day)
