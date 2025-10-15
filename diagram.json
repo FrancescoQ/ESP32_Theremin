@@ -1,0 +1,63 @@
+{
+  "version": 1,
+  "author": "ESP32 Theremin Project",
+  "editor": "wokwi",
+  "parts": [
+    {
+      "type": "wokwi-esp32-devkit-v1",
+      "id": "esp32",
+      "top": 0,
+      "left": 0,
+      "attrs": {}
+    },
+    {
+      "type": "wokwi-potentiometer",
+      "id": "pitch_pot",
+      "top": -100,
+      "left": -150,
+      "attrs": {
+        "label": "Pitch (Distance)"
+      }
+    },
+    {
+      "type": "wokwi-potentiometer",
+      "id": "volume_pot",
+      "top": -100,
+      "left": 100,
+      "attrs": {
+        "label": "Volume (Distance)"
+      }
+    },
+    {
+      "type": "wokwi-buzzer",
+      "id": "buzzer",
+      "top": 200,
+      "left": 0,
+      "attrs": {
+        "volume": "0.5"
+      }
+    },
+    {
+      "type": "wokwi-resistor",
+      "id": "r1",
+      "top": 150,
+      "left": 50,
+      "attrs": {
+        "value": "220"
+      }
+    }
+  ],
+  "connections": [
+    ["pitch_pot:SIG", "esp32:GPIO34", "green", ["h0"]],
+    ["pitch_pot:GND", "esp32:GND.1", "black", ["h0"]],
+    ["pitch_pot:VCC", "esp32:3V3", "red", ["h0"]],
+
+    ["volume_pot:SIG", "esp32:GPIO35", "blue", ["h0"]],
+    ["volume_pot:GND", "esp32:GND.2", "black", ["h0"]],
+    ["volume_pot:VCC", "esp32:3V3", "red", ["h0"]],
+
+    ["esp32:GPIO25", "r1:1", "purple", ["h0"]],
+    ["r1:2", "buzzer:1", "purple", ["h0"]],
+    ["buzzer:2", "esp32:GND.3", "black", ["h0"]]
+  ]
+}

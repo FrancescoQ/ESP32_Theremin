@@ -1,0 +1,10 @@
+[wokwi]
+version = 1
+
+# PlatformIO builds firmware to these locations
+firmware = '.pio/build/esp32dev-wokwi/firmware.bin'
+elf = '.pio/build/esp32dev-wokwi/firmware.elf'
+
+# Optional: Enable RFC2217 serial port forwarding
+# Allows external serial monitor tools to connect
+rfc2217ServerPort = 4000
