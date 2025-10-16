@@ -13,8 +13,8 @@
     {
       "type": "wokwi-potentiometer",
       "id": "pitch_pot",
-      "top": -180,
-      "left": -200,
+      "top": -183.7,
+      "left": -192.2,
       "attrs": {
         "label": "Pitch (Distance)"
       }
@@ -60,24 +60,6 @@
       "$serialMonitor:TX",
       "green",
       []
-    ],
-    [
-      "pitch_pot:SIG",
-      "esp32:GPIO34",
-      "green",
-      [
-        "v50",
-        "h120"
-      ]
-    ],
-    [
-      "volume_pot:SIG",
-      "esp32:GPIO35",
-      "blue",
-      [
-        "v50",
-        "h-100"
-      ]
     ],
     [
       "esp32:D25",
@@ -147,6 +129,24 @@
       [
         "v53.9",
         "h286.2"
+      ]
+    ],
+    [
+      "pitch_pot:SIG",
+      "esp32:34",
+      "green",
+      [
+        "v0"
+      ]
+    ],
+    [
+      "volume_pot:SIG",
+      "esp32:35",
+      "green",
+      [
+        "v86.4",
+        "h-211.6",
+        "v96"
       ]
     ]
   ],
