@@ -4,7 +4,7 @@
   "editor": "wokwi",
   "parts": [
     {
-      "type": "wokwi-esp32-devkit-v1",
+      "type": "board-esp32-devkit-c-v4",
       "id": "esp32",
       "top": -4.9,
       "left": 14.2,
@@ -50,6 +50,18 @@
   ],
   "connections": [
     [
+      "esp32:TX",
+      "$serialMonitor:RX",
+      "green",
+      []
+    ],
+    [
+      "esp32:RX",
+      "$serialMonitor:TX",
+      "green",
+      []
+    ],
+    [
       "pitch_pot:SIG",
       "esp32:GPIO34",
       "green",
@@ -59,51 +71,12 @@
       ]
     ],
     [
-      "pitch_pot:GND",
-      "esp32:GND.1",
-      "black",
-      [
-        "v60",
-        "h130"
-      ]
-    ],
-    [
-      "pitch_pot:VCC",
-      "esp32:3V3",
-      "red",
-      [
-        "v70",
-        "h295",
-        "v195.1"
-      ]
-    ],
-    [
       "volume_pot:SIG",
       "esp32:GPIO35",
       "blue",
       [
         "v50",
         "h-100"
-      ]
-    ],
-    [
-      "volume_pot:GND",
-      "esp32:GND.2",
-      "black",
-      [
-        "v92.3",
-        "h-294.2",
-        "v163.3"
-      ]
-    ],
-    [
-      "volume_pot:VCC",
-      "esp32:3V3",
-      "red",
-      [
-        "v86.4",
-        "h-10.4",
-        "v182.4"
       ]
     ],
     [
@@ -123,14 +96,57 @@
       ]
     ],
     [
-      "buzzer:2",
+      "r1:1",
+      "esp32:25",
+      "green",
+      [
+        "h0",
+        "v-76.8"
+      ]
+    ],
+    [
+      "volume_pot:VCC",
+      "esp32:3V3",
+      "red",
+      [
+        "v105.6",
+        "h-183.59"
+      ]
+    ],
+    [
+      "pitch_pot:VCC",
+      "esp32:3V3",
+      "red",
+      [
+        "v121.1",
+        "h160.6"
+      ]
+    ],
+    [
       "esp32:GND.1",
+      "buzzer:2",
       "black",
       [
-        "h43",
-        "v-8.8",
-        "h220.8",
-        "v-211.1"
+        "h-9.21",
+        "v196.9"
+      ]
+    ],
+    [
+      "esp32:GND.2",
+      "volume_pot:GND",
+      "black",
+      [
+        "v-119.9",
+        "h67.44"
+      ]
+    ],
+    [
+      "pitch_pot:GND",
+      "esp32:GND.2",
+      "black",
+      [
+        "v53.9",
+        "h286.2"
       ]
     ]
   ],

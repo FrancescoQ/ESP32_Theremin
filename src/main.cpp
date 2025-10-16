@@ -86,7 +86,7 @@ int smoothReading(int readings[], int &index, int newReading);
 // SETUP (Clean & Simple)
 // ============================================================================
 void setup() {
-  Serial.begin(115200);
+  Serial.begin(9600);
   delay(100);
 
   #ifdef WOKWI_SIMULATION
@@ -232,10 +232,12 @@ void processAndPlayAudio(int pitchDistance, int volumeDistance) {
 
   // Generate audio
   if (dutyCycle > 5) {
-    ledcWriteTone(PWM_CHANNEL, frequency);
+    // Change frequency, then set duty cycle
+    ledcChangeFrequency(PWM_CHANNEL, frequency, PWM_RESOLUTION);
     ledcWrite(PWM_CHANNEL, dutyCycle);
   } else {
-    ledcWriteTone(PWM_CHANNEL, 0);
+    // Silence - set duty cycle to 0
+    ledcWrite(PWM_CHANNEL, 0);
   }
 
   // Debug output (throttled)

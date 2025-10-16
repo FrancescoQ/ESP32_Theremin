@@ -7,4 +7,4 @@ elf = '.pio/build/esp32dev-wokwi/firmware.elf'
 
 # Optional: Enable RFC2217 serial port forwarding
 # Allows external serial monitor tools to connect
-rfc2217ServerPort = 4000
+#rfc2217ServerPort = 4000
