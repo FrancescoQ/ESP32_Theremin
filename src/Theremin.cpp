@@ -6,6 +6,7 @@
  */
 
 #include "Theremin.h"
+#include "Debug.h"
 
 // Constructor
 Theremin::Theremin()
@@ -14,24 +15,24 @@ Theremin::Theremin()
 
 // Initialize theremin
 bool Theremin::begin() {
-    Serial.println("\n=== ESP32 Theremin Initializing ===");
+    DEBUG_PRINTLN("\n=== ESP32 Theremin Initializing ===");
 
 #ifdef WOKWI_SIMULATION
-    Serial.println("[MODE] Simulation (Potentiometers)");
+    DEBUG_PRINTLN("[MODE] Simulation (Potentiometers)");
 #else
-    Serial.println("[MODE] Hardware (VL53L0X Sensors)");
+    DEBUG_PRINTLN("[MODE] Hardware (VL53L0X Sensors)");
 #endif
 
     // Initialize sensors
     if (!sensors.begin()) {
-        Serial.println("[ERROR] Sensor initialization failed!");
+        DEBUG_PRINTLN("[ERROR] Sensor initialization failed!");
         return false;
     }
 
     // Initialize audio
     audio.begin();
 
-    Serial.println("=== Initialization Complete ===\n");
+    DEBUG_PRINTLN("=== Initialization Complete ===\n");
     return true;
 }
 
@@ -79,14 +80,14 @@ void Theremin::setDebugMode(bool enabled) {
 // Print debug information
 void Theremin::printDebugInfo(int pitchDist, int volumeDist, int freq, int amplitude) {
     if (loopCounter % 10 == 0) {
-        Serial.print("[PITCH] ");
-        Serial.print(pitchDist);
-        Serial.print("mm → ");
-        Serial.print(freq);
-        Serial.print("Hz  |  [VOLUME] ");
-        Serial.print(volumeDist);
-        Serial.print("mm → ");
-        Serial.print(amplitude);
-        Serial.println("%");
+        DEBUG_PRINT("[PITCH] ");
+        DEBUG_PRINT(pitchDist);
+        DEBUG_PRINT("mm → ");
+        DEBUG_PRINT(freq);
+        DEBUG_PRINT("Hz  |  [VOLUME] ");
+        DEBUG_PRINT(volumeDist);
+        DEBUG_PRINT("mm → ");
+        DEBUG_PRINT(amplitude);
+        DEBUG_PRINTLN("%");
     }
 }

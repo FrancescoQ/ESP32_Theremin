@@ -6,6 +6,7 @@
  */
 
 #include "AudioEngine.h"
+#include "Debug.h"
 
 // Constructor
 AudioEngine::AudioEngine()
@@ -19,7 +20,7 @@ void AudioEngine::begin() {
     // Configure PWM channel
     ledcSetup(PWM_CHANNEL, PWM_FREQUENCY, PWM_RESOLUTION);
     ledcAttachPin(BUZZER_PIN, PWM_CHANNEL);
-    Serial.println("[AUDIO] PWM configured on GPIO25");
+    DEBUG_PRINTLN("[AUDIO] PWM configured on GPIO25");
 }
 
 // Set frequency

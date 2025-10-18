@@ -12,26 +12,27 @@
  */
 
 #include <Arduino.h>
+#include "Debug.h"
 #include "Theremin.h"
 
 // Create theremin instance
 Theremin theremin;
 
 void setup() {
-    // Initialize serial communication
-    Serial.begin(9600);
+    // Initialize debug output
+    DEBUG_INIT(9600);
     delay(100);
 
     // Initialize theremin (sensors + audio)
     if (!theremin.begin()) {
-        Serial.println("\n[FATAL] Theremin initialization failed!");
-        Serial.println("System halted.");
+        DEBUG_PRINTLN("\n[FATAL] Theremin initialization failed!");
+        DEBUG_PRINTLN("System halted.");
         while (1) {
             delay(1000);
         }
     }
 
-    Serial.println("=== Ready to Play! ===\n");
+    DEBUG_PRINTLN("=== Ready to Play! ===\n");
 }
 
 void loop() {

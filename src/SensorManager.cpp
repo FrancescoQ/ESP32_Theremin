@@ -6,6 +6,7 @@
  */
 
 #include "SensorManager.h"
+#include "Debug.h"
 
 // Constructor
 SensorManager::SensorManager()
@@ -23,13 +24,13 @@ bool SensorManager::begin() {
     // Simulation mode: configure ADC pins
     pinMode(PITCH_INPUT_PIN, INPUT);
     pinMode(VOLUME_INPUT_PIN, INPUT);
-    Serial.println("[SENSOR] Analog inputs configured (GPIO34, GPIO35)");
+    DEBUG_PRINTLN("[SENSOR] Analog inputs configured (GPIO34, GPIO35)");
     return true;
 
 #else
     // Hardware mode: initialize I2C and VL53L0X sensors
     Wire.begin(SDA_PIN, SCL_PIN);
-    Serial.println("[SENSOR] I2C initialized");
+    DEBUG_PRINTLN("[SENSOR] I2C initialized");
 
     // Configure XSHUT pins
     pinMode(XSHUT_PIN_1, OUTPUT);
@@ -44,19 +45,19 @@ bool SensorManager::begin() {
     digitalWrite(XSHUT_PIN_1, HIGH);
     delay(10);
     if (!pitchSensor.begin(SENSOR_ADDR_1)) {
-        Serial.println("[SENSOR] ERROR: Pitch sensor failed to initialize!");
+        DEBUG_PRINTLN("[SENSOR] ERROR: Pitch sensor failed to initialize!");
         return false;
     }
-    Serial.println("[SENSOR] Pitch sensor initialized at 0x30");
+    DEBUG_PRINTLN("[SENSOR] Pitch sensor initialized at 0x30");
 
     // Initialize volume sensor at default address 0x29
     digitalWrite(XSHUT_PIN_2, HIGH);
     delay(10);
     if (!volumeSensor.begin(SENSOR_ADDR_2)) {
-        Serial.println("[SENSOR] ERROR: Volume sensor failed to initialize!");
+        DEBUG_PRINTLN("[SENSOR] ERROR: Volume sensor failed to initialize!");
         return false;
     }
-    Serial.println("[SENSOR] Volume sensor initialized at 0x29");
+    DEBUG_PRINTLN("[SENSOR] Volume sensor initialized at 0x29");
 
     return true;
 #endif
