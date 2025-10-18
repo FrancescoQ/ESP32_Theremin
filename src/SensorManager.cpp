@@ -118,8 +118,8 @@ int SensorManager::readPitchRaw() {
 
 int SensorManager::readVolumeRaw() {
   volumeSensor.rangingTest(&volumeMeasure, false);
-  // Return measured distance, or max distance if out of range
-  return (volumeMeasure.RangeStatus != 4) ? volumeMeasure.RangeMilliMeter : VOLUME_MAX_DIST;
+  // Return measured distance, or min distance (silent) if out of range
+  return (volumeMeasure.RangeStatus != 4) ? volumeMeasure.RangeMilliMeter : VOLUME_MIN_DIST;
 }
 
 #endif
