@@ -52,8 +52,8 @@ void Theremin::update() {
     int amplitude = map(volumeDistance,
                        SensorManager::VOLUME_MIN_DIST,
                        SensorManager::VOLUME_MAX_DIST,
-                       100,  // Max amplitude (closest)
-                       0);   // Min amplitude (farthest)
+                       0,    // Min amplitude (closest - like real theremin)
+                       100); // Max amplitude (farthest - like real theremin)
 
     // Constrain values
     frequency = constrain(frequency, AudioEngine::MIN_FREQUENCY, AudioEngine::MAX_FREQUENCY);
