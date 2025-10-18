@@ -19,26 +19,26 @@
 Theremin theremin;
 
 void setup() {
-    // Initialize debug output
-    DEBUG_INIT(9600);
-    delay(100);
+  // Initialize debug output
+  DEBUG_INIT(9600);
+  delay(100);
 
-    // Initialize theremin (sensors + audio)
-    if (!theremin.begin()) {
-        DEBUG_PRINTLN("\n[FATAL] Theremin initialization failed!");
-        DEBUG_PRINTLN("System halted.");
-        while (1) {
-            delay(1000);
-        }
+  // Initialize theremin (sensors + audio)
+  if (!theremin.begin()) {
+    DEBUG_PRINTLN("\n[FATAL] Theremin initialization failed!");
+    DEBUG_PRINTLN("System halted.");
+    while (1) {
+      delay(1000);
     }
+  }
 
-    DEBUG_PRINTLN("=== Ready to Play! ===\n");
+  DEBUG_PRINTLN("=== Ready to Play! ===\n");
 }
 
 void loop() {
-    // Update theremin (read sensors, generate audio)
-    theremin.update();
+  // Update theremin (read sensors, generate audio)
+  theremin.update();
 
-    // Small delay for stability (~50Hz update rate)
-    delay(20);
+  // Small delay for stability (~50Hz update rate)
+  delay(20);
 }

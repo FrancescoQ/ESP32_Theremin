@@ -1,0 +1,40 @@
+---
+# C++ formatting style for this project
+# Uses K&R/1TBS style (braces on same line) with 2-space indentation
+
+BasedOnStyle: Google
+IndentWidth: 2
+TabWidth: 2
+UseTab: Never
+ColumnLimit: 100
+
+# CRITICAL: Braces on same line (K&R style)
+BreakBeforeBraces: Attach
+
+# Function braces on same line
+AllowShortFunctionsOnASingleLine: Empty
+AllowShortIfStatementsOnASingleLine: Never
+AllowShortLoopsOnASingleLine: false
+
+# Pointer and reference alignment
+PointerAlignment: Left
+ReferenceAlignment: Left
+
+# Indentation
+IndentCaseLabels: true
+IndentPPDirectives: BeforeHash
+
+# Spacing
+SpaceAfterCStyleCast: false
+SpaceBeforeParens: ControlStatements
+SpaceBeforeRangeBasedForLoopColon: true
+
+# Line breaks
+AlwaysBreakAfterReturnType: None
+AlwaysBreakBeforeMultilineStrings: false
+
+# Comments
+ReflowComments: false
+
+# Include sorting
+SortIncludes: false
