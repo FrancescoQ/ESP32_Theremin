@@ -12,14 +12,13 @@ Debug output is **enabled by default** for development. All builds will show deb
 
 ### Disabling Debug Output
 
-#### Option 1: Use Production Build Environment (Recommended)
+#### Option 1: Edit platformio.ini (Recommended)
 
-```bash
-# Simulation - no debug output
-pio run -e esp32dev-wokwi-production
-
-# Hardware - no debug output
-pio run -e esp32dev-production
+Open `platformio.ini` and change the `esp32dev` environment:
+```ini
+[env:esp32dev]
+build_flags =
+    -DDEBUG_MODE=0  # ← Change from 1 to 0
 ```
 
 #### Option 2: Edit Debug.h
@@ -29,17 +28,17 @@ Open `include/Debug.h` and change:
 #define DEBUG_MODE 1  // ← Change to 0
 ```
 
+**Note:** The simulation environment (`esp32dev-wokwi`) always has debug enabled since it's used for development and testing.
+
 ## Build Configurations
 
-The `platformio.ini` file provides four build environments:
+The `platformio.ini` file provides two build environments:
 
-### Development Builds (Debug Enabled)
-- **`esp32dev-wokwi`** - Simulation with debug output
-- **`esp32dev`** - Hardware with debug output
+### Available Environments
+- **`esp32dev-wokwi`** - Simulation with debug output (always enabled)
+- **`esp32dev`** - Hardware with debug output (enabled by default)
 
-### Production Builds (Debug Disabled)
-- **`esp32dev-wokwi-production`** - Simulation, no debug output
-- **`esp32dev-production`** - Hardware, no debug output
+**For production builds:** Simply change `DEBUG_MODE=1` to `DEBUG_MODE=0` in the `esp32dev` environment.
 
 ## Memory Savings
 
@@ -192,24 +191,33 @@ This output is throttled (every 10th loop) to avoid flooding the serial monitor.
 ## Best Practices
 
 ### Development
-1. Keep `DEBUG_MODE=1` while developing
+1. Keep `DEBUG_MODE=1` in `platformio.ini` while developing
 2. Use debug output to verify sensor readings
 3. Monitor for errors and warnings
-4. Use `esp32dev-wokwi` or `esp32dev` environments
+4. Use `esp32dev-wokwi` for simulation or `esp32dev` for hardware
 
 ### Production/Deployment
-1. Build with production environments:
-   - `pio run -e esp32dev-wokwi-production`
-   - `pio run -e esp32dev-production`
-2. Saves flash space for future features
-3. Slightly faster startup (no Serial.begin delay)
-4. Cleaner for battery-powered operation
+1. Change `DEBUG_MODE=1` to `DEBUG_MODE=0` in `platformio.ini` for the `esp32dev` environment
+2. Build with: `pio run -e esp32dev`
+3. Saves ~30KB flash space for future features
+4. Slightly faster startup (no Serial.begin delay)
+5. Cleaner for battery-powered operation
+
+### Production Build Checklist
+When preparing for final deployment:
+- [ ] Change `DEBUG_MODE=1` to `DEBUG_MODE=0` in `platformio.ini`
+- [ ] Clean build: `pio run -t clean`
+- [ ] Build production firmware: `pio run -e esp32dev`
+- [ ] Test on real hardware
+- [ ] Verify no serial output appears
+- [ ] Upload to ESP32: `pio run -e esp32dev -t upload`
 
 ### Battery Operation
 For battery-powered theremin:
+1. Set `DEBUG_MODE=0` in `platformio.ini`
+2. Build and upload:
 ```bash
-# Use production build to save power
-pio run -e esp32dev-production -t upload
+pio run -e esp32dev -t upload
 ```
 
 Debug output disabled saves:
@@ -219,17 +227,19 @@ Debug output disabled saves:
 
 ## Testing Both Modes
 
-### Test Debug Enabled
+### Test Debug Enabled (Default)
 ```bash
-pio run -e esp32dev-wokwi
+pio run -e esp32dev
 ```
-Should see debug output in serial monitor.
+Should compile and show debug output when uploaded.
 
 ### Test Debug Disabled
+1. Edit `platformio.ini`, change `DEBUG_MODE=1` to `DEBUG_MODE=0`
+2. Build:
 ```bash
-pio run -e esp32dev-wokwi-production
+pio run -e esp32dev
 ```
-Should compile successfully with smaller binary size, no debug output.
+Should compile successfully with smaller binary size (~30KB less flash).
 
 ## Troubleshooting
 
@@ -244,9 +254,9 @@ If you get this error, you're using `Serial.print()` directly instead of `DEBUG_
 3. Check `DEBUG_MODE` is `1` in `Debug.h` or `platformio.ini`
 
 ### Can't Disable Debug Output
-1. Make sure you're using production build environment
+1. Make sure `DEBUG_MODE=0` is set in `platformio.ini`
 2. Check for any direct `Serial.print()` calls (bypass the macros)
-3. Rebuild from scratch: `pio run -t clean` then `pio run -e esp32dev-production`
+3. Rebuild from scratch: `pio run -t clean` then `pio run -e esp32dev`
 
 ## Advanced Usage
 
