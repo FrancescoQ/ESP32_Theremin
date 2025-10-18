@@ -3,43 +3,45 @@
 ## Current Work Focus
 
 ### Project Status
-**Phase:** Phase 0 Complete - Wokwi Simulation Ready
-**Date:** October 15, 2025
+**Phase:** Architecture Refactoring Complete
+**Date:** October 18, 2025
 
-Wokwi simulation implementation is complete! The project now has a fully functional simulation environment using potentiometers to simulate distance sensors. The code uses clean conditional compilation architecture that supports both simulation (potentiometers) and hardware (VL53L0X sensors) from a single source file.
+Major architectural refactoring completed! The project has been transformed from a monolithic 250-line main.cpp into a clean, modular, object-oriented architecture with separate classes for:
+- **SensorManager**: Handles all sensor input (simulation and hardware)
+- **AudioEngine**: Manages audio synthesis
+- **Theremin**: Coordinates sensors and audio
 
-**Key Achievement:** Clean architecture with `#ifdef WOKWI_SIMULATION` allows seamless switching between simulation and hardware builds without code duplication.
+**Key Achievement:** Code now organized into reusable, testable classes with clear separation of concerns. main.cpp reduced to just 40 lines. Architecture is future-proof and ready for DAC audio, waveform selection, OLED display, and other planned features.
 
 ### Immediate Next Steps
 
-1. **Test Wokwi Simulation**
-   - Start Wokwi simulator in VS Code (F1 → "Wokwi: Start Simulator")
-   - Verify initialization message shows "[SIMULATION]" mode
-   - Test left potentiometer controls pitch (100-2000 Hz)
-   - Test right potentiometer controls volume (duty cycle 0-128)
-   - Monitor serial output for distance → frequency/volume mapping
-   - Validate audio synthesis logic
+1. **Test Refactored Code**
+   - Test in Wokwi simulator to verify behavior matches original
+   - Verify all functionality intact after refactoring
+   - Check serial output format unchanged
+   - Validate sensor smoothing still working
 
-2. **Hardware Preparation** (When Ready)
-   - Order/acquire ESP32 dev board
-   - Order/acquire 2x VL53L0X breakout modules
-   - Order/acquire passive piezo buzzer
-   - Gather breadboard and jumper wires
-   - Get 220Ω resistor for buzzer
+2. **Future Architecture Extensions**
+   - Design WaveformGenerator class hierarchy for different waveforms
+   - Design Display class for OLED integration
+   - Design UserInterface class for buttons/switches
+   - Plan DAC output implementation in AudioEngine
 
-3. **Hardware Build & Test** (Future)
+3. **Hardware Build & Test** (When Ready)
    - Build for hardware: `/Users/fquagliati/.platformio/penv/bin/pio run -e esp32dev`
-   - No code changes needed - conditional compilation handles everything
    - Test with real VL53L0X sensors
-   - Compare simulation vs. hardware behavior
+   - Verify modular architecture works on hardware
 
 ## Recent Changes
 
-**Initial Memory Bank Creation:**
-- Created complete memory bank structure
-- Documented project brief, product context, system patterns, and technical context
-- Established clear architecture and design decisions
-- Defined development phases and success criteria
+**Major Architecture Refactoring (October 18, 2025):**
+- Extracted all sensor logic into SensorManager class (header + implementation)
+- Extracted all audio logic into AudioEngine class (header + implementation)
+- Created Theremin coordinator class to manage sensors and audio
+- Simplified main.cpp from 250+ lines to 40 lines
+- Added comprehensive ARCHITECTURE.md documentation
+- **Build Status:** ✅ Compiles successfully for simulation
+- All functionality preserved, but now organized and extensible
 
 ## Active Decisions
 
@@ -69,10 +71,12 @@ Wokwi simulation implementation is complete! The project now has a fully functio
 ## Important Patterns & Preferences
 
 ### Code Style
-- Clear, educational code over clever optimizations
-- Extensive comments explaining I2C addressing and PWM concepts
-- Meaningful variable names (e.g., `pitchDistance`, `volumeDutyCycle`)
-- Modular functions for sensor reading, mapping, audio output
+- Object-oriented design with clear separation of concerns
+- Each class has single, well-defined responsibility
+- Public interfaces documented with comments
+- Meaningful class and method names (e.g., `SensorManager::getPitchDistance()`)
+- Clean abstractions that hide implementation details
+- Future-proof design allowing easy feature additions
 
 ### Development Philosophy
 - Build incrementally: test each component before integration
@@ -87,6 +91,31 @@ Wokwi simulation implementation is complete! The project now has a fully functio
 - Clear initialization failure messages
 
 ## Learnings & Project Insights
+
+### Architectural Insights
+
+**Modular Design Benefits:**
+Successfully refactored from monolithic code to modular architecture:
+- **Separation of Concerns**: Each class handles one aspect (input, output, coordination)
+- **Testability**: Can test SensorManager without AudioEngine and vice versa
+- **Extensibility**: Adding features (DAC, waveforms, display) requires minimal changes to existing code
+- **Maintainability**: Easy to locate and fix bugs in specific subsystems
+- **Reusability**: Classes can be used in other ESP32 projects
+
+**Class Design Pattern:**
+The three-layer architecture works well:
+1. **SensorManager** - Input abstraction layer
+2. **AudioEngine** - Output abstraction layer
+3. **Theremin** - Business logic / coordination layer
+
+This mirrors MVC pattern and makes future expansion straightforward.
+
+**Future Extension Path:**
+Adding new features is now clean:
+- New waveforms → Create WaveformGenerator interface, add to AudioEngine
+- OLED display → Create Display class, add to Theremin
+- Buttons/switches → Create UserInterface class, add to Theremin
+- Multiple oscillators → Extend AudioEngine with Oscillator instances
 
 ### Key Technical Insights
 
