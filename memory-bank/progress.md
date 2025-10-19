@@ -1,15 +1,24 @@
 # Progress - ESP32 Theremin
 
+> **📌 Roadmap Reference:**
+> This progress tracker follows the v2.0 development roadmap (Phases 0-7).
+> See `/productbrief.md` for complete feature specifications and phase details.
+
 ## Current Status
 
-**Project Phase:** Phase 0 - Complete ✅
-**Overall Completion:** 25% (Simulation environment fully functional)
-**Last Updated:** October 15, 2025
+**Project Phase:** Phase 1 - Architecture Refactoring Complete ✅
+**Overall Completion:** ~15% (Phase 0 + Phase 1 foundation complete)
+**Last Updated:** October 19, 2025
 
 ### Status Summary
-Wokwi simulation environment is complete and ready for testing! The project successfully implements a clean architecture using conditional compilation to support both simulation (potentiometers) and hardware (VL53L0X sensors) from a single source file. The firmware builds successfully and is ready to run in Wokwi simulator.
+Major architectural refactoring completed! The project has evolved from a monolithic 250-line main.cpp into a clean, modular, object-oriented architecture with separate classes:
+- **SensorManager** (header + implementation): Handles all sensor input (simulation and hardware)
+- **AudioEngine** (header + implementation): Manages PWM audio synthesis
+- **Theremin** (header + implementation): Coordinates sensors and audio
 
-**Current State:** Ready to test simulation, then transition to hardware when components are acquired
+The Wokwi simulation environment is complete and functional. The refactored architecture is future-proof and ready for v2.0 features (DAC audio, multiple oscillators, effects, display, etc.).
+
+**Current State:** Clean Phase 1 foundation ready. Next: Test in Wokwi, then proceed to Phase 2 (DAC + Amplifier upgrade)
 
 ## What Works
 
@@ -30,7 +39,8 @@ Wokwi simulation environment is complete and ready for testing! The project succ
 
 ## What's Left to Build
 
-### Phase 0: Environment Setup and Simulation ✅ COMPLETE
+### Phase 0: Wokwi Virtual Prototyping ✅ COMPLETE
+
 - [x] **Development Environment**
   - [x] PlatformIO installed and accessible at `/Users/fquagliati/.platformio/penv/bin/pio`
   - [x] Created PlatformIO project structure
@@ -43,89 +53,188 @@ Wokwi simulation environment is complete and ready for testing! The project succ
   - [x] Virtual circuit properly wired (GPIO34/35 for ADC, GPIO25 for PWM)
   - [x] Ready for simulation launch
 
-- [x] **Code Implementation with Clean Architecture**
+- [x] **Architecture Refactoring (October 18, 2025)**
+  - [x] Extracted SensorManager class (include/SensorManager.h + src/SensorManager.cpp)
+  - [x] Extracted AudioEngine class (include/AudioEngine.h + src/AudioEngine.cpp)
+  - [x] Created Theremin coordinator class (include/Theremin.h + src/Theremin.cpp)
   - [x] Implemented conditional compilation with `#ifdef WOKWI_SIMULATION`
-  - [x] Created simulation-specific functions: `simulationSetup()`, `simulationReadPitch()`, `simulationReadVolume()`
-  - [x] Created hardware-specific functions: `hardwareSetup()`, `hardwareReadPitch()`, `hardwareReadVolume()`
-  - [x] Implemented shared audio synthesis logic in `processAndPlayAudio()`
-  - [x] Added smoothing filter (5-sample moving average)
-  - [x] Implemented ADC-to-distance conversion for simulation
-  - [x] Clean 10-line setup() and loop() functions
+  - [x] Added smoothing filter (5-sample moving average) in SensorManager
+  - [x] Implemented ADC-to-distance conversion for simulation mode
+  - [x] Simplified main.cpp to ~40 lines (was 250+)
   - [x] Comprehensive serial debug output
+  - [x] Created ARCHITECTURE.md documentation
+  - [x] Build verified: ✅ Compiles successfully
 
-### Phase 1: Real Hardware Setup and Basic Testing (Not Started)
-- [ ] **Component Acquisition**
+### Phase 1: Hardware Base Implementation ✅ FOUNDATION COMPLETE
+
+**Goal:** Get real sensors + buzzer working on ESP32
+
+**Status:** Architecture complete, ready for hardware testing
+
+- [x] **Architecture Foundation**
+  - [x] SensorManager class with hardware/simulation modes
+  - [x] AudioEngine class with PWM audio generation
+  - [x] Theremin coordinator class
+  - [x] Clean separation of concerns
+  - [x] Future-proof design for v2.0 features
+
+- [ ] **Hardware Testing (When Components Acquired)**
   - [ ] Acquire ESP32 development board
   - [ ] Acquire 2x VL53L0X ToF sensor modules
   - [ ] Acquire passive piezo buzzer
-  - [ ] Acquire breadboard, jumper wires, and resistor
+  - [ ] Connect ESP32, test upload
+  - [ ] Test VL53L0X XSHUT sequential initialization
+  - [ ] Verify I2C communication stability
+  - [ ] Test basic pitch control (1 sensor → PWM frequency)
 
-- [ ] **Initial Hardware Tests**
-  - [ ] Connect ESP32 to computer, test upload
-  - [ ] Test single VL53L0X sensor on breadboard
-  - [ ] Run Adafruit VL53L0X example code
-  - [ ] Test PWM tone generation with buzzer
-  - [ ] Verify I2C bus functionality
+**Success Criteria:**
+- ✓ Clean architecture implemented
+- ⏳ Both sensors read distances correctly (pending hardware)
+- ⏳ Hand movement changes buzzer pitch (pending hardware)
+- ⏳ No I2C errors or crashes (pending hardware)
 
-### Phase 2: Dual Sensor Control (Not Started)
-- [ ] **I2C Address Management**
-  - [ ] Connect both sensors to I2C bus
-  - [ ] Implement XSHUT pin initialization sequence
-  - [ ] Configure sensor #1 to address 0x30
-  - [ ] Keep sensor #2 at default address 0x29
-  - [ ] Verify both sensors readable simultaneously
+---
 
-- [ ] **Reading Loop**
-  - [ ] Implement continuous reading from both sensors
-  - [ ] Add error handling for I2C timeouts
-  - [ ] Display readings on serial monitor
-  - [ ] Verify no bus conflicts or hangs
+### Phase 2: Audio Upgrade - DAC + Amplifier (v2.0 Begins)
 
-### Phase 3: Audio Mapping and Integration (Not Started)
-- [ ] **Pitch Control Implementation**
-  - [ ] Map sensor #1 distance → frequency (100-2000 Hz)
-  - [ ] Implement range clamping
-  - [ ] Test frequency changes with hand movement
-  - [ ] Calibrate distance range for musical playability
+**Goal:** Replace PWM buzzer with real audio output (DAC + speaker + line-out)
 
-- [ ] **Volume Control Implementation**
-  - [ ] Map sensor #2 distance → PWM duty cycle (0-255)
-  - [ ] Implement range clamping
-  - [ ] Test volume changes independently
-  - [ ] Calibrate distance range
+**Status:** Not Started
 
-- [ ] **Integration**
-  - [ ] Combine pitch and volume control in main loop
-  - [ ] Verify simultaneous independent control
-  - [ ] Test latency and responsiveness
-  - [ ] Ensure stable operation
+- [ ] **Oscillator Class Implementation**
+  - [ ] Create Oscillator class with wavetable generation
+  - [ ] Implement sine/square/sawtooth waveforms
+  - [ ] Pre-compute wavetables (1024 samples each)
+  - [ ] Test wavetable lookup performance
 
-### Phase 4: Refinement and Optimization (Not Started)
-- [ ] **Signal Smoothing**
-  - [ ] Implement moving average filter for pitch sensor
-  - [ ] Implement moving average filter for volume sensor
-  - [ ] Tune SAMPLES constant for best responsiveness/stability balance
-  - [ ] Test jitter elimination
+- [ ] **DAC Audio Output**
+  - [ ] Switch from PWM to ESP32 internal DAC (GPIO25)
+  - [ ] Implement proper sample rate (22-32kHz)
+  - [ ] Add PAM8403 amplifier module + 8Ω speaker
+  - [ ] Add 6.35mm jack for line-out (pre-amp signal)
+  - [ ] Test audio quality and volume levels
 
-- [ ] **Calibration**
-  - [ ] Fine-tune distance ranges for optimal playing
-  - [ ] Test different frequency mapping curves (linear vs. exponential)
-  - [ ] Adjust timing parameters if needed
-  - [ ] Optimize loop delay for best latency/stability
+- [ ] **Display for Monitoring (Early Implementation)**
+  - [ ] Connect SSD1306 OLED (I2C address 0x3C)
+  - [ ] Create DisplayManager class
+  - [ ] Show real-time CPU usage %
+  - [ ] Show free RAM in KB
+  - [ ] Show current frequency and sensor distances
 
-- [ ] **Error Handling**
-  - [ ] Implement robust sensor timeout handling
-  - [ ] Add recovery from I2C errors
-  - [ ] Add initialization retry logic
-  - [ ] Test failure modes
+- [ ] **CHECKPOINT 1: Benchmark**
+  - [ ] Measure CPU usage with 1 oscillator + display
+  - [ ] Measure latency (target <20ms)
+  - [ ] Verify audio quality at chosen sample rate
+  - [ ] **DECISION:** Proceed to Phase 3 OR optimize
 
-### Phase 5: Enhancement (Optional - Not Started)
-- [ ] LED visual feedback for sensor status
-- [ ] Serial commands for runtime calibration
-- [ ] EEPROM preset saving/loading
-- [ ] Waveform selection (requires DAC upgrade)
-- [ ] Physical enclosure design
-- [ ] Ergonomic sensor positioning
+**Success Criteria:**
+- ✓ Clean DAC audio output (no crackling/distortion)
+- ✓ Speaker and line-out both functional
+- ✓ **CPU usage <30%** with 1 oscillator + display
+- ✓ **Latency <20ms** measured
+- ✓ Display shows accurate CPU/RAM metrics
+
+---
+
+### Phase 3: Multiple Oscillators Expansion (v2.0 Feature)
+
+**Goal:** Add 2nd and 3rd oscillators with independent controls
+
+**Status:** Not Started
+
+- [ ] **AudioMixer Class**
+  - [ ] Implement AudioMixer to sum multiple oscillator outputs
+  - [ ] Add 2nd Oscillator instance
+  - [ ] **BENCHMARK:** Test CPU load with 2 oscillators
+  - [ ] If CPU <60%, add 3rd Oscillator
+
+- [ ] **Control Expansion**
+  - [ ] Add MCP23017 I2C GPIO expander
+  - [ ] Wire rotary switches for waveform selection (3x 4-position)
+  - [ ] Wire toggle switches for octave control (3x 3-position)
+  - [ ] Implement SwitchController class with interrupt handling
+
+- [ ] **CHECKPOINT 2: Performance Test**
+  - [ ] Test CPU/RAM with 2-3 oscillators
+  - [ ] Monitor for audio glitches/dropouts
+  - [ ] **DECISION:** Keep 3 osc OR drop to 2
+
+**Success Criteria:**
+- ✓ 2 oscillators: CPU <60%, no audio glitches
+- ✓ 3 oscillators (if attempted): CPU <75%, audio stable
+- ✓ All switches respond correctly via MCP23017
+- ✓ Latency still <20ms
+
+---
+
+### Phase 4: Visual Feedback & Effects (v2.0 Feature)
+
+**Goal:** Add LED meters and effects (Delay, Chorus)
+
+**Status:** Not Started
+
+- [ ] **LED Meters**
+  - [ ] Connect 2x WS2812B LED strips (8 LEDs each)
+  - [ ] Implement LEDMeter class
+  - [ ] Map sensor distance → LED bar graph
+
+- [ ] **Effects Chain**
+  - [ ] Implement EffectsChain class
+  - [ ] Add Delay effect (circular buffer)
+  - [ ] Add Chorus effect (modulated delay with LFO)
+  - [ ] Wire toggle switches for effect on/off
+
+- [ ] **CHECKPOINT 3: Full System Test**
+  - [ ] Test CPU with oscillators + delay + chorus
+  - [ ] **DECISION:** Attempt Reverb OR skip to Phase 5
+
+**Success Criteria:**
+- ✓ LED meters track sensor distances smoothly
+- ✓ Effects sound good (no artifacts)
+- ✓ **Total CPU <75%** with all features active
+
+---
+
+### Phase 5: Professional I/O & Polish (v2.0 Feature)
+
+**Goal:** Finalize hardware integration and user experience
+
+**Status:** Not Started
+
+- [ ] Install amp enable/disable switch
+- [ ] Wire LED indicator for amp status
+- [ ] Label all controls
+- [ ] Cable management and strain relief
+- [ ] Test all signal paths
+- [ ] Final calibration of sensor ranges
+- [ ] Document control layout
+
+**Success Criteria:**
+- ✓ All I/O paths functional and labeled
+- ✓ Instrument is playable and responsive
+- ✓ Professional appearance
+
+---
+
+### Phase 6: Enclosure & Finishing (Future)
+
+**Goal:** Build proper case and final aesthetics
+
+**Status:** Not Started
+
+(See `/productbrief.md` Phase 6 for details)
+
+---
+
+### Phase 7: Future Upgrades (Future)
+
+**Goal:** THE TONE™ perfection (never truly ends)
+
+**Status:** Not Started
+
+Ideas: I2S DAC upgrade, MIDI, CV/Gate, WiFi control, granular synthesis...
+
+(See `/productbrief.md` Phase 7 for complete list)
 
 ## Known Issues
 

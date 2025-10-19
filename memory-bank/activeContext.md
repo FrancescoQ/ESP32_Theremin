@@ -1,72 +1,123 @@
 # Active Context - ESP32 Theremin
 
+> **📌 Context Alignment:**
+> This tracks current work on the **Phase 1 foundation**.
+> For the full v2.0 roadmap (Phases 0-7), see `/productbrief.md` and `progress.md`.
+
 ## Current Work Focus
 
 ### Project Status
-**Phase:** Architecture Refactoring Complete
-**Date:** October 18, 2025
+**Phase:** Phase 1 - Architecture Refactoring Complete ✅
+**Date:** October 19, 2025
+**v2.0 Vision:** Multi-oscillator synthesizer with effects, professional I/O, and visual feedback
 
-Major architectural refactoring completed! The project has been transformed from a monolithic 250-line main.cpp into a clean, modular, object-oriented architecture with separate classes for:
-- **SensorManager**: Handles all sensor input (simulation and hardware)
-- **AudioEngine**: Manages audio synthesis
-- **Theremin**: Coordinates sensors and audio
+**Major Milestone Achieved:** Architecture Refactoring Complete!
 
-**Key Achievement:** Code now organized into reusable, testable classes with clear separation of concerns. main.cpp reduced to just 40 lines. Architecture is future-proof and ready for DAC audio, waveform selection, OLED display, and other planned features.
+The project has been transformed from a monolithic 250-line main.cpp into a clean, modular, object-oriented architecture with separate classes:
+- **SensorManager** (include/SensorManager.h + src/SensorManager.cpp): Handles all sensor input (simulation and hardware)
+- **AudioEngine** (include/AudioEngine.h + src/AudioEngine.cpp): Manages audio synthesis (currently PWM, designed for DAC upgrade)
+- **Theremin** (include/Theremin.h + src/Theremin.cpp): Coordinates sensors and audio
+
+**Key Achievement:**
+- Code now organized into reusable, testable classes with clear separation of concerns
+- main.cpp reduced to just ~40 lines
+- Architecture is future-proof and ready for v2.0 features:
+  - DAC audio with wavetable synthesis
+  - Multiple oscillators with AudioMixer
+  - Effects chain (Delay, Chorus, Reverb)
+  - OLED display with DisplayManager
+  - LED meters and visual feedback
+  - Professional I/O (line-out, amp control)
 
 ### Immediate Next Steps
 
-1. **Test Refactored Code**
-   - Test in Wokwi simulator to verify behavior matches original
+1. **Test Phase 1 Foundation**
+   - Test in Wokwi simulator to verify refactored code works
    - Verify all functionality intact after refactoring
    - Check serial output format unchanged
    - Validate sensor smoothing still working
+   - Build for hardware when components acquired
 
-2. **Future Architecture Extensions**
-   - Design WaveformGenerator class hierarchy for different waveforms
-   - Design Display class for OLED integration
-   - Design UserInterface class for buttons/switches
+2. **Prepare for Phase 2 (v2.0 Begins)**
+   - Design Oscillator class with wavetable generation
+   - Design AudioMixer class for multiple oscillators
    - Plan DAC output implementation in AudioEngine
+   - Research SSD1306 display integration
+   - Order Phase 2 components (PAM8403, speaker, display)
 
-3. **Hardware Build & Test** (When Ready)
-   - Build for hardware: `/Users/fquagliati/.platformio/penv/bin/pio run -e esp32dev`
-   - Test with real VL53L0X sensors
-   - Verify modular architecture works on hardware
+3. **Future v2.0 Architecture Extensions**
+   - Oscillator class hierarchy for different waveforms (sine/square/saw)
+   - AudioMixer for summing multiple oscillator outputs
+   - EffectsChain class (Delay, Chorus, optional Reverb)
+   - DisplayManager class for OLED integration
+   - SwitchController class for MCP23017 GPIO expander
+   - LEDMeter class for WS2812B visual feedback
 
 ## Recent Changes
+
+**Product Brief Updated to v2.0 (October 19, 2025):**
+- Root `/productbrief.md` now describes complete v2.0 vision (Phases 0-7)
+- Includes multi-oscillator architecture, effects chain, professional I/O
+- BOM, performance budgets, and detailed technical specifications
+- Memory-bank files updated to reflect v1.0 → v2.0 evolution
+- Current Phase 1 foundation positioned as stepping stone to v2.0
 
 **Major Architecture Refactoring (October 18, 2025):**
 - Extracted all sensor logic into SensorManager class (header + implementation)
 - Extracted all audio logic into AudioEngine class (header + implementation)
 - Created Theremin coordinator class to manage sensors and audio
-- Simplified main.cpp from 250+ lines to 40 lines
+- Simplified main.cpp from 250+ lines to ~40 lines
 - Added comprehensive ARCHITECTURE.md documentation
 - **Build Status:** ✅ Compiles successfully for simulation
 - All functionality preserved, but now organized and extensible
+- Foundation ready for v2.0 expansion
 
 ## Active Decisions
 
-### Design Choices Made
+### Phase 1 Design Choices (Current)
 1. **Sensor Selection:** VL53L0X Time-of-Flight sensors
-   - Reason: High precision, no interference, fast reading
+   - Reason: High precision (±3%), no interference, fast reading (<30ms)
    - Trade-off: More expensive than ultrasonic, but worth it for quality
+   - v2.0 note: Same sensors will work for advanced features
 
 2. **Audio Output:** Start with passive buzzer + PWM
-   - Reason: Simplest implementation for learning
-   - Future path: Can upgrade to DAC + amplifier later
+   - Reason: Simplest implementation for learning Phase 1 fundamentals
+   - **v2.0 upgrade path:** ESP32 DAC → PAM8403 amp → speaker + line-out
+   - Clear migration strategy in AudioEngine class
 
 3. **Development Approach:** Virtual prototyping first
    - Reason: Validate logic before hardware assembly
    - Risk mitigation: Avoid damaging components during learning
+   - **Status:** ✅ Wokwi simulation ready
 
 4. **I2C Address Management:** XSHUT pin method
-   - Reason: Simpler than multiplexer for just 2 sensors
+   - Reason: Simpler than multiplexer for 2 sensors
    - Implementation: Sequential initialization with address reassignment
+   - v2.0 note: Will add MCP23017 expander, SSD1306 display on same bus
+
+### v2.0 Strategic Decisions
+5. **Modular Architecture:** Separate classes for each subsystem
+   - Reason: Easier to add v2.0 features without rewriting
+   - **Benefit:** Can test SensorManager, AudioEngine independently
+   - Future: Easy to add Oscillator, EffectsChain, DisplayManager classes
+
+6. **Incremental Feature Addition:** Checkpoints after each phase
+   - Reason: Monitor CPU/RAM usage before adding more features
+   - Critical checkpoints: After Phase 2 (1 osc), Phase 3 (2-3 osc), Phase 4 (effects)
+   - Plan B ready: Drop from 3 to 2 oscillators if CPU >80%
+
+7. **Performance Budget:** Reserve CPU headroom
+   - Target: <75% CPU usage sustained
+   - Latency: <20ms sensor-to-sound
+   - Audio dropout rate: 0 (critical)
+   - See `/productbrief.md` Section 5 for detailed budgets
 
 ### Open Questions
-- Is Wokwi license active and does it support VL53L0X?
-- If not, HC-SR04 simulation adequate for initial logic testing?
-- Which specific ESP32 board variant will be used?
-- Physical layout: How to position sensors for optimal playing ergonomics?
+- When to acquire Phase 2 components (DAC amp, speaker, OLED)?
+- Which specific ESP32 board variant (standard DevKit sufficient)?
+- Physical layout: Sensor positioning for ergonomics?
+- Enclosure design: Wait until Phase 6 or prototype earlier?
+- MCP23017 vs direct GPIO: When to add expander?
 
 ## Important Patterns & Preferences
 
@@ -94,11 +145,11 @@ Major architectural refactoring completed! The project has been transformed from
 
 ### Architectural Insights
 
-**Modular Design Benefits:**
+**Modular Design Benefits (Phase 1 Foundation Complete):**
 Successfully refactored from monolithic code to modular architecture:
 - **Separation of Concerns**: Each class handles one aspect (input, output, coordination)
 - **Testability**: Can test SensorManager without AudioEngine and vice versa
-- **Extensibility**: Adding features (DAC, waveforms, display) requires minimal changes to existing code
+- **Extensibility**: Adding v2.0 features requires minimal changes to existing code
 - **Maintainability**: Easy to locate and fix bugs in specific subsystems
 - **Reusability**: Classes can be used in other ESP32 projects
 
@@ -108,14 +159,18 @@ The three-layer architecture works well:
 2. **AudioEngine** - Output abstraction layer
 3. **Theremin** - Business logic / coordination layer
 
-This mirrors MVC pattern and makes future expansion straightforward.
+This mirrors MVC pattern and makes v2.0 expansion straightforward.
 
-**Future Extension Path:**
+**v2.0 Extension Path (Planned Architecture):**
 Adding new features is now clean:
-- New waveforms → Create WaveformGenerator interface, add to AudioEngine
-- OLED display → Create Display class, add to Theremin
-- Buttons/switches → Create UserInterface class, add to Theremin
-- Multiple oscillators → Extend AudioEngine with Oscillator instances
+- **Phase 2:** Oscillator class with wavetable generation → Integrate into AudioEngine
+- **Phase 2:** DisplayManager class for OLED → Add to Theremin coordinator
+- **Phase 3:** AudioMixer class → Sum multiple Oscillator outputs in AudioEngine
+- **Phase 3:** SwitchController class for MCP23017 → Add to Theremin for user controls
+- **Phase 4:** EffectsChain class (Delay, Chorus, Reverb) → Insert between Oscillator and output
+- **Phase 4:** LEDMeter class for WS2812B strips → Add to Theremin for visual feedback
+
+See `/productbrief.md` Section 4.4 for complete v2.0 class structure.
 
 ### Key Technical Insights
 

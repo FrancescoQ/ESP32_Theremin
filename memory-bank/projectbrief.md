@@ -1,18 +1,35 @@
 # Project Brief - ESP32 Theremin
 
+> **📌 Note on Project Evolution:**
+> This memory-bank documents the **current implementation** (v1.0 foundation, Phase 1).
+> For the full **v2.0 vision and roadmap** (Phases 0-7), see `/productbrief.md` in the project root.
+> The current work focuses on building a solid Phase 1 foundation that will evolve into the v2.0 multi-oscillator synthesizer.
+
 ## Core Identity
-**Project Name:** ESP32 Theremin
-**Type:** DIY Electronic Musical Instrument
+**Project Name:** ESP32 Advanced Theremin
+**Type:** DIY Performance Electronic Musical Instrument
+**Current Phase:** Phase 1 - Foundation Implementation
 **Primary Goal:** Create a functional, playable theremin using ESP32 and proximity sensors to control sound frequency and volume in real-time.
 
 ## Vision
+
+**v1.0 Foundation (Current):**
 Build an educational and playable digital theremin that demonstrates:
 - Sensor-based gesture control
 - Real-time audio synthesis on embedded systems
 - I2C multi-device management
 - PWM audio generation
+- Clean, modular architecture for future expansion
 
-This is an experimental educational project focused on learning ESP32 capabilities, not replicating professional theremin quality.
+**v2.0 Evolution (Roadmap):**
+Transform into a professional-grade performance instrument with:
+- Multiple oscillators (2-3) with selectable waveforms
+- Effects chain (Delay, Chorus, optional Reverb)
+- Professional I/O (DAC, line-out, amp control)
+- Visual feedback (OLED display, LED meters)
+- Preset system and advanced controls
+
+See `/productbrief.md` for complete v2.0 specifications and development roadmap.
 
 ## Core Requirements
 
