@@ -69,9 +69,20 @@ class AudioEngine {
   static const int MAX_DUTY_CYCLE = 128;   // 50% max for square wave
   static const int SILENCE_THRESHOLD = 5;  // Below this, output silence
 
+  // Amplitude smoothing (prevents sudden volume jumps)
+  // Tuning guide - adjust to taste:
+  //   0.05 = ~2.0s fade time (very smooth, laggy)
+  //   0.10 = ~1.2s fade time (smooth, professional)
+  //   0.15 = ~0.8s fade time (balanced - current setting)
+  //   0.25 = ~0.5s fade time (responsive, slight smoothing)
+  //   0.50 = ~0.2s fade time (minimal smoothing)
+  //   1.00 = instant (no smoothing, like before)
+  static constexpr float SMOOTHING_FACTOR = 0.15;  // 0.0-1.0 (lower = smoother)
+
   // Current state
   int currentFrequency;
-  int currentAmplitude;
+  int currentAmplitude;     // Target amplitude
+  float smoothedAmplitude;  // Actual smoothed amplitude value
   int dutyCycle;
 
   /**

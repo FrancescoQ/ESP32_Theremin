@@ -9,7 +9,7 @@
 #include "Debug.h"
 
 // Constructor
-AudioEngine::AudioEngine() : currentFrequency(MIN_FREQUENCY), currentAmplitude(0), dutyCycle(0) {}
+AudioEngine::AudioEngine() : currentFrequency(MIN_FREQUENCY), currentAmplitude(0), smoothedAmplitude(0.0), dutyCycle(0) {}
 
 // Initialize audio hardware
 void AudioEngine::begin() {
@@ -33,7 +33,11 @@ void AudioEngine::setAmplitude(int amplitude) {
 
 // Update audio output
 void AudioEngine::update() {
-  // Calculate duty cycle based on amplitude
+  // Apply exponential smoothing to amplitude
+  // This creates smooth fade-in/fade-out instead of sudden volume jumps
+  smoothedAmplitude += (currentAmplitude - smoothedAmplitude) * SMOOTHING_FACTOR;
+
+  // Calculate duty cycle based on smoothed amplitude
   calculateDutyCycle();
 
   // Apply to PWM hardware
@@ -42,8 +46,9 @@ void AudioEngine::update() {
 
 // Map amplitude to duty cycle
 void AudioEngine::calculateDutyCycle() {
-  // Map amplitude (0-100) to duty cycle (0-MAX_DUTY_CYCLE)
-  dutyCycle = map(currentAmplitude, 0, 100, MIN_DUTY_CYCLE, MAX_DUTY_CYCLE);
+  // Map smoothed amplitude (0-100) to duty cycle (0-MAX_DUTY_CYCLE)
+  // Using smoothedAmplitude instead of currentAmplitude gives smooth transitions
+  dutyCycle = map((int)smoothedAmplitude, 0, 100, MIN_DUTY_CYCLE, MAX_DUTY_CYCLE);
   dutyCycle = constrain(dutyCycle, MIN_DUTY_CYCLE, MAX_DUTY_CYCLE);
 }
 
