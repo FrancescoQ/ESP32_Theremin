@@ -1,134 +1,778 @@
-# Product Brief - ESP32 Homemade Theremin
+# Product Brief v2.0 - ESP32 Advanced Theremin
+
+> **📋 Note on Architecture:** This document describes the **target architecture** for Phases 1-5 of the project. The current implementation (Phase 1) uses a simplified class structure:
+> - `SensorManager` handles VL53L0X sensors (will become VL53L0XManager + SensorCalibration)
+> - `AudioEngine` handles PWM audio (will evolve into Oscillator + AudioMixer + DACOutput + EffectsChain)
+> - `Theremin` orchestrates the system
+>
+> See the actual codebase for current implementation details. This document serves as the roadmap and reference for future development.
 
 ## 1. Project Overview
 
-**Project Name:** ESP32 Theremin  
-**Type:** DIY Electronic Musical Instrument  
-**Goal:** Create a simplified theremin using ESP32 and proximity sensors to control frequency and volume of an audio signal.
+**Project Name:** ESP32 Advanced Theremin
+**Type:** DIY Performance Electronic Musical Instrument
+**Goal:** Create a professional-grade theremin using ESP32 and Time-of-Flight sensors with multiple oscillators, effects, and versatile I/O options for live performance and recording.
 
-## 2. Concept
+**Current Status:**
+- ✅ Wokwi simulation functional (2 potentiometers + buzzer)
+- ✅ Code refactored with class architecture for scalability
+- 🔄 Ready for hardware implementation phase
 
-A homemade theremin that leverages ESP32 capabilities to detect hand distance via sensors and translate it into musical parameters (pitch and volume), producing sound through a piezoelectric buzzer or speaker.
+---
+
+## 2. Evolution from v1.0
+
+This version represents a significant evolution from the initial educational prototype:
+
+**From:** Simple proof-of-concept with basic pitch/volume control
+**To:** Performance-ready instrument with multiple oscillators, effects, and professional I/O
+
+**Key Philosophy Shift:**
+- v1.0: Learning tool for ESP32 + I2C + basic audio
+- v2.0: **Playable musical instrument** with THE TONE™ in mind 🎸
+
+---
 
 ## 3. Functional Requirements
 
-### Core Features
-- **Frequency Control:** One sensor detects hand distance and modulates sound frequency (pitch)
-- **Volume Control:** A second sensor detects distance and controls sound intensity
-- **Audio Generation:** Output through piezo buzzer or small speaker
-- **Real-time Response:** Minimal latency between movement and sound change
+### Core Features (Phase 1-2)
+- **Dual Sensor Control:** VL53L0X sensors for pitch and volume via hand distance
+- **Single Oscillator:** Selectable waveforms (Sine/Square/Sawtooth) via rotary switch
+- **Octave Control:** -1/Normal/+1 octave switching per oscillator
+- **Audio Output:** Internal DAC → PAM8403 amplifier → 3W 8Ω speaker
+- **Real-time Response:** Target latency <20ms hand-to-sound
 
-### Optional Features (Future)
-- Selection of different waveforms (sine, square, sawtooth)
-- Preset saving
-- LED visualization of active range
-- Manual sensor calibration
-- Audio output to external amplifier
+### Advanced Features (Phase 3-5)
+- **Multiple Oscillators:** 2-3 independent oscillators (CPU-dependent)
+- **Visual Feedback:** 2x WS2812B LED strips (8 LEDs each) as sensor range meters
+- **Professional I/O:** 6.35mm jack line-out for external amplifiers/mixers
+- **Effects Chain:** Delay, Chorus, (Reverb if CPU permits)
+- **OLED Display:** SSD1306 0.96" showing waveform/CPU load/settings
+- **Preset System:** (Future) Save/load configurations
 
-## 4. Technical Specifications
+### Optional/Future Features
+- Headphone output with proper attenuation (low priority - HX Stomp available)
+- MIDI out (USB or DIN)
+- CV/Gate for modular integration
+- Expression pedal input
+- Tap tempo for effects
 
-### Main Hardware
-- **Microcontroller:** ESP32 (any Dev Board variant)
-- **Proximity Sensors:** 2x VL53L0X Time-of-Flight laser sensors
-- **Audio Output:** Passive piezoelectric buzzer (alternative: DAC + mini speaker)
-- **Power Supply:** USB (5V) or Li-Po battery 3.7V
+---
 
-### Sensor Choice
+## 4. Technical Architecture
 
-**Selected Sensor: VL53L0X (Time-of-Flight Laser)**
+### 4.1 Hardware Components
 
-**Characteristics:**
-- Technology: Laser ToF (Time of Flight)
-- Range: 30-1000mm (optimal 50-500mm for theremin)
-- Interface: I2C
-- Precision: ±3% (excellent for musical application)
-- Speed: Very fast continuous readings (<30ms)
-- Dimensions: Very compact (breakout module ~15x10mm)
+#### Main Processing
+- **Microcontroller:** ESP32 DevKit (dual-core, 240MHz, 520KB RAM)
+- **Power Supply:** 5V 10A dedicated PSU with terminal blocks for distribution
 
-**Advantages for the Project:**
-- No mutual interference between the two sensors
-- Very stable and precise readings
-- Perfect range for musical gestures
-- Two sensors on the same I2C bus (configurable addresses)
-- Well-supported Arduino libraries (Adafruit VL53L0X)
+#### Sensing & Control
+- **Proximity Sensors:** 2x VL53L0X Time-of-Flight (I2C addresses 0x29, 0x30)
+- **GPIO Expander:** MCP23017 (I2C, 16 additional GPIO for switches)
+- **Control Switches:**
+  - 3x Rotary 4-position (waveform: Off/Sine/Square/Saw per oscillator)
+  - 3x Toggle 3-position (octave: -1/0/+1 per oscillator)
+  - 3x Toggle 2-position (effects: Delay/Chorus/Reverb on/off)
+  - 2x Toggle 2-position (LED meter enable, internal amp enable)
 
-**I2C Notes:**
-- Both VL53L0X sensors have the same default I2C address (0x29)
-- Solution: use XSHUT pins to initialize sensors sequentially and assign different addresses
-- Alternative: use an I2C multiplexer (TCA9548A) if expansion is desired in the future
-
-### Circuit and Connections
-
-**Complete Schematic:**
+#### Audio Chain
 ```
-ESP32                VL53L0X #1 (Pitch)    VL53L0X #2 (Volume)
------                -------------------    --------------------
-3.3V  ─────────────── VCC                   VCC
-GND   ─────────────── GND                   GND
-GPIO21 (SDA) ───┬──── SDA                   SDA
-GPIO22 (SCL) ───┤──── SCL                   SCL
-                │
-GPIO16 ──────────┼──── XSHUT
-GPIO17 ──────────┴─────────────────────── XSHUT
-
-GPIO25 (PWM) ───[100Ω]─── Piezo Buzzer (+)
-GND ───────────────────── Piezo Buzzer (-)
+ESP32 DAC (GPIO25/26) → Split:
+  ├─→ [Volume POT] → PAM8403 → Speaker 8Ω 3W
+  └─→ Jack 6.35mm (line-out, bypass amp)
 ```
 
-**Circuit Components:**
+**Power Distribution with Physical Switches:**
+```
+5V 10A PSU → Terminal Blocks:
+  ├─→ ESP32 (5V pin) → Self-regulated 3.3V for sensors + display
+  ├─→ [SPST Switch] → WS2812B LED strips (~480mA max)
+  └─→ [SPST Switch] → PAM8403 + Speaker (200-500mA)
+                    └─→ [LED indicator] → Shows amp powered status
+```
 
-*Essential:*
-- 1x ESP32 Dev Board
-- 2x VL53L0X breakout modules (with integrated regulator and pull-ups)
-- 1x **PASSIVE** piezoelectric buzzer (not active!)
-- 1x Breadboard 400+ points
-- Male-to-male jumper wires
+**Audio Path Details:**
+- **DAC:** Internal 8-bit (phase 1-2), optional I2S upgrade (MAX98357A/PCM5102)
+- **Sample Rate:** 22-32kHz (sufficient for theremin range, saves CPU)
+- **Internal Amp:** PAM8403 with volume potentiometer, **powered via physical switch** (no GPIO control)
+- **Line Output:** Direct from DAC, pre-amplification (correct level for amp/mixer inputs)
+- **LED Strips:** **Powered via separate physical switch** (no GPIO control, saves power when not needed)
 
-*Optional but recommended:*
-- 1x 100-220Ω Resistor (buzzer protection)
-- 2x 4.7kΩ Resistor (additional I2C pull-ups, only if modules don't have them)
-- 2x LED + 2x 220Ω Resistor (visual feedback)
+#### Visual Feedback
+- **LED Meters:** 2x WS2812B strips (8 LEDs each) showing sensor range
+- **Display:** SSD1306 0.96" OLED (128x64, I2C)
+- **Status LEDs:** Internal amp on/off indicator
 
-**Circuit Notes:**
-- VL53L0X breakout modules already include 3.3V regulator and I2C pull-ups (typically 10kΩ)
-- Total power consumption: ~60mA, easily manageable by ESP32 via USB
-- Keep I2C cables short (<20cm) for stability
-- Passive buzzer can be identified by visible components inside (oscillator)
+#### Power Distribution
+```
+5V 10A PSU → Terminal Blocks:
+  ├─→ ESP32 (5V pin) → Self-regulated 3.3V for sensors + display
+  ├─→ WS2812B LED strips (switchable, ~480mA max)
+  └─→ PAM8403 + Speaker (switchable, 200-500mA)
+```
 
-**ESP32 GPIO Pins Used:**
-- GPIO21: SDA (I2C Data)
-- GPIO22: SCL (I2C Clock)
-- GPIO16: XSHUT sensor #1
-- GPIO17: XSHUT sensor #2
-- GPIO25: PWM for buzzer (can be changed to any PWM pin)
+### 4.2 I2C Bus Architecture
 
-### Output Audio
+**I2C Device Map:**
+| Device | Address | Update Rate | Priority |
+|--------|---------|-------------|----------|
+| VL53L0X #1 (Pitch) | 0x30 | Continuous (~30ms) | CRITICAL |
+| VL53L0X #2 (Volume) | 0x29 | Continuous (~30ms) | CRITICAL |
+| MCP23017 (GPIO) | 0x20 | Event-driven (interrupt) | MEDIUM |
+| SSD1306 (Display) | 0x3C | 20-30Hz | LOW |
 
-**Option A - Passive Piezo Buzzer:**
-- Pro: Very simple, economical
-- Con: Limited audio quality, fixed volume
+**I2C Bus Load Management:**
+- VL53L0X sensors: Continuous polling (unavoidable, ~30ms per reading)
+- MCP23017: Interrupt-driven, reads only on switch change
+- Display: Throttled to 20-30Hz refresh (not real-time)
+- Total estimated bus load: ~40-50% (acceptable)
 
-**Option B - ESP32 Internal DAC + Speaker:**
-- Pro: Better audio quality, real volume control
-- Con: Requires amplification circuit, more complex
+**Note:** WS2812B LEDs use GPIO data line (not I2C), no bus impact.
 
-## 5. Estimated Operating Ranges
+### 4.3 GPIO Pin Assignment
 
-- **Frequency sensor distance:** 5-40 cm (useful musical range)
-- **Frequency range:** 100-2000 Hz (approximately 4 octaves)
-- **Volume sensor distance:** 5-30 cm
-- **Volume range:** 0-100% (PWM duty cycle)
+**ESP32 Pins:**
+```
+GPIO21 (SDA)     → I2C Data (sensors, expander, display)
+GPIO22 (SCL)     → I2C Clock
+GPIO16           → VL53L0X #1 XSHUT (address config)
+GPIO17           → VL53L0X #2 XSHUT (address config)
+GPIO25           → DAC Output (audio)
+GPIO26           → (Reserved for future stereo/second DAC channel)
+GPIO18           → WS2812B LED Strip #1 (pitch meter)
+GPIO19           → WS2812B LED Strip #2 (volume meter)
+```
 
-## 6. Software Architecture (High-Level)
+**Note:** Amplifier and LED strip power are controlled by physical SPST switches on 5V power rails (hardware-only, no software control needed).
 
-### Development Environment
+**MCP23017 Pins (via I2C):**
+- GPA0-GPA7: Oscillator waveform rotary switches (4-pos × 3 = 12 combinations)
+- GPB0-GPB7: Octave switches (3-pos × 3) + Effect switches (3) + LED/Display enable (2)
+
+### 4.4 Software Architecture
+
+#### Development Environment
 - **IDE:** Visual Studio Code
-- **Framework:** Arduino Framework
+- **Framework:** Arduino (ESP32 core)
 - **Build System:** PlatformIO
-- **Simulation:** Wokwi Simulator (VSCode plugin with active license)
-- **Required Libraries:**
-  - `Adafruit_VL53L0X` (ToF sensor management)
-  - `Wire.h` (I2C communication, included in Arduino)
+- **Simulation:** Wokwi (for prototyping/testing before hardware)
+
+#### Code Structure (Refactored)
+```
+src/
+├── main.cpp                    # Main loop and setup
+├── audio/
+│   ├── Oscillator.h/.cpp      # Single oscillator class (waveform generation)
+│   ├── AudioMixer.h/.cpp      # Mix multiple oscillators
+│   ├── EffectsChain.h/.cpp    # Delay, Chorus, Reverb
+│   └── DACOutput.h/.cpp       # DAC abstraction (internal/I2S)
+├── sensors/
+│   ├── VL53L0XManager.h/.cpp  # Dual sensor handling with XSHUT init
+│   └── SensorCalibration.h    # Range mapping and smoothing
+├── io/
+│   ├── SwitchController.h/.cpp # MCP23017 interrupt handling
+│   └── LEDMeter.h/.cpp        # WS2812B visualization
+├── ui/
+│   └── DisplayManager.h/.cpp  # OLED rendering (CPU/waveform/presets)
+└── utils/
+    ├── PerformanceMonitor.h   # CPU/RAM tracking
+    └── Config.h               # Constants and pin definitions
+```
+
+#### Key Algorithms
+
+**Oscillator Implementation (Wavetable Lookup):**
+```cpp
+class Oscillator {
+  private:
+    float phase;                // Current phase (0.0 - 1.0)
+    float frequency;            // Target frequency (Hz)
+    int16_t* wavetable;         // Pre-computed waveform (1024 samples)
+
+  public:
+    int16_t getNextSample(float sampleRate) {
+      int index = (int)(phase * WAVETABLE_SIZE);
+      phase += frequency / sampleRate;
+      if (phase >= 1.0) phase -= 1.0;
+      return wavetable[index];
+    }
+};
+```
+
+**Why Wavetable vs Real-Time Calculation:**
+- ✅ ~10x faster (simple array lookup + interpolation)
+- ✅ Predictable CPU load
+- ✅ Easy to add complex waveforms (arbitrary shapes)
+- ❌ Uses ~3-4KB RAM per oscillator (acceptable with 520KB available)
+
+**Distance → Frequency Mapping:**
+```cpp
+// Exponential mapping for musical scale feel
+float frequency = MIN_FREQ * pow(2.0, (distance / RANGE) * OCTAVES);
+
+// With smoothing (moving average)
+smoothedDistance = (smoothedDistance * 0.8) + (rawDistance * 0.2);
+```
+
+**Effects Implementation:**
+
+*Delay:*
+```cpp
+// Circular buffer
+delaySample = delayBuffer[readPtr];
+delayBuffer[writePtr] = inputSample + (delaySample * feedback);
+output = inputSample + (delaySample * mix);
+```
+
+*Chorus:*
+```cpp
+// Modulated delay with LFO
+delayTime = baseDelay + (LFO_sin * modDepth);
+output = inputSample + delayedSample(delayTime) * mix;
+```
+
+*Reverb (Freeverb - CPU intensive):*
+- 8x parallel comb filters
+- 4x series allpass filters
+- Estimated CPU load: 30-50% (may be prohibitive with 3 oscillators)
+
+#### FreeRTOS Task Architecture
+
+```
+Core 0 (High Priority - Audio):
+├── Audio Generation Task (10kHz, highest priority)
+│   ├── Read sensors (throttled to avoid jitter)
+│   ├── Generate oscillator samples
+│   ├── Apply effects chain
+│   └── Output to DAC
+└── LED Update Task (60Hz)
+
+Core 1 (Lower Priority - UI/Control):
+├── Display Update Task (20-30Hz)
+├── Switch Polling Task (event-driven via interrupt)
+└── Performance Monitoring Task (1Hz)
+```
+
+**Latency Budget:**
+- Sensor reading: ~30ms (VL53L0X hardware limit)
+- Processing + DAC output: <5ms target
+- **Total system latency: <35ms** (acceptable for musical performance)
+
+---
+
+### 4.5 Dynamic CPU Resource Management
+
+**Key Design Feature: Real-time CPU Load Balancing**
+
+Each oscillator can be set to **OFF** via its rotary switch (4-position: Off/Sine/Square/Saw). When set to OFF, the oscillator consumes **near-zero CPU** (<0.1% vs ~15% when active) through early-return optimization:
+
+```cpp
+class Oscillator {
+  WaveformType waveform; // OFF, SINE, SQUARE, SAW
+
+  int16_t getNextSample() {
+    if (waveform == OFF) {
+      return 0;  // ← IMMEDIATE RETURN, no calculations!
+    }
+
+    // Only execute if oscillator is active
+    int index = (int)(phase * WAVETABLE_SIZE);
+    phase += frequency / sampleRate;
+    if (phase >= 1.0) phase -= 1.0;
+    return wavetable[index];
+  }
+};
+```
+
+**Performance Implications:**
+
+| Configuration | Active Oscillators | Effects Active | Est. CPU Load | Status |
+|---------------|-------------------|----------------|---------------|--------|
+| **Ambient Mode** | 1 (Sine) | Delay + Reverb | ~50-60% | ✅ Safe |
+| **Rich Texture** | 3 (all waveforms) | None | ~45-55% | ✅ Safe |
+| **Balanced** | 2 (Sine + Saw) | Delay + Chorus | ~55-70% | ✅ Safe |
+| **Effect-Heavy** | 1 (any) | Delay + Chorus + Reverb | ~60-75% | ⚠️ Test |
+| **Maximum Power** | 3 (all) | Delay + Chorus | ~70-85% | ⚠️ May glitch |
+
+**Real-time Adaptation Strategy:**
+
+This design allows **dynamic CPU allocation** during live performance:
+
+1. **Need heavy effects?** → Disable 1-2 oscillators, free up ~30% CPU for reverb
+2. **Want thick harmonic texture?** → Enable all 3 oscillators, disable effects
+3. **Experiencing glitches?** → Immediately switch oscillator(s) to OFF without restarting
+4. **Musical context changes?** → Adjust oscillator/effect balance on-the-fly
+
+**Example Performance Scenarios:**
+
+```
+Song Intro (atmospheric):
+→ OSC1: SINE, OSC2: OFF, OSC3: OFF
+→ Effects: Delay + Reverb ON
+→ CPU: ~50-60% (plenty of headroom)
+
+Verse (rhythmic texture):
+→ OSC1: SQUARE, OSC2: SAW, OSC3: OFF
+→ Effects: Delay ON, others OFF
+→ CPU: ~40-50% (very stable)
+
+Chorus (wall of sound):
+→ OSC1: SINE, OSC2: SQUARE, OSC3: SAW
+→ Effects: Delay + Chorus ON
+→ CPU: ~70-80% (pushing limits but usable)
+
+Breakdown (spacey):
+→ OSC1: SINE, OSC2: OFF, OSC3: OFF
+→ Effects: ALL ON (Delay + Chorus + Reverb)
+→ CPU: ~70-75% (if reverb implemented)
+```
+
+**Key Advantages:**
+
+✅ **No reboot required** - all changes happen in real-time
+✅ **Graceful degradation** - instantly respond to CPU overload
+✅ **Musical flexibility** - adapt timbre to song structure
+✅ **Learning tool** - understand CPU cost of each feature
+✅ **Future-proof** - same instrument, multiple use cases
+
+**Implementation Detail:**
+
+The mixer can optionally skip inactive oscillators entirely:
+
+```cpp
+int16_t AudioMixer::mixOscillators() {
+  int32_t mix = 0;
+  int activeCount = 0;
+
+  if (osc1.isActive()) { mix += osc1.getNextSample(); activeCount++; }
+  if (osc2.isActive()) { mix += osc2.getNextSample(); activeCount++; }
+  if (osc3.isActive()) { mix += osc3.getNextSample(); activeCount++; }
+
+  // Average only active oscillators (prevents volume drop when disabling)
+  return activeCount > 0 ? (int16_t)(mix / activeCount) : 0;
+}
+```
+
+This ensures:
+- Volume stays consistent regardless of active oscillator count
+- Function call overhead eliminated for OFF oscillators
+- Audio buffer never contains stale data
+
+**Bottom Line:**
+
+The 4-position rotary switches (Off/Sine/Square/Saw) are not just waveform selectors - they're **dynamic CPU allocation controls**. This transforms potential "not enough CPU" limitation into a **performance feature**, allowing the player to make real-time tradeoffs between harmonic complexity and effect depth based on musical needs.
+
+---
+
+## 5. Performance Budget & Benchmarks
+
+### 5.1 CPU Load Estimates (per feature)
+
+| Component | CPU % (estimated) | RAM Usage |
+|-----------|-------------------|-----------|
+| **1 Oscillator (wavetable)** | ~10-15% | ~4KB |
+| **2 Oscillators** | ~20-30% | ~8KB |
+| **3 Oscillators** | ~35-45% | ~12KB |
+| **Delay Effect** | ~5-10% | ~20KB (buffer) |
+| **Chorus Effect** | ~10-15% | ~25KB (buffer) |
+| **Reverb Effect** | ~30-50% | ~40KB (buffers) |
+| **Sensor Reading** | ~5% | <1KB |
+| **LED Update (60Hz)** | ~3% | ~1KB |
+| **Display (30Hz)** | ~2% | ~2KB |
+| **Switch Handling** | <1% | <1KB |
+
+### 5.2 Realistic Configurations
+
+**Configuration A - Conservative (100% safe):**
+- 2 Oscillators + Delay + Chorus
+- Estimated CPU: ~55-70%
+- RAM: ~60KB
+- Status: ✅ **SAFE**
+
+**Configuration B - Target (should work):**
+- 3 Oscillators + Delay + Chorus
+- Estimated CPU: ~65-80%
+- RAM: ~65KB
+- Status: ⚠️ **TEST REQUIRED** (checkpoint after Phase 3)
+
+**Configuration C - Ambitious (risky):**
+- 3 Oscillators + Delay + Chorus + Reverb
+- Estimated CPU: ~85-95%+
+- RAM: ~105KB
+- Status: ❌ **LIKELY TOO HEAVY** (Plan B: remove reverb or 3rd oscillator)
+
+### 5.3 Critical Checkpoints
+
+**CHECKPOINT 1 (After Phase 2):**
+```
+✓ Benchmark 1 oscillator + delay
+✓ Measure actual CPU load and latency
+✓ Verify audio quality at 22kHz sample rate
+→ DECISION: Proceed with 2nd oscillator OR optimize
+```
+
+**CHECKPOINT 2 (After Phase 3):**
+```
+✓ Test 3 oscillators simultaneously
+✓ Add chorus effect
+✓ Monitor for audio dropouts/glitches
+→ DECISION: Keep 3 osc OR drop to 2, proceed with reverb OR skip
+```
+
+**Target Metrics:**
+- CPU usage: <75% sustained (leave headroom for peaks)
+- Audio dropout rate: 0 (critical)
+- Sensor-to-sound latency: <20ms
+- Free RAM: >100KB (for safety)
+
+---
+
+## 6. Development Roadmap
+
+### Phase 0 - Wokwi Virtual Prototyping ✅ COMPLETE
+- [x] Circuit simulation with 2 potentiometers + buzzer
+- [x] Basic pitch/volume control logic
+- [x] Code refactoring with class architecture
+
+### Phase 1 - Hardware Base Implementation 🔄 IN PROGRESS
+**Goal:** Get real sensors + buzzer working on ESP32
+
+**Tasks:**
+- [ ] Setup PlatformIO project with correct libraries
+- [ ] Physical circuit assembly (ESP32 + 2x VL53L0X + passive buzzer)
+- [ ] Test VL53L0X XSHUT sequential initialization (address 0x29 and 0x30)
+- [ ] Verify I2C communication stability
+- [ ] Port Wokwi code to real hardware
+- [ ] Test basic pitch control (1 sensor → PWM frequency)
+
+**Success Criteria:**
+- ✓ Both sensors read distances correctly
+- ✓ Hand movement changes buzzer pitch
+- ✓ No I2C errors or crashes
+- ✓ Latency feels acceptable (<50ms)
+
+**Components Needed:**
+- ESP32 Dev Board
+- 2x VL53L0X breakout modules
+- Passive piezo buzzer
+- Breadboard + jumpers
+- 100Ω resistor (buzzer protection)
+
+---
+
+### Phase 2 - Audio Upgrade: DAC + Amplifier
+**Goal:** Replace buzzer with real audio output (speaker + line-out)
+
+**Tasks:**
+- [ ] Implement first Oscillator class with wavetable (sine/square/saw)
+- [ ] Switch from PWM buzzer to ESP32 internal DAC (GPIO25)
+- [ ] Add PAM8403 amplifier module + 8Ω speaker
+- [ ] Implement octave switching logic (-1/0/+1)
+- [ ] Add 6.35mm jack for line-out (direct from DAC, pre-amp)
+- [ ] Test audio quality and volume levels
+- [ ] **CHECKPOINT 1: Benchmark CPU/RAM with Display monitoring**
+
+**Display Implementation (early for debugging):**
+- [ ] Connect SSD1306 OLED (I2C address 0x3C)
+- [ ] Create DisplayManager class
+- [ ] Show real-time CPU usage % (calculated from processing time)
+- [ ] Show free RAM in KB
+- [ ] Show current frequency and sensor distances
+- [ ] Refresh rate: 20-30Hz (no faster needed)
+
+**Success Criteria:**
+- ✓ Clean audio output (no crackling/distortion)
+- ✓ Speaker and line-out both functional
+- ✓ Octave switching works correctly
+- ✓ **CPU usage <30%** with 1 oscillator + display
+- ✓ **Latency <20ms** measured
+- ✓ Display shows accurate CPU/RAM metrics
+
+**Components Needed:**
+- PAM8403 amplifier module (with volume pot)
+- 8Ω 3W speaker
+- 6.35mm mono jack
+- SSD1306 0.96" OLED display
+- SPST switch (amp enable/disable)
+- LED indicator (amp status)
+
+**Decision Point:**
+- If CPU >40% with 1 osc → investigate optimization before adding more oscillators
+- If latency >30ms → reduce sensor polling rate or optimize audio generation
+
+---
+
+### Phase 3 - Multiple Oscillators Expansion
+**Goal:** Add 2nd and 3rd oscillators with independent controls
+
+**Tasks:**
+- [ ] Implement AudioMixer class (sum multiple oscillator outputs)
+- [ ] Add 2nd Oscillator instance
+- [ ] **BENCHMARK:** Test CPU load with 2 oscillators
+- [ ] If CPU <60%, add 3rd Oscillator
+- [ ] Add MCP23017 I2C GPIO expander
+- [ ] Wire rotary switches for waveform selection (3x 4-position)
+- [ ] Wire toggle switches for octave control (3x 3-position)
+- [ ] Implement SwitchController class with interrupt handling
+- [ ] Test all switch combinations
+- [ ] **CHECKPOINT 2: CPU/RAM with 2-3 oscillators**
+
+**Success Criteria:**
+- ✓ 2 oscillators working: CPU <60%, no audio glitches
+- ✓ 3 oscillators (if attempted): CPU <75%, audio stable
+- ✓ All switches respond correctly via MCP23017
+- ✓ No I2C conflicts between sensors, expander, display
+- ✓ Latency still <20ms
+
+**Components Needed:**
+- MCP23017 I2C expander breakout
+- 3x Rotary switches (4-position, make-before-break)
+- 3x Toggle switches (3-position ON-ON-ON)
+- Resistors for pull-ups (if not on MCP23017 module)
+
+**Decision Point:**
+- **If 3 osc causes CPU >80% or audio glitches:**
+  - **Plan B:** Drop to 2 oscillators permanently
+  - Update BOM and panel layout accordingly
+  - Proceed to Phase 4
+
+---
+
+### Phase 4 - Visual Feedback & Effects
+**Goal:** Add LED meters and first effects (Delay, Chorus)
+
+**Tasks:**
+- [ ] Connect 2x WS2812B LED strips (8 LEDs each)
+- [ ] Implement LEDMeter class (map sensor distance → LED bar graph)
+- [ ] Add toggle switch to enable/disable LED meters
+- [ ] Implement EffectsChain class
+- [ ] Add Delay effect (circular buffer, feedback, mix controls)
+- [ ] Add Chorus effect (modulated delay with LFO)
+- [ ] Wire toggle switches for effect on/off (2-3 switches)
+- [ ] **BENCHMARK:** Test CPU with oscillators + delay + chorus
+- [ ] Update Display to show effect status and waveform preview
+
+**Display Updates:**
+- [ ] Show static waveform of selected oscillator (not real-time audio)
+- [ ] Show effect status (Delay: ON/OFF, Chorus: ON/OFF)
+- [ ] Show current preset info (if implemented)
+- [ ] Keep CPU/RAM monitoring available via menu
+
+**Success Criteria:**
+- ✓ LED meters visually track sensor distances smoothly
+- ✓ Delay and Chorus effects sound good (no artifacts)
+- ✓ **Total CPU <75%** with all features active
+- ✓ Effects can be toggled without audio glitches
+- ✓ Display updates without affecting audio latency
+
+**Components Needed:**
+- 2x WS2812B LED strips (8 LEDs each, or pre-made stick modules)
+- 2-3x Toggle switches (effects on/off)
+- 1x Toggle switch (LED meter enable/disable)
+
+**Decision Point - Reverb:**
+- **If CPU <70% at this stage:**
+  - Attempt to add Freeverb reverb effect
+  - If CPU goes >85% or glitches → remove reverb, keep delay+chorus
+- **If CPU already >75%:**
+  - Skip reverb entirely
+  - Document as "future feature with I2S DAC upgrade"
+
+---
+
+### Phase 5 - Professional I/O & Polish
+**Goal:** Finalize hardware integration and user experience
+
+**Tasks:**
+- [ ] Install physical SPST switch for amp power (on 5V rail to PAM8403)
+- [ ] Install physical SPST switch for LED strip power (on 5V rail)
+- [ ] Wire LED indicator in series with amp power (lights when amp powered)
+- [ ] Label all controls (waveform, octave, effects, volume)
+- [ ] Cable management and strain relief
+- [ ] Test all signal paths:
+  - Internal speaker (amp switch ON)
+  - Line-out to external amp (amp switch ON or OFF, both work)
+  - LED meters (switch ON/OFF)
+- [ ] Final calibration of sensor ranges
+- [ ] Optimize smoothing filters for playability
+- [ ] Document control layout and signal flow
+
+**Optional Enhancements:**
+- [ ] Preset save/load system (store in SPIFFS/EEPROM)
+- [ ] MIDI output implementation (USB MIDI or DIN)
+- [ ] Expression pedal input (for effect parameters)
+- [ ] Tap tempo for delay (with footswitch)
+
+**Success Criteria:**
+- ✓ All I/O paths functional and labeled
+- ✓ Instrument is playable and responsive
+- ✓ Professional appearance and ergonomics
+- ✓ No loose wires or unstable connections
+- ✓ User can switch between all features easily
+
+---
+
+### Phase 6 - Enclosure & Finishing (Future)
+**Goal:** Build proper case and final aesthetics
+
+**Tasks:**
+- [ ] Design enclosure (3D print, laser-cut, or handmade)
+- [ ] Mount sensors at ergonomic height/distance
+- [ ] Create control panel with labeled switches
+- [ ] Install jacks and power connector on rear panel
+- [ ] Internal mounting for ESP32, breadboard, or PCB
+- [ ] Cosmetic finishing (paint, labels, LED diffusers)
+
+**Optional Professional Touches:**
+- Custom PCB (eliminate breadboard)
+- Wooden/metal enclosure (vintage theremin aesthetic)
+- Adjustable sensor mounting arms
+- Foot switch for effects/presets
+- External expression pedal jack
+
+---
+
+### Phase 7 - Future Upgrades (Rabbit Hole Awaits 🐰)
+**Goal:** THE TONE™ perfection (never truly ends)
+
+**Ideas for Future Iterations:**
+- **I2S DAC Upgrade:** Switch to MAX98357A or PCM5102 for 16-bit audio
+- **Reverb Effect:** With better DAC and optimized code
+- **More Waveforms:** Arbitrary wavetables, user-loadable
+- **MIDI In:** Control theremin via MIDI keyboard/sequencer
+- **CV/Gate Out:** Integrate with Eurorack modular system
+- **WiFi Control:** Web interface for remote parameter tweaking
+- **Granular Synthesis:** If you're feeling particularly adventurous
+- **Multi-timbral Mode:** Different oscillators on different MIDI channels
+- **Touch Sensors:** Capacitive touch for additional expression
+- **Headphone Output:** With proper attenuation circuit (low priority for now)
+
+**Note:** These are explicitly "future scope" to avoid feature creep. Current roadmap through Phase 5 is already ambitious!
+
+---
+
+## 7. Bill of Materials (BOM)
+
+### Core Components (Phase 1-2)
+| Component | Quantity | Est. Cost (€) | Notes |
+|-----------|----------|---------------|-------|
+| ESP32 Dev Board | 1 | 5-8 | Any variant (30-pin recommended) |
+| VL53L0X ToF Sensor | 2 | 6-12 | Breakout with regulator + pull-ups |
+| PAM8403 Amplifier | 1 | 1-2 | With volume potentiometer |
+| Speaker 8Ω 3W | 1 | 2-4 | Full-range, ~50mm diameter |
+| SSD1306 OLED 0.96" | 1 | 3-5 | I2C, 128x64 resolution |
+| Passive Piezo Buzzer | 1 | 1 | For Phase 1 testing only |
+| **Subtotal** | | **18-32** | |
+
+### Expansion Components (Phase 3-4)
+| Component | Quantity | Est. Cost (€) | Notes |
+|-----------|----------|---------------|-------|
+| MCP23017 I2C Expander | 1 | 2-3 | Breakout or bare IC + decoupling |
+| Rotary Switch 4-pos | 3 | 6-12 | Waveform selection per oscillator |
+| Toggle Switch 3-pos | 3 | 3-6 | Octave control (ON-ON-ON) |
+| Toggle Switch 2-pos | 5 | 2-5 | Effects, LED, amp enable |
+| WS2812B LED Strip 8-LED | 2 | 4-8 | Or individual addressable LEDs |
+| LED Indicator (amp) | 1 | 0.50 | 3mm or 5mm, any color |
+| 220Ω Resistor (LED) | 1 | 0.10 | Current limiting |
+| **Subtotal** | | **17.6-34.6** | |
+
+### Professional I/O (Phase 5)
+| Component | Quantity | Est. Cost (€) | Notes |
+|-----------|----------|---------------|-------|
+| 6.35mm Mono Jack | 1 | 1-2 | Panel-mount, line-out |
+| SPST Toggle Switch | 2 | 1-2 | Amp power, LED power (on 5V rails) |
+| 3.5mm Stereo Jack | 1 | 1 | (Future) Headphone out |
+| 100Ω + 47Ω Resistors | 2 | 0.20 | (Future) Headphone attenuator |
+| **Subtotal** | | **3.2-5.2** | |
+
+### Power & Connectivity
+| Component | Quantity | Est. Cost (€) | Notes |
+|-----------|----------|---------------|-------|
+| 5V 10A Power Supply | 1 | 10-15 | Dedicated PSU (already owned) |
+| Terminal Blocks | 3-4 | 2-4 | Power distribution |
+| Breadboard 830-point | 1-2 | 5-10 | Or custom PCB later |
+| Jumper Wires (M-M) | 1 pack | 2-3 | Various lengths |
+| Jumper Wires (M-F) | 1 pack | 2-3 | For sensors/modules |
+| **Subtotal** | | **21-35** | (Exclude PSU if owned: 11-20) |
+
+### Miscellaneous
+| Component | Quantity | Est. Cost (€) | Notes |
+|-----------|----------|---------------|-------|
+| 100Ω Resistor (buzzer) | 1 | 0.10 | Protection for Phase 1 |
+| Hookup Wire (22-24 AWG) | 1 spool | 3-5 | Internal wiring |
+| Heat Shrink Tubing | 1 pack | 2-3 | Insulation |
+| Velcro/Mounting Tape | 1 roll | 2-3 | Module mounting |
+| Enclosure (DIY/3D print) | 1 | 0-30 | Depends on approach |
+| **Subtotal** | | **7.1-41.1** | |
+
+### **TOTAL ESTIMATED COST**
+- **Minimum (no enclosure, PSU owned):** €55-80
+- **Typical (basic enclosure, PSU owned):** €75-110
+- **Maximum (professional finish, new PSU):** €90-150
+
+**Note:** Prices are estimates for EU/Italy market. Bulk buying (e.g., AliExpress) can reduce costs by 30-50%.
+
+---
+
+## 8. Risks, Challenges & Mitigation
+
+### 8.1 Technical Risks
+
+| Risk | Likelihood | Impact | Mitigation Strategy |
+|------|------------|--------|---------------------|
+| **CPU overload with 3 oscillators + effects** | HIGH | HIGH | Checkpoint benchmarks after each phase; Plan B: drop to 2 osc or skip reverb |
+| **I2C bus congestion causing latency** | MEDIUM | MEDIUM | Throttle display refresh, use async sensor reads, FreeRTOS task priorities |
+| **Audio glitches/dropouts under load** | MEDIUM | HIGH | Lower sample rate (22kHz), optimize audio loop, test extensively |
+| **VL53L0X sensor noise/jitter** | MEDIUM | MEDIUM | Moving average filter, calibrate dead zones, smooth mapping curves |
+| **MCP23017 interrupt conflicts** | LOW | MEDIUM | Careful ISR design, debounce switches in software |
+| **Power supply noise affecting DAC** | LOW | LOW | Add decoupling caps, separate analog/digital grounds if needed |
+| **WS2812B LEDs causing voltage drops** | LOW | LOW | Separate 5V rail with switch, buffer data line |
+
+### 8.2 Development Challenges
+
+**Challenge:** Balancing feature richness vs. real-time performance
+- **Solution:** Incremental development with mandatory checkpoints
+- **Fallback:** Feature priority list (oscillators > effects > visual feedback)
+
+**Challenge:** Manual switch wiring complexity (17+ connections)
+- **Solution:** Use MCP23017 to consolidate, clear labeling, test each switch individually
+- **Future:** Custom PCB to eliminate breadboard
+
+**Challenge:** Sensor calibration for musical playability
+- **Solution:** Adjustable min/max ranges via serial interface or potentiometers
+- **Testing:** Multiple hand sizes, different lighting conditions
+
+**Challenge:** Enclosure design (sensors must be externally accessible)
+- **Solution:** Modular approach - get electronics working first, case later
+- **Inspiration:** Study classic theremin ergonomics (Moog Etherwave, etc.)
+
+### 8.3 Success Criteria & Testing
+
+**Minimum Viable Instrument (MVI):**
+- ✓ 2 oscillators with sine/square/saw waveforms
+- ✓ Pitch and volume control via sensors (<20ms latency)
+- ✓ Delay effect functional
+- ✓ Line-out produces clean signal for external amp
+- ✓ Internal speaker works for practice
+- ✓ No crashes or audio dropouts in 10-minute session
+
+**Stretch Goals:**
+- ✓ 3 oscillators simultaneously
+- ✓ Chorus effect in addition to delay
+- ✓ LED meters providing visual feedback
+- ✓ Display showing waveform and CPU metrics
+- ✓ Reverb effect (if CPU permits)
+
+**Testing Protocol:**
+- **Unit Tests:** Each class/module tested in isolation
+- **Integration Tests:** Sensors → Audio pipeline → Output
+- **Performance Tests:** CPU/RAM benchmarks at each checkpoint
+- **User Tests:** Playability evaluation by musician (you!)
+
+---
+
+## 9. Software Libraries & Dependencies
 
 ### PlatformIO Configuration
 ```ini
@@ -136,162 +780,379 @@ GND ───────────────────── Piezo Buzzer
 platform = espressif32
 board = esp32dev
 framework = arduino
-lib_deps = 
-    adafruit/Adafruit VL53L0X@^1.2.0
 monitor_speed = 115200
+
+lib_deps =
+    adafruit/Adafruit VL53L0X @ ^1.2.0
+    adafruit/Adafruit MCP23017 @ ^2.3.0
+    adafruit/Adafruit SSD1306 @ ^2.5.7
+    adafruit/Adafruit GFX Library @ ^1.11.5
+    fastled/FastLED @ ^3.6.0
+
+build_flags =
+    -DDEBUG_MODE=1
 ```
 
-### Wokwi Simulation
-Wokwi allows testing code and circuit virtually before assembling real hardware:
-- Complete ESP32 simulation with sensors and components
-- Interactive code debugging
-- Circuit testing without risk of damaging components
-- Rapid prototyping of functionalities
+**Note:** The `build_flags` shown are project-specific. The current implementation uses `-DDEBUG_MODE=1` for custom debug logging and `-DWOKWI_SIMULATION` for simulation builds. The `-DBOARD_HAS_PSRAM` flag is only needed if your ESP32 variant has PSRAM (most standard DevKits do not).
 
-**Note:** Verify VL53L0X availability in Wokwi. If not available, use HC-SR04 ultrasonic sensors to test logic, then migrate to VL53L0X on real hardware.
+### Key Libraries
 
-### Main Program Flow
+| Library | Purpose | Version | License |
+|---------|---------|---------|---------|
+| **Adafruit_VL53L0X** | ToF sensor control | 1.2.0+ | BSD |
+| **Adafruit_MCP23017** | GPIO expander | 2.3.0+ | BSD |
+| **Adafruit_SSD1306** | OLED display | 2.5.7+ | BSD |
+| **Adafruit_GFX** | Graphics primitives | 1.11.5+ | BSD |
+| **FastLED** | WS2812B LED control | 3.6.0+ | MIT |
+| **Wire.h** | I2C communication | Built-in | - |
+| **FreeRTOS** | Multitasking | Built-in (ESP32) | MIT |
 
-```
-Setup:
-├─ I2C Initialization (Wire.begin)
-├─ Sensor #1 Initialization via XSHUT
-│  ├─ XSHUT1 HIGH, XSHUT2 LOW
-│  ├─ Configure sensor #1
-│  └─ Change address to 0x30
-├─ Sensor #2 Initialization via XSHUT
-│  ├─ XSHUT2 HIGH
-│  ├─ Configure sensor #2
-│  └─ Keep address at 0x29
-└─ PWM Setup for buzzer (ledcSetup)
-
-Main Loop:
-├─ Read Sensor #1 @ 0x30 (Pitch)
-├─ Map distance → frequency (e.g., 100-2000 Hz)
-├─ Read Sensor #2 @ 0x29 (Volume)
-├─ Map distance → PWM duty cycle (0-255)
-├─ Tone generation: ledcWriteTone(frequency)
-├─ Volume control: ledcWrite(duty_cycle)
-└─ Optional: value smoothing filter
-```
-
-## 7. Suggested Development Phases
-
-### Phase 0 - Wokwi Simulation (Optional but Recommended)
-- Create Wokwi project with ESP32
-- Test basic logic with available sensors in Wokwi
-- Validate distance → frequency/volume mapping
-- Initial debugging without physical hardware
-- **Note:** If VL53L0X not available in Wokwi, use HC-SR04 for logic
-
-### Phase 1 - Environment Setup and Basic Testing
-- Setup PlatformIO with ESP32 and Arduino framework
-- Test single VL53L0X sensor on real hardware
-- Test simple PWM tone generation on buzzer
-- Verify I2C functionality
-
-### Phase 2 - Dual Sensor Control
-- Implement sequential XSHUT initialization
-- Configure multiple I2C addresses (0x29 and 0x30)
-- Simultaneous reading of both sensors
-- Debug I2C communication
-
-### Phase 3 - Mapping and Audio
-- Map sensor #1 distance → frequency (pitch)
-- Map sensor #2 distance → volume (duty cycle)
-- Real-time tone control integration
-- Calibrate operating ranges
-
-### Phase 4 - Refinement
-- Reading smoothing (moving average or low-pass filter)
-- Fine-tune response curves
-- Handle edge cases (out of range)
-- Latency optimization
-
-### Phase 5 - Enhancement (Optional)
-- Visual LED feedback
-- Preset saving in EEPROM/SPIFFS
-- Waveform selection (if switching to DAC)
-- Dynamic calibration via serial
-- Case and physical ergonomics
-
-## 8. Estimated Materials
-
-### Base Components
-- 1x ESP32 Dev Board (~€5-8)
-- 2x VL53L0X ToF sensor breakout modules (~€3-6 each)
-- 1x **Passive** piezo buzzer (~€1)
-- 1x Breadboard 400+ points (~€3)
-- Male-to-male jumper wires (~€2)
-- 1x 100-220Ω Resistor for buzzer (~€0.10)
-- **Estimated Total:** €17-30
-
-**Optional Components:**
-- 2x I2C pull-up resistors 4.7kΩ (only if not integrated in VL53L0X modules)
-- 2x LED + 2x 220Ω Resistors (sensor status indicators)
-- 100µF Capacitor (stabilization, rarely necessary)
-
-### For Advanced Version
-- 8Ω Mini speaker
-- Amplifier (PAM8403 or similar)
-- Potentiometer for calibration
-- 3D printed or handmade case
-
-## 9. Risks and Challenges
-
-- **I2C Addressing:** Both VL53L0X have the same default address, sequential initialization with XSHUT pins required
-- **Reading Jitter:** Possible need for software filters to stabilize (moving average or low-pass filter)
-- **Limited Buzzer Range:** Audio quality not comparable to real theremin
-- **Latency:** Must be minimized for fluid musical experience
-- **I2C Consumption:** Watch bus speed for fast simultaneous readings
-
-## 10. Success Criteria
-
-The project is considered successful if:
-- ✓ Both sensors correctly detect distance
-- ✓ Pitch changes continuously and predictably
-- ✓ Volume is independently controllable
-- ✓ Latency is imperceptible (<50ms)
-- ✓ System is stable and reproducible
-
-## 11. Next Steps
-
-1. **Development Environment Setup**
-   - Install VSCode + PlatformIO extension
-   - Verify Wokwi plugin and active license
-   - Create new ESP32 project with Arduino framework
-   - Configure platformio.ini with necessary libraries
-
-2. **Virtual Prototyping (Wokwi)**
-   - Create diagram.json and wokwi.toml for simulation
-   - Test basic logic with simulated sensors
-   - Validate mapping and virtual audio control
-   - Initial debugging without physical components
-
-3. **Order/Acquire Physical Components**
-   - 1x ESP32 Dev Board
-   - 2x VL53L0X breakout modules
-   - 1x Passive piezo buzzer
-   - Breadboard and jumper wires
-   - 100-220Ω Resistor
-
-4. **Real Component Testing**
-   - Upload blink test to ESP32
-   - Test single VL53L0X with Adafruit examples
-   - Test PWM buzzer with simple tones
-   - Verify I2C bus
-
-5. **Physical Prototype Implementation**
-   - Migrate code from Wokwi to hardware
-   - Dual sensor initialization with XSHUT
-   - Real-time reading + audio integration
-   - Iteration and calibration
-
-6. **Refinement and Case**
-   - Smoothing and optimizations
-   - Build physical support for sensors
-   - Musical testing and fine-tuning
+**Notes:**
+- All libraries available via PlatformIO Library Manager
+- Adafruit libraries well-documented with examples
+- FastLED supports multiple LED types (future-proof)
 
 ---
 
-**Note:** This is an experimental educational project. A professional-quality theremin would require LC oscillator circuits and capacitive antennas, but this digital version is perfect for learning and having fun with ESP32, I2C, and audio synthesis!
+## 10. Future Considerations & Open Questions
+
+### 10.1 Headphone Output (Deferred)
+
+**Current Status:** LOW PRIORITY - HX Stomp available as workaround
+
+**If implemented in future:**
+- Requires attenuator circuit (100Ω + 47Ω to ground)
+- 3.5mm TRS jack with switching contact to mute speaker
+- Separate volume control (or PAM8403 channel R repurposed)
+- **Risk:** Easy to damage headphones if attenuation incorrect
+- **Recommendation:** Only implement after thorough testing with cheap headphones
+
+**Reference Design:**
+```
+DAC → [100Ω] → Jack 3.5mm (L+R) → Headphones 32Ω
+              ↓
+            [47Ω]
+              ↓
+             GND
+```
+
+**Decision:** Address in Phase 7 or later, not critical for initial builds.
+
+### 10.2 I2S DAC Upgrade Path
+
+**When to consider:**
+- Audio quality becomes limiting factor
+- Want to implement high-quality reverb
+- Need true stereo output (panning oscillators)
+- Performing live and need professional audio specs
+
+**Recommended I2S DACs:**
+- **MAX98357A:** DAC + 3W amp, I2S, ~€5 (all-in-one solution)
+- **PCM5102:** Stereo DAC, I2S, excellent SNR, ~€4 (requires external amp)
+- **UDA1334A:** Stereo DAC, I2S, Adafruit breakout, ~€8
+
+**Migration complexity:** MEDIUM
+- Change from `dacWrite()` to `i2s_write()`
+- Requires buffer management (I2S is DMA-based)
+- Better CPU efficiency (DMA offloads audio output)
+- More complex debugging
+
+### 10.3 MIDI Implementation Ideas
+
+**MIDI Out - Theremin to DAW/Synth:**
+- Send pitch (MIDI note number) and velocity (volume sensor)
+- Pitch bend for microtonal expression
+- Control change (CC) messages for effects parameters
+- **Use case:** Use theremin as MIDI controller for soft synths
+
+**MIDI In - External Control:**
+- MIDI notes trigger specific frequencies (quantized mode)
+- MIDI CC controls effect parameters (delay time, chorus depth)
+- **Use case:** Integrate into MIDI setup, sync with sequencers
+
+**Libraries:** `MIDI.h` (USB MIDI) or `FortySevenEffects MIDI Library` (DIN)
+
+### 10.4 Alternative Sensor Options (Future R&D)
+
+**Current:** VL53L0X (30-1000mm range, laser ToF)
+
+**Alternatives if VL53L0X proves limiting:**
+- **VL53L1X:** Longer range (up to 4m), faster readings
+- **VL53L4CD:** Wide field-of-view (18°), better hand detection
+- **APDS-9960:** Gesture sensor (proximity + RGB + gesture recognition)
+- **Ultrasonic (HC-SR04):** Cheaper but noisier, tested in Wokwi
+
+**Decision:** Stick with VL53L0X for v2.0, evaluate alternatives only if major issues arise.
+
+---
+
+## 11. Design Philosophy & Artistic Vision
+
+### Why This Project Exists
+
+**Beyond Technical Challenge:**
+This isn't just about making sounds with an ESP32. It's about:
+- **Expressive Performance:** Real-time gestural control, no buttons/knobs mid-performance
+- **Sonic Exploration:** Multiple oscillators and effects for timbral variety
+- **The Tone™ Quest:** As a guitarist, chasing that perfect sound never ends
+- **DIY Ethos:** Building your own instrument creates deeper connection to music
+
+**Inspiration:**
+- Classic theremins (Moog Etherwave, Theremin World)
+- Modular synths (Eurorack philosophy of building custom signal chains)
+- Guitar pedal culture (stacking effects for unique tones)
+- ESP32 audio projects (Talkie, AudioInI2S, Mozzi)
+
+### Musical Applications
+
+**Genre Fit:**
+- Ambient / Drone (sustained tones, slow evolving textures)
+- Experimental / Noise (harsh waveforms, heavy effects)
+- Electronic / Synthwave (retro vibes, leads over backing tracks)
+- Soundtracks / Scoring (eerie, otherworldly atmospheres)
+- Live Looping (with external looper pedal via line-out)
+
+**Integration with Existing Setup:**
+```
+Theremin Line-Out → HX Stomp → FRFR Speaker / DAW
+                     ↓
+                Additional FX, IR loading, recording
+```
+
+The theremin becomes another "instrument" in your rig, processable like guitar.
+
+---
+
+## 12. Documentation & Knowledge Transfer
+
+### 12.1 Project Documentation Requirements
+
+**Code Documentation:**
+- Inline comments for complex algorithms (wavetable generation, effects DSP)
+- Header file comments (class purpose, public API usage)
+- README.md with build instructions and dependencies
+
+**Hardware Documentation:**
+- Fritzing diagram (breadboard view for Phase 1-4)
+- Schematic diagram (Eagle/KiCad for Phase 5+)
+- Component placement photos (top/bottom of breadboard)
+- Pin assignment table (quick reference)
+
+**User Manual (Future):**
+- Control layout diagram (what each switch does)
+- Quick start guide (power on, basic operation)
+- Calibration procedure (adjusting sensor ranges)
+- Troubleshooting guide (common issues and fixes)
+
+### 12.2 Lessons Learned Log
+
+**Maintain journal for:**
+- What worked better than expected (e.g., "VL53L0X more stable than thought")
+- What didn't work (e.g., "Reverb too CPU-heavy, removed")
+- Design decisions and rationale (why DAC internal vs I2S)
+- Performance optimization tricks discovered
+- Gotchas and workarounds (e.g., "MCP23017 interrupt pin needs pull-up")
+
+This becomes invaluable for:
+- Debugging later issues
+- Sharing knowledge with community (blog post, GitHub)
+- Planning v3.0 improvements
+
+---
+
+## 13. Community & Open Source
+
+### Sharing the Project
+
+**If/When Published:**
+- **GitHub Repository:** Full code, schematics, BOM, build log
+- **License:** MIT or GPL (for code), CERN-OHL (for hardware)
+- **Video Demo:** Playing the instrument, showcasing features
+- **Blog Post:** Technical deep-dive, challenges, solutions
+- **Platforms:** Hackaday, Arduino Project Hub, Reddit (r/synthdiy, r/esp32)
+
+**What Makes This Project Shareable:**
+- Clear incremental roadmap (others can stop at any phase)
+- Realistic performance budgets (managing expectations)
+- Multiple fallback options (Plan B for CPU issues)
+- Detailed BOM with cost estimates
+- Beginner-friendly yet extensible architecture
+
+**Potential Community Contributions:**
+- Alternative enclosure designs (3D printable STLs)
+- Additional effect algorithms
+- Preset libraries
+- MIDI implementation variants
+- I2S DAC integration examples
+
+---
+
+## 14. Success Metrics & Project Completion
+
+### Minimum Viable Product (MVP) Definition
+
+**Phase 1-2 Success = MVP Complete:**
+- ✓ ESP32 + 2 sensors + DAC + amp + speaker fully functional
+- ✓ 1 oscillator with 3 waveforms + octave switching
+- ✓ Line-out works for external amp
+- ✓ Display shows CPU/RAM metrics
+- ✓ Latency <20ms
+- ✓ Can play simple melodies controllably
+
+**At this point, you have a WORKING INSTRUMENT.** Everything beyond is enhancement.
+
+### Full Feature Set (Phases 3-5)
+
+**Complete when:**
+- 2-3 oscillators (whichever CPU permits)
+- Delay + Chorus effects (Reverb optional)
+- LED visual feedback
+- All switches operational via MCP23017
+- Professional I/O (line-out, amp enable/disable)
+- No critical bugs or stability issues
+
+**This is a PERFORMANCE-READY INSTRUMENT.**
+
+### The Rabbit Hole (Phase 7+)
+
+**There is no "done."**
+
+Welcome to THE TONE™ quest - there's always:
+- One more oscillator to add
+- One more effect to implement
+- Better DAC, better amp, better speakers
+- MIDI, CV, WiFi, Bluetooth...
+- Custom PCB, custom enclosure, custom everything
+
+**But that's the beauty of it.** 🐰🎸
+
+---
+
+## 15. Next Immediate Actions
+
+### Week 1-2: Hardware Assembly (Phase 1)
+1. **Order/gather components:**
+   - ESP32, VL53L0X (x2), buzzer, breadboard, wires
+   - SSD1306 display (for early CPU monitoring)
+
+2. **Setup development environment:**
+   - Install PlatformIO in VSCode
+   - Create new project with platformio.ini config
+   - Test blink sketch on ESP32
+
+3. **Build Phase 1 circuit:**
+   - ESP32 + 2x VL53L0X with XSHUT addressing
+   - Passive buzzer on GPIO25 (PWM)
+   - Test I2C communication with both sensors
+
+4. **Port Wokwi code to hardware:**
+   - Adapt sensor reading logic
+   - Test distance → frequency mapping
+   - Verify latency is acceptable
+
+### Week 3-4: Audio Upgrade (Phase 2)
+1. **Order audio components:**
+   - PAM8403, speaker 8Ω 3W, jack 6.35mm
+
+2. **Implement Oscillator class:**
+   - Pre-generate wavetables (sine, square, saw)
+   - Test wavetable lookup performance
+
+3. **Switch from PWM to DAC output:**
+   - Refactor audio generation loop
+   - Add PAM8403 + speaker
+   - Install line-out jack
+
+4. **Add display for monitoring:**
+   - Connect SSD1306 (I2C)
+   - Implement CPU usage calculation
+   - Show real-time metrics
+
+5. **CHECKPOINT 1:**
+   - Measure CPU %, RAM usage, latency
+   - Document findings
+   - Decide: proceed to Phase 3 or optimize?
+
+### Month 2: Expansion & Effects (Phases 3-4)
+- Follow roadmap based on Phase 2 results
+- Incremental addition of oscillators
+- Implement effects one at a time
+- Continuous performance monitoring
+
+---
+
+## 16. Closing Notes
+
+### This Is a Journey, Not a Destination
+
+You started with "let's make a simple theremin" and now you're designing a multi-oscillator synthesizer with effects, visual feedback, and professional I/O. **This is the way.** 🎸
+
+**Key Takeaways:**
+1. **Incremental development saves sanity** - checkpoints prevent runaway feature creep
+2. **Performance budgets are your friend** - know your limits before you hit them
+3. **Plan B is not failure** - dropping from 3 to 2 oscillators still makes a great instrument
+4. **Documentation is future-you's best friend** - you'll thank yourself in 6 months
+5. **The Tone™ is a journey** - enjoy the process, don't stress the perfect endpoint
+
+### Final Wisdom from a Fellow Tone Chaser
+
+> "The perfect tone doesn't exist. But the search for it is where all the fun happens. And hey, at least you're building your own gear now - that's already 10x cooler than just buying pedals."
+>
+> — Every guitarist who learned to solder 😄
+
+**Now go make some weird, wonderful sounds!** 🎶⚡
+
+---
+
+**Document Version:** 2.0
+**Last Updated:** 2025-01-XX (update date when finalizing)
+**Status:** Living Document (will evolve with project)
+**Author:** [Your Name]
+**Contact:** [Email/GitHub]
+
+---
+
+## Appendix A - Quick Reference Tables
+
+### A.1 Pin Assignment Summary
+| Function | ESP32 Pin | Connected To | Notes |
+|----------|-----------|--------------|-------|
+| I2C SDA | GPIO21 | VL53L0X, MCP23017, SSD1306 | Shared bus |
+| I2C SCL | GPIO22 | VL53L0X, MCP23017, SSD1306 | Shared bus |
+| Sensor 1 XSHUT | GPIO16 | VL53L0X #1 | Address config |
+| Sensor 2 XSHUT | GPIO17 | VL53L0X #2 | Address config |
+| DAC Out | GPIO25 | PAM8403 IN, Jack 6.35mm | Audio signal |
+| LED Strip 1 | GPIO18 | WS2812B (pitch meter) | Data line |
+| LED Strip 2 | GPIO19 | WS2812B (volume meter) | Data line |
+
+**Hardware Switches (not GPIO-controlled):**
+- PAM8403 amplifier power: Physical SPST switch on 5V rail
+- WS2812B LED strips power: Physical SPST switch on 5V rail
+- Amp status LED: Wired in series with amp power (lights when amp powered)
+
+### A.2 I2C Address Map
+| Device | Address (Hex) | Configurable? |
+|--------|---------------|---------------|
+| VL53L0X #1 (Pitch) | 0x30 | Yes (via XSHUT) |
+| VL53L0X #2 (Volume) | 0x29 | Default |
+| MCP23017 (GPIO) | 0x20 | Yes (via A0-A2 pins) |
+| SSD1306 (Display) | 0x3C | Usually fixed |
+
+### A.3 Effect Parameters Reference
+| Effect | Parameter | Range | Description |
+|--------|-----------|-------|-------------|
+| **Delay** | Time | 50-1000ms | Delay buffer length |
+| | Feedback | 0-95% | Repeating decay rate |
+| | Mix | 0-100% | Wet/dry balance |
+| **Chorus** | Rate | 0.1-5Hz | LFO modulation speed |
+| | Depth | 0-50ms | Pitch variation amount |
+| | Mix | 0-100% | Wet/dry balance |
+| **Reverb** | Room Size | 0.1-1.0 | Virtual room dimensions |
+| (optional) | Damping | 0.1-1.0 | High frequency rolloff |
+| | Mix | 0-100% | Wet/dry balance |
+
+---
+
+**END OF DOCUMENT**
+
+*May your oscillators stay in tune and your CPU stay under 75%. Happy hacking! 🎵🔧*
