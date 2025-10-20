@@ -33,6 +33,7 @@ class OTAManager {
   WebServer server;
   String apSSID;
   String apPassword;
+  int enablePin;
   bool isInitialized;
 
  public:
@@ -40,8 +41,9 @@ class OTAManager {
    * Constructor
    * @param ssid Access Point name (visible WiFi network name)
    * @param apPass Access Point password (leave empty for open network, min 8 chars if used)
+   * @param buttonPin GPIO pin for enable button (-1 = always enable, >=0 = check button on boot)
    */
-  OTAManager(const char* ssid, const char* apPass = "");
+  OTAManager(const char* ssid, const char* apPass = "", int buttonPin = -1);
 
   /**
    * Initialize WiFi AP and ElegantOTA server

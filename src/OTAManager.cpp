@@ -11,11 +11,24 @@
 #include "Debug.h"
 
 // Constructor
-OTAManager::OTAManager(const char* ssid, const char* apPass)
-    : server(80), apSSID(ssid), apPassword(apPass), isInitialized(false) {}
+OTAManager::OTAManager(const char* ssid, const char* apPass, int buttonPin)
+    : server(80), apSSID(ssid), apPassword(apPass), enablePin(buttonPin),
+      isInitialized(false) {}
 
 // Initialize WiFi AP and ElegantOTA
 bool OTAManager::begin(const char* otaUser, const char* otaPass) {
+  // Check enable pin if configured
+  if (enablePin >= 0) {
+    pinMode(enablePin, INPUT_PULLUP);
+    if (digitalRead(enablePin) != LOW) {
+      // Button not pressed during boot
+      DEBUG_PRINTLN("[OTA] Enable button not pressed, OTA disabled");
+      isInitialized = false;
+      return false;
+    }
+    DEBUG_PRINTLN("[OTA] Enable button detected, starting OTA...");
+  }
+
   DEBUG_PRINTLN("\n=== OTA Manager Initialization ===");
 
   // Configure and start Access Point

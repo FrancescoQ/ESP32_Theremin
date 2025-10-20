@@ -16,17 +16,23 @@
 #include "Theremin.h"
 
 #ifdef ENABLE_OTA
-  #include "OTAManager.h"
+#include "OTAManager.h"
+
+// OTA Enable Pin Configuration
+// Set to -1 to always enable OTA (no button check)
+// Set to GPIO pin number (e.g., 0, 2, 4) to require button press during boot
+#define OTA_ENABLE_PIN -1  // -1 = always active, change to GPIO pin when decided
 #endif
 
 // Create theremin instance
 Theremin theremin;
 
 #ifdef ENABLE_OTA
-  // Create OTA manager instance
-  // AP Name: "Theremin-OTA", AP Password: "" (open network)
-  // OTA Auth: username "admin", password "theremin"
-  OTAManager ota("Theremin-OTA", "");
+// Create OTA manager instance
+// AP Name: "Theremin-OTA", AP Password: "" (open network)
+// OTA Auth: username "admin", password "theremin"
+// Enable pin: OTA_ENABLE_PIN (-1 = always active, >=0 = button on that GPIO)
+OTAManager ota("Theremin-OTA", "", OTA_ENABLE_PIN);
 #endif
 
 void setup() {
