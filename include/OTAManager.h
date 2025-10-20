@@ -24,50 +24,50 @@
 
 #ifdef ENABLE_OTA
 
-#include <WiFi.h>
-#include <WebServer.h>
-#include <ElegantOTA.h>
+  #include <WiFi.h>
+  #include <WebServer.h>
+  #include <ElegantOTA.h>
 
 class OTAManager {
-private:
-    WebServer server;
-    String apSSID;
-    String apPassword;
-    bool isInitialized;
+ private:
+  WebServer server;
+  String apSSID;
+  String apPassword;
+  bool isInitialized;
 
-public:
-    /**
-     * Constructor
-     * @param ssid Access Point name (visible WiFi network name)
-     * @param apPass Access Point password (leave empty for open network, min 8 chars if used)
-     */
-    OTAManager(const char* ssid, const char* apPass = "");
+ public:
+  /**
+   * Constructor
+   * @param ssid Access Point name (visible WiFi network name)
+   * @param apPass Access Point password (leave empty for open network, min 8 chars if used)
+   */
+  OTAManager(const char* ssid, const char* apPass = "");
 
-    /**
-     * Initialize WiFi AP and ElegantOTA server
-     * @param otaUser Username for OTA page authentication
-     * @param otaPass Password for OTA page authentication
-     * @return true if initialization successful, false otherwise
-     */
-    bool begin(const char* otaUser = "", const char* otaPass = "");
+  /**
+   * Initialize WiFi AP and ElegantOTA server
+   * @param otaUser Username for OTA page authentication
+   * @param otaPass Password for OTA page authentication
+   * @return true if initialization successful, false otherwise
+   */
+  bool begin(const char* otaUser = "", const char* otaPass = "");
 
-    /**
-     * Handle incoming OTA requests (call in loop())
-     * Non-blocking, processes HTTP requests and OTA updates
-     */
-    void handle();
+  /**
+   * Handle incoming OTA requests (call in loop())
+   * Non-blocking, processes HTTP requests and OTA updates
+   */
+  void handle();
 
-    /**
-     * Check if OTA manager is initialized and running
-     * @return true if running, false otherwise
-     */
-    bool isRunning() const;
+  /**
+   * Check if OTA manager is initialized and running
+   * @return true if running, false otherwise
+   */
+  bool isRunning() const;
 
-    /**
-     * Get the Access Point IP address
-     * @return IP address as IPAddress object
-     */
-    IPAddress getIP() const;
+  /**
+   * Get the Access Point IP address
+   * @return IP address as IPAddress object
+   */
+  IPAddress getIP() const;
 };
 
-#endif // ENABLE_OTA
+#endif  // ENABLE_OTA
