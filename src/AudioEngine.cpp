@@ -13,9 +13,9 @@ AudioEngine::AudioEngine() : currentFrequency(MIN_FREQUENCY), currentAmplitude(0
 
 // Initialize audio hardware
 void AudioEngine::begin() {
-  // Configure PWM channel
+  // Setup PWM for buzzer (uses PIN_AUDIO_OUTPUT from PinConfig.h)
   ledcSetup(PWM_CHANNEL, PWM_FREQUENCY, PWM_RESOLUTION);
-  ledcAttachPin(BUZZER_PIN, PWM_CHANNEL);
+  ledcAttachPin(PIN_AUDIO_OUTPUT, PWM_CHANNEL);
   DEBUG_PRINTLN("[AUDIO] PWM configured on GPIO25");
 }
 

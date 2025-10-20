@@ -8,6 +8,7 @@
 
 #pragma once
 #include <Arduino.h>
+#include "PinConfig.h"
 
 // Conditional includes based on build mode
 #ifdef WOKWI_SIMULATION
@@ -67,9 +68,9 @@ class SensorManager {
   int smoothReading(int readings[], int& index, int newReading);
 
 #ifdef WOKWI_SIMULATION
-  // Simulation mode: potentiometer pins
-  static const int PITCH_INPUT_PIN = 34;   // ADC1_CH6
-  static const int VOLUME_INPUT_PIN = 35;  // ADC1_CH7
+  // Simulation mode: potentiometer pins (from PinConfig.h)
+  // Uses PIN_SENSOR_PITCH_ADC and PIN_SENSOR_VOLUME_ADC
+  // Note: These need to be added to PinConfig.h for simulation mode
 
   /**
    * Read raw pitch distance from ADC (simulation mode)
@@ -87,13 +88,10 @@ class SensorManager {
   int adcToDistance(int adc, int minDist, int maxDist);
 
 #else
-  // Hardware mode: VL53L0X sensors
-  static const int SDA_PIN = 21;
-  static const int SCL_PIN = 22;
-  static const int XSHUT_PIN_1 = 16;
-  static const int XSHUT_PIN_2 = 17;
-  static const uint8_t SENSOR_ADDR_1 = 0x30;  // Pitch sensor
-  static const uint8_t SENSOR_ADDR_2 = 0x29;  // Volume sensor
+  // Hardware mode: VL53L0X sensors (uses pins from PinConfig.h)
+  // PIN_SENSOR_I2C_SDA, PIN_SENSOR_I2C_SCL
+  // PIN_SENSOR_PITCH_XSHUT, PIN_SENSOR_VOLUME_XSHUT
+  // I2C_ADDR_SENSOR_PITCH, I2C_ADDR_SENSOR_VOLUME
 
   Adafruit_VL53L0X pitchSensor;
   Adafruit_VL53L0X volumeSensor;

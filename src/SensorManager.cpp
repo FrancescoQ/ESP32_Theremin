@@ -20,39 +20,39 @@ SensorManager::SensorManager() : pitchIndex(0), volumeIndex(0) {
 // Initialize sensors
 bool SensorManager::begin() {
 #ifdef WOKWI_SIMULATION
-  // Simulation mode: configure ADC pins
-  pinMode(PITCH_INPUT_PIN, INPUT);
-  pinMode(VOLUME_INPUT_PIN, INPUT);
+  // Simulation mode: configure ADC pins (from PinConfig.h)
+  pinMode(PIN_SENSOR_PITCH_ADC, INPUT);
+  pinMode(PIN_SENSOR_VOLUME_ADC, INPUT);
   DEBUG_PRINTLN("[SENSOR] Analog inputs configured (GPIO34, GPIO35)");
   return true;
 
 #else
   // Hardware mode: initialize I2C and VL53L0X sensors
-  Wire.begin(SDA_PIN, SCL_PIN);
+  Wire.begin(PIN_SENSOR_I2C_SDA, PIN_SENSOR_I2C_SCL);
   DEBUG_PRINTLN("[SENSOR] I2C initialized");
 
   // Configure XSHUT pins
-  pinMode(XSHUT_PIN_1, OUTPUT);
-  pinMode(XSHUT_PIN_2, OUTPUT);
+  pinMode(PIN_SENSOR_PITCH_XSHUT, OUTPUT);
+  pinMode(PIN_SENSOR_VOLUME_XSHUT, OUTPUT);
 
   // Disable both sensors initially
-  digitalWrite(XSHUT_PIN_1, LOW);
-  digitalWrite(XSHUT_PIN_2, LOW);
+  digitalWrite(PIN_SENSOR_PITCH_XSHUT, LOW);
+  digitalWrite(PIN_SENSOR_VOLUME_XSHUT, LOW);
   delay(10);
 
   // Initialize pitch sensor at custom address 0x30
-  digitalWrite(XSHUT_PIN_1, HIGH);
+  digitalWrite(PIN_SENSOR_PITCH_XSHUT, HIGH);
   delay(10);
-  if (!pitchSensor.begin(SENSOR_ADDR_1)) {
+  if (!pitchSensor.begin(I2C_ADDR_SENSOR_PITCH)) {
     DEBUG_PRINTLN("[SENSOR] ERROR: Pitch sensor failed to initialize!");
     return false;
   }
   DEBUG_PRINTLN("[SENSOR] Pitch sensor initialized at 0x30");
 
   // Initialize volume sensor at default address 0x29
-  digitalWrite(XSHUT_PIN_2, HIGH);
+  digitalWrite(PIN_SENSOR_VOLUME_XSHUT, HIGH);
   delay(10);
-  if (!volumeSensor.begin(SENSOR_ADDR_2)) {
+  if (!volumeSensor.begin(I2C_ADDR_SENSOR_VOLUME)) {
     DEBUG_PRINTLN("[SENSOR] ERROR: Volume sensor failed to initialize!");
     return false;
   }
@@ -92,12 +92,12 @@ int SensorManager::smoothReading(int readings[], int& index, int newReading) {
 // ============================================================================
 
 int SensorManager::readPitchRaw() {
-  int adc = analogRead(PITCH_INPUT_PIN);
+  int adc = analogRead(PIN_SENSOR_PITCH_ADC);
   return adcToDistance(adc, PITCH_MIN_DIST, PITCH_MAX_DIST);
 }
 
 int SensorManager::readVolumeRaw() {
-  int adc = analogRead(VOLUME_INPUT_PIN);
+  int adc = analogRead(PIN_SENSOR_VOLUME_ADC);
   return adcToDistance(adc, VOLUME_MIN_DIST, VOLUME_MAX_DIST);
 }
 

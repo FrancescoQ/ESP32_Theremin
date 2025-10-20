@@ -14,14 +14,10 @@
 #include <Arduino.h>
 #include "Debug.h"
 #include "Theremin.h"
+#include "PinConfig.h"
 
 #ifdef ENABLE_OTA
 #include "OTAManager.h"
-
-// OTA Enable Pin Configuration
-// Set to -1 to always enable OTA (no button check)
-// Set to GPIO pin number (e.g., 0, 2, 4) to require button press during boot
-#define OTA_ENABLE_PIN -1  // -1 = always active, change to GPIO pin when decided
 #endif
 
 // Create theremin instance
@@ -31,8 +27,8 @@ Theremin theremin;
 // Create OTA manager instance
 // AP Name: "Theremin-OTA", AP Password: "" (open network)
 // OTA Auth: username "admin", password "theremin"
-// Enable pin: OTA_ENABLE_PIN (-1 = always active, >=0 = button on that GPIO)
-OTAManager ota("Theremin-OTA", "", OTA_ENABLE_PIN);
+// Enable pin: PIN_OTA_ENABLE from PinConfig.h (-1 = always active, >=0 = button)
+OTAManager ota("Theremin-OTA", "", PIN_OTA_ENABLE);
 #endif
 
 void setup() {
