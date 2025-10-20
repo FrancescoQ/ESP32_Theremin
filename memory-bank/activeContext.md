@@ -63,10 +63,15 @@ The project has been transformed from a monolithic 250-line main.cpp into a clea
 - HTTP Basic Authentication for security (admin/theremin)
 - Conditional compilation with `#ifdef ENABLE_OTA` for zero-overhead when disabled
 - Non-blocking operation - theremin continues playing during OTA
+- **Optional button activation feature** - saves RAM when OTA not needed
+  - OTA_ENABLE_PIN macro in main.cpp (-1 = always on, >=0 = check button)
+  - Button logic encapsulated in OTAManager.begin()
+  - Saves ~50-70KB RAM when button not pressed during boot
+  - Active LOW with internal pullup (connect button between GPIO and GND)
 - Created comprehensive OTA_SETUP.md documentation
-- Updated all project documentation (ARCHITECTURE.md, productbrief.md, progress.md)
+- Updated all project documentation (ARCHITECTURE.md, productbrief.md, progress.md, README.md)
 - **Build Status:** ✅ Compiles successfully (RAM: 48KB, Flash: 847KB)
-- **Key Benefit:** Can update firmware wirelessly when theremin is enclosed in box
+- **Key Benefits:** Wireless updates when enclosed + RAM savings with button activation
 
 **Product Brief Updated to v2.0 (October 19, 2025):**
 - Root `/productbrief.md` now describes complete v2.0 vision (Phases 0-7)

@@ -87,7 +87,13 @@ The Wokwi simulation environment is complete and functional. The refactored arch
   - [x] Conditional compilation with #ifdef ENABLE_OTA
   - [x] Non-blocking operation (theremin continues playing during OTA)
   - [x] Updated OTAManager.h to use #pragma once for consistency
+  - [x] **Optional button activation** - GPIO pin configurable via macro
+    - [x] OTA_ENABLE_PIN macro in main.cpp (-1 = always on, >=0 = button check)
+    - [x] Button logic encapsulated in OTAManager.begin()
+    - [x] Saves ~50-70KB RAM when button not pressed during boot
+    - [x] Active LOW with internal pullup (connect button to GND)
   - [x] Created comprehensive OTA_SETUP.md documentation
+  - [x] Updated README.md and OTA_SETUP.md with button activation details
   - [x] Build verified: ✅ Compiles successfully (RAM: 48KB, Flash: 847KB)
 
 - [ ] **Hardware Testing (When Components Acquired)**
