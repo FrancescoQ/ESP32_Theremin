@@ -55,7 +55,7 @@ This approach demonstrates how modern AI tools can accelerate embedded systems d
 - ✓ Dual sensor control working
 - ✓ Real-time audio synthesis
 - ✓ Stable, responsive operation
-- ✓ OTA update support
+- ✓ OTA update support (with optional button activation)
 
 See `productbrief.md` for v2.0 roadmap including multi-oscillator synthesis, effects chain, and professional I/O.
 

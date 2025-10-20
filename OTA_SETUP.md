@@ -66,7 +66,7 @@ ota.begin("", "");  // No authentication
 
 ## Disabling OTA
 
-### Option 1: Compile-Time Disable (Recommended)
+### Option 1: Compile-Time Disable
 Edit `platformio.ini` and remove the `-DENABLE_OTA=1` line:
 
 ```ini
@@ -82,23 +82,49 @@ lib_deps =
     # ayushsharma82/ElegantOTA@^3.1.0  <- Optional: also comment this
 ```
 
-This completely removes OTA code from the binary (saves RAM/Flash).
+This completely removes OTA code from the binary (saves ~100-150 KB Flash).
 
-### Option 2: Runtime Disable (Future Enhancement)
-You can later add button-activated OTA:
+### Option 2: Runtime Button Activation (Implemented)
+
+OTA now supports **optional button activation** to save RAM when not needed.
+
+**How It Works:**
+- If button not pressed during boot → OTA disabled, saves ~50-70 KB RAM
+- If button pressed during boot → OTA enabled at 192.168.4.1/update
+- Currently set to always-on for testing (see below)
+
+**Configure the Enable Pin:**
+
+Edit `OTA_ENABLE_PIN` macro in `src/main.cpp`:
 
 ```cpp
-// In setup():
-if (digitalRead(BUTTON_PIN) == LOW) {  // Hold button during boot
-  ota.begin("admin", "theremin");
-  DEBUG_PRINTLN("[OTA] Enabled via button");
-}
+#ifdef ENABLE_OTA
+#include "OTAManager.h"
 
-// In loop():
-if (ota.isRunning()) {
-  ota.handle();
-}
+// Set to -1 to always enable OTA (no button check)
+// Set to GPIO pin number to require button press during boot
+#define OTA_ENABLE_PIN -1  // Change to your chosen GPIO (e.g., 2, 4, 15)
+#endif
 ```
+
+**Pin Configuration:**
+```cpp
+#define OTA_ENABLE_PIN -1   // Always enable OTA (current default)
+#define OTA_ENABLE_PIN 2    // Check GPIO 2 (active LOW with pullup)
+#define OTA_ENABLE_PIN 4    // Check GPIO 4
+// etc.
+```
+
+**Usage:**
+1. Connect button between your chosen GPIO and GND
+2. Hold button while powering on ESP32
+3. Serial output will show: `[OTA] Enable button detected, starting OTA...`
+4. Connect to "Theremin-OTA" and upload firmware
+
+**Benefits:**
+- **RAM savings:** ~50-70 KB when disabled (WiFi stack not loaded)
+- **Flexibility:** Enable OTA only when needed
+- **Simple:** One macro to configure, button logic handled internally
 
 ## Resource Usage
 
