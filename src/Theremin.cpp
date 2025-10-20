@@ -9,7 +9,7 @@
 #include "Debug.h"
 
 // Constructor
-Theremin::Theremin() : debugEnabled(true), loopCounter(0) {}
+Theremin::Theremin() : debugEnabled(true) {}
 
 // Initialize theremin
 bool Theremin::begin() {
@@ -62,8 +62,6 @@ void Theremin::update() {
   if (debugEnabled) {
     printDebugInfo(pitchDistance, volumeDistance, frequency, amplitude);
   }
-
-  loopCounter++;  // Increment counter for debug output throttling
 }
 
 // Enable/disable debug output
@@ -72,8 +70,10 @@ void Theremin::setDebugMode(bool enabled) {
 }
 
 // Print debug information (throttled to avoid flooding serial monitor)
-// Uses loopCounter to print only every 10th loop iteration (~5 times/second at 50Hz)
+// Uses static local counter to print only every 10th loop iteration (~5 times/second at 50Hz)
 void Theremin::printDebugInfo(int pitchDist, int volumeDist, int freq, int amplitude) {
+  static unsigned int loopCounter = 0;  // Static local - only increments when debug is enabled
+
   if (loopCounter % 10 == 0) {  // Print only when counter is divisible by 10
     DEBUG_PRINT("[PITCH] ");
     DEBUG_PRINT(pitchDist);
@@ -85,4 +85,9 @@ void Theremin::printDebugInfo(int pitchDist, int volumeDist, int freq, int ampli
     DEBUG_PRINT(amplitude);
     DEBUG_PRINTLN("%");
   }
+
+  // For future me: if you're worried about overflow, this will wrap around
+  // safely, and in any case at 50Hz it should take something like ~994 days
+  // to overflow... that's a long song...
+  loopCounter++;
 }

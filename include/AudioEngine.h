@@ -59,7 +59,6 @@ class AudioEngine {
   static const int MAX_FREQUENCY = 2000;
 
  private:
-  // PWM configuration (BUZZER_PIN now from PinConfig.h as PIN_AUDIO_OUTPUT)
   static const int PWM_CHANNEL = 0;
   static const int PWM_RESOLUTION = 8;
   static const int PWM_FREQUENCY = 2000;

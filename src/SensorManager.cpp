@@ -40,7 +40,8 @@ bool SensorManager::begin() {
   digitalWrite(PIN_SENSOR_VOLUME_XSHUT, LOW);
   delay(10);
 
-  // Initialize pitch sensor at custom address 0x30
+  // Initialize pitch sensor at custom address to avoid conflict as
+  // both sensors default to same I2C address.
   digitalWrite(PIN_SENSOR_PITCH_XSHUT, HIGH);
   delay(10);
   if (!pitchSensor.begin(I2C_ADDR_SENSOR_PITCH)) {

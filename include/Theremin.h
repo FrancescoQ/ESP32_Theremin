@@ -38,7 +38,6 @@ class Theremin {
   SensorManager sensors;
   AudioEngine audio;
   bool debugEnabled;
-  int loopCounter;
 
   /**
    * Map sensor distances to audio parameters
