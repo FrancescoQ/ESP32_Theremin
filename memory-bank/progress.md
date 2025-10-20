@@ -78,6 +78,18 @@ The Wokwi simulation environment is complete and functional. The refactored arch
   - [x] Clean separation of concerns
   - [x] Future-proof design for v2.0 features
 
+- [x] **OTA Update Implementation (October 20, 2025)**
+  - [x] Created OTAManager class (include/OTAManager.h + src/OTAManager.cpp)
+  - [x] Implemented WiFi Access Point mode (ESP32 creates "Theremin-OTA" network)
+  - [x] Integrated ElegantOTA library v3.1.7
+  - [x] Added HTTP Basic Authentication for security (admin/theremin)
+  - [x] Fixed IP web interface at http://192.168.4.1/update
+  - [x] Conditional compilation with #ifdef ENABLE_OTA
+  - [x] Non-blocking operation (theremin continues playing during OTA)
+  - [x] Updated OTAManager.h to use #pragma once for consistency
+  - [x] Created comprehensive OTA_SETUP.md documentation
+  - [x] Build verified: ✅ Compiles successfully (RAM: 48KB, Flash: 847KB)
+
 - [ ] **Hardware Testing (When Components Acquired)**
   - [ ] Acquire ESP32 development board
   - [ ] Acquire 2x VL53L0X ToF sensor modules

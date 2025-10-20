@@ -2,18 +2,16 @@
 
 ## System Architecture
 
-### High-Level Architecture - Dual Mode Design
+### High-Level Architecture - Modular Design
 ```
                 ┌─────────────────────────────────────┐
                 │   ESP32 Main Loop (setup/loop)      │
-                │         Single Source File          │
+                │      Modular Class Structure         │
                 └─────────────────────────────────────┘
                               │
                     ┌─────────┴─────────┐
-                    │  Conditional      │
-                    │  Compilation      │
-                    │  #ifdef WOKWI_    │
-                    │  SIMULATION       │
+                    │  Core Components  │
+                    │  (always enabled) │
                     └─────────┬─────────┘
                               │
             ┌─────────────────┴─────────────────┐
@@ -26,13 +24,14 @@
    ┌────────▼────────┐              ┌───────────▼──────────┐
    │ Potentiometers  │              │   VL53L0X Sensors    │
    │ GPIO34/35 (ADC) │              │   I2C @ 0x29/0x30    │
+   │ SensorManager   │              │   SensorManager      │
    └────────┬────────┘              └───────────┬──────────┘
             │                                   │
             └──────────┬────────────────────────┘
                        │
           ┌────────────▼────────────┐
-          │ Shared Audio Synthesis  │
-          │  processAndPlayAudio()  │
+          │      AudioEngine        │
+          │   Audio Synthesis       │
           └────────────┬────────────┘
                        │
                   ┌────▼────┐
@@ -43,6 +42,21 @@
                   ┌────▼────┐
                   │ Buzzer  │
                   └─────────┘
+
+   ┌──────────────────────────────────────┐
+   │   Optional: OTAManager               │
+   │   (#ifdef ENABLE_OTA)                │
+   │                                      │
+   │   ┌────────────┐                     │
+   │   │ WiFi AP    │                     │
+   │   │ 192.168.4.1│                     │
+   │   └─────┬──────┘                     │
+   │         │                            │
+   │   ┌─────▼──────┐                     │
+   │   │ ElegantOTA │                     │
+   │   │ Web Server │                     │
+   │   └────────────┘                     │
+   └──────────────────────────────────────┘
 ```
 
 ### Simulation Architecture (Wokwi)

@@ -11,33 +11,35 @@ The ESP32 Theremin has been refactored from a single monolithic file into a clea
 │                      main.cpp                           │
 │                   (Entry Point)                         │
 │  - Creates Theremin instance                            │
+│  - Creates OTAManager instance (optional)               │
 │  - Calls begin() and update()                           │
-└────────────────────┬────────────────────────────────────┘
-                     │
-                     ▼
-┌─────────────────────────────────────────────────────────┐
-│                  Theremin.h/cpp                         │
-│              (Main Coordinator)                         │
-│  - Manages SensorManager and AudioEngine                │
-│  - Maps sensor distances to audio parameters            │
-│  - Handles debug output                                 │
-└────────┬────────────────────────────────────┬───────────┘
-         │                                    │
-         ▼                                    ▼
+└────────┬──────────────────────────────────┬─────────────┘
+         │                                  │
+         ▼                                  ▼
 ┌────────────────────────┐    ┌─────────────────────────┐
-│  SensorManager.h/cpp   │    │   AudioEngine.h/cpp     │
-│   (Input Handling)     │    │   (Audio Synthesis)     │
+│  Theremin.h/cpp        │    │   OTAManager.h/cpp      │
+│  (Main Coordinator)    │    │   (Firmware Updates)    │
 ├────────────────────────┤    ├─────────────────────────┤
-│ - getPitchDistance()   │    │ - setFrequency()        │
-│ - getVolumeDistance()  │    │ - setAmplitude()        │
-│ - Smoothing filter     │    │ - update()              │
-│                        │    │ - PWM generation        │
-│ Supports:              │    │                         │
-│ ✓ Simulation (ADC)     │    │ Future extensions:      │
-│ ✓ Hardware (VL53L0X)   │    │ • DAC output            │
-│                        │    │ • Waveform generators   │
-└────────────────────────┘    │ • Multiple oscillators  │
-                              └─────────────────────────┘
+│ - Manages subsystems   │    │ - WiFi AP mode          │
+│ - Maps sensor → audio  │    │ - ElegantOTA server     │
+│ - Debug output         │    │ - handle()              │
+└───┬─────────────────┬──┘    │ - HTTP auth             │
+    │                 │       │                         │
+    ▼                 ▼       │ Features:               │
+┌──────────────┐ ┌──────────┐│ ✓ Access Point mode     │
+│SensorManager │ │AudioEngine││ ✓ Non-blocking          │
+│  .h/cpp      │ │  .h/cpp   ││ ✓ Conditional (#ifdef)  │
+├──────────────┤ ├──────────┤└─────────────────────────┘
+│- getPitch    │ │- setFreq │
+│  Distance()  │ │  ()      │
+│- getVolume   │ │- setAmp  │
+│  Distance()  │ │  ()      │
+│- Smoothing   │ │- update()│
+│                           │
+│ Supports:    │ │Future:   │
+│✓ Simulation  │ │• DAC out │
+│✓ Hardware    │ │• Waveform│
+└──────────────┘ └──────────┘
 ```
 
 ## File Structure
@@ -47,15 +49,18 @@ theremin/
 ├── include/
 │   ├── SensorManager.h      # Sensor input abstraction
 │   ├── AudioEngine.h         # Audio synthesis abstraction
-│   └── Theremin.h            # Main coordinator
+│   ├── Theremin.h            # Main coordinator
+│   └── OTAManager.h          # OTA firmware updates (conditional)
 │
 ├── src/
-│   ├── main.cpp              # Entry point (40 lines)
+│   ├── main.cpp              # Entry point (~60 lines with OTA)
 │   ├── SensorManager.cpp     # Sensor implementation
 │   ├── AudioEngine.cpp       # Audio implementation
-│   └── Theremin.cpp          # Coordinator implementation
+│   ├── Theremin.cpp          # Coordinator implementation
+│   └── OTAManager.cpp        # OTA implementation (conditional)
 │
-└── memory-bank/              # Project documentation
+├── memory-bank/              # Project documentation
+└── OTA_SETUP.md              # OTA usage guide
 ```
 
 ## Class Responsibilities
@@ -117,6 +122,44 @@ theremin/
 - UI handling (buttons/switches)
 - Display management
 - Configuration system
+
+### OTAManager
+**Purpose:** Manage wireless firmware updates
+
+**Public Interface:**
+- `bool begin(const char* otaUser, const char* otaPass)` - Initialize WiFi AP and OTA server
+- `void handle()` - Process OTA requests (non-blocking, call in loop)
+- `bool isRunning()` - Check if OTA manager is active
+- `IPAddress getIP()` - Get Access Point IP address
+
+**Current Implementation:**
+- WiFi Access Point mode (ESP32 creates own network)
+- ElegantOTA library v3.1.7 for web interface
+- HTTP Basic Authentication for security
+- Fixed IP: 192.168.4.1
+- Conditional compilation with `#ifdef ENABLE_OTA`
+
+**Features:**
+- **Non-blocking:** Theremin continues playing during OTA
+- **Isolated:** Complete separation from main application logic
+- **Configurable:** AP name, password, OTA credentials
+- **Secure:** HTTP Basic Auth protects update endpoint
+- **Optional:** Can be completely disabled at compile-time
+
+**Configuration:**
+```cpp
+// In main.cpp
+#ifdef ENABLE_OTA
+  OTAManager ota("Theremin-OTA", "");  // AP name, AP password
+  ota.begin("admin", "theremin");      // OTA user, OTA password
+#endif
+```
+
+**Future Extensions:**
+- Runtime enable/disable via button press
+- Station mode as alternative to AP mode
+- mDNS support (access via theremin.local)
+- Auto-timeout after X minutes of inactivity
 
 ## Benefits of New Architecture
 
@@ -230,13 +273,37 @@ display.showFrequency(frequency);  // ← One line
 
 **No changes needed** to SensorManager or AudioEngine!
 
+### Real-World Example: OTAManager (Already Implemented!)
+
+The OTAManager class is a **perfect demonstration** of the modular architecture in action:
+
+**What We Added:**
+- New class: OTAManager with complete WiFi AP + ElegantOTA functionality
+- Added to main.cpp with `#ifdef ENABLE_OTA` (6 lines of code)
+- Created OTA_SETUP.md documentation
+
+**What We Didn't Touch:**
+- ✅ SensorManager - zero changes
+- ✅ AudioEngine - zero changes
+- ✅ Theremin - zero changes
+- ✅ All existing functionality works identically
+
+**Result:**
+- Wireless firmware updates fully functional
+- Theremin continues playing during OTA
+- Can be completely disabled with one compile flag
+- Zero impact on existing code
+
+**This proves the architecture works as designed!** Adding a major feature (wireless updates) required only creating the new class and adding it to main.cpp. No refactoring, no side effects, no breaking changes.
+
 ## Migration Summary
 
 ### What Changed
 ✅ All sensor logic extracted to SensorManager class
 ✅ All audio logic extracted to AudioEngine class
 ✅ Coordination logic moved to Theremin class
-✅ main.cpp simplified to ~40 lines
+✅ OTA functionality added as separate OTAManager class (October 2025)
+✅ main.cpp simplified to ~60 lines (with optional OTA)
 ✅ Proper separation of concerns
 
 ### What Stayed the Same

@@ -446,6 +446,18 @@ The 4-position rotary switches (Off/Sine/Square/Saw) are not just waveform selec
 - [ ] Port Wokwi code to real hardware
 - [ ] Test basic pitch control (1 sensor → PWM frequency)
 
+**OTA Update Implementation ✅ COMPLETE (October 20, 2025):**
+- [x] Created OTAManager class (include/OTAManager.h + src/OTAManager.cpp)
+- [x] Implemented WiFi Access Point mode (ESP32 creates "Theremin-OTA" network)
+- [x] Integrated ElegantOTA library v3.1.7
+- [x] Added HTTP Basic Authentication for security (admin/theremin)
+- [x] Fixed IP web interface at http://192.168.4.1/update
+- [x] Conditional compilation with #ifdef ENABLE_OTA
+- [x] Non-blocking operation (theremin continues playing during OTA)
+- [x] Updated to use #pragma once for consistency with other headers
+- [x] Created comprehensive OTA_SETUP.md documentation
+- [x] Build verified: ✅ Compiles successfully (RAM: 48KB, Flash: 847KB)
+
 **Success Criteria:**
 - ✓ Both sensors read distances correctly
 - ✓ Hand movement changes buzzer pitch

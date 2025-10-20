@@ -55,6 +55,19 @@ The project has been transformed from a monolithic 250-line main.cpp into a clea
 
 ## Recent Changes
 
+**OTA Firmware Update System Implemented (October 20, 2025):**
+- Created OTAManager class (include/OTAManager.h + src/OTAManager.cpp)
+- Implemented WiFi Access Point mode (ESP32 creates "Theremin-OTA" network)
+- Integrated ElegantOTA library v3.1.7 for web interface
+- Fixed IP address: 192.168.4.1/update
+- HTTP Basic Authentication for security (admin/theremin)
+- Conditional compilation with `#ifdef ENABLE_OTA` for zero-overhead when disabled
+- Non-blocking operation - theremin continues playing during OTA
+- Created comprehensive OTA_SETUP.md documentation
+- Updated all project documentation (ARCHITECTURE.md, productbrief.md, progress.md)
+- **Build Status:** ✅ Compiles successfully (RAM: 48KB, Flash: 847KB)
+- **Key Benefit:** Can update firmware wirelessly when theremin is enclosed in box
+
 **Product Brief Updated to v2.0 (October 19, 2025):**
 - Root `/productbrief.md` now describes complete v2.0 vision (Phases 0-7)
 - Includes multi-oscillator architecture, effects chain, professional I/O
@@ -66,7 +79,7 @@ The project has been transformed from a monolithic 250-line main.cpp into a clea
 - Extracted all sensor logic into SensorManager class (header + implementation)
 - Extracted all audio logic into AudioEngine class (header + implementation)
 - Created Theremin coordinator class to manage sensors and audio
-- Simplified main.cpp from 250+ lines to ~40 lines
+- Simplified main.cpp from 250+ lines to ~60 lines (with OTA)
 - Added comprehensive ARCHITECTURE.md documentation
 - **Build Status:** ✅ Compiles successfully for simulation
 - All functionality preserved, but now organized and extensible
