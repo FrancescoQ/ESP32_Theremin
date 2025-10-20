@@ -15,8 +15,19 @@
 #include "Debug.h"
 #include "Theremin.h"
 
+#ifdef ENABLE_OTA
+  #include "OTAManager.h"
+#endif
+
 // Create theremin instance
 Theremin theremin;
+
+#ifdef ENABLE_OTA
+  // Create OTA manager instance
+  // AP Name: "Theremin-OTA", AP Password: "" (open network)
+  // OTA Auth: username "admin", password "theremin"
+  OTAManager ota("Theremin-OTA", "");
+#endif
 
 void setup() {
   // Initialize debug output
@@ -33,11 +44,25 @@ void setup() {
   }
 
   DEBUG_PRINTLN("=== Ready to Play! ===\n");
+
+#ifdef ENABLE_OTA
+  // Initialize OTA manager
+  if (ota.begin("admin", "theremin")) {
+    DEBUG_PRINTLN("[OTA] OTA updates enabled");
+  } else {
+    DEBUG_PRINTLN("[OTA] Failed to start OTA manager");
+  }
+#endif
 }
 
 void loop() {
   // Update theremin (read sensors, generate audio)
   theremin.update();
+
+  #ifdef ENABLE_OTA
+    // Handle OTA requests (non-blocking)
+    ota.handle();
+  #endif
 
   // Small delay for stability (~50Hz update rate)
   delay(20);
