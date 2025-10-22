@@ -59,11 +59,15 @@ class SensorManager {
   int volumeIndex;
 
   /**
-   * Apply moving average smoothing to sensor readings
-   * @param readings Array of recent readings
-   * @param index Current position in circular buffer
-   * @param newReading New raw reading to add
-   * @return Smoothed value
+   * Apply moving average smoothing to sensor readings using a circular buffer.
+   * Stores the new reading in the buffer, advances the buffer position (wrapping at SAMPLES),
+   * then calculates and returns the average of all readings in the buffer.
+   * This reduces sensor noise by averaging the most recent SAMPLES readings.
+   *
+   * @param readings Array of recent readings (circular buffer)
+   * @param index Current position in circular buffer (passed by reference, auto-increments)
+   * @param newReading New raw reading to add to the buffer
+   * @return Smoothed value (average of last SAMPLES readings)
    */
   int smoothReading(int readings[], int& index, int newReading);
 
