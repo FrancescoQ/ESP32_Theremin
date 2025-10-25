@@ -2,13 +2,9 @@
  * ESP32 Theremin - Main Entry Point
  *
  * Clean, modular architecture using separate classes for:
- * - SensorManager: Handles distance sensor input (simulation or hardware)
+ * - SensorManager: Handles distance sensor input (VL53L0X sensors)
  * - AudioEngine: Manages audio synthesis (currently PWM, future DAC support)
  * - Theremin: Coordinates sensors and audio
- *
- * Build Commands:
- * - Simulation: pio run -e esp32dev-wokwi
- * - Hardware:   pio run -e esp32dev
  */
 
 #include <Arduino.h>

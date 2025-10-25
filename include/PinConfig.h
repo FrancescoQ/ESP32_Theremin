@@ -22,10 +22,6 @@
 #define I2C_ADDR_SENSOR_PITCH     0x30  // Pitch sensor (reassigned)
 #define I2C_ADDR_SENSOR_VOLUME    0x29  // Volume sensor (default)
 
-// Simulation mode pins (Wokwi - potentiometers via ADC)
-#define PIN_SENSOR_PITCH_ADC      34  // ADC1_CH6 - pitch potentiometer
-#define PIN_SENSOR_VOLUME_ADC     35  // ADC1_CH7 - volume potentiometer
-
 //=============================================================================
 // AUDIO PINS - Current: PWM, Future: DAC + Amplifier
 //=============================================================================

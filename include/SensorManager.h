@@ -2,22 +2,15 @@
  * SensorManager.h
  *
  * Manages distance sensor input for the ESP32 Theremin.
- * Supports both hardware (VL53L0X I2C sensors) and simulation (potentiometers via ADC).
+ * Uses VL53L0X Time-of-Flight sensors over I2C.
  * Provides smoothed distance readings for pitch and volume control.
  */
 
 #pragma once
 #include <Arduino.h>
+#include <Wire.h>
+#include "Adafruit_VL53L0X.h"
 #include "PinConfig.h"
-
-// Conditional includes based on build mode
-#ifdef WOKWI_SIMULATION
-// Simulation mode: no hardware sensor libraries needed
-#else
-  // Hardware mode: VL53L0X Time-of-Flight sensors
-  #include <Wire.h>
-  #include "Adafruit_VL53L0X.h"
-#endif
 
 class SensorManager {
  public:
@@ -71,28 +64,7 @@ class SensorManager {
    */
   int smoothReading(int readings[], int& index, int newReading);
 
-#ifdef WOKWI_SIMULATION
-  // Simulation mode: potentiometer pins (from PinConfig.h)
-  // Uses PIN_SENSOR_PITCH_ADC and PIN_SENSOR_VOLUME_ADC
-  // Note: These need to be added to PinConfig.h for simulation mode
-
-  /**
-   * Read raw pitch distance from ADC (simulation mode)
-   */
-  int readPitchRaw();
-
-  /**
-   * Read raw volume distance from ADC (simulation mode)
-   */
-  int readVolumeRaw();
-
-  /**
-   * Convert ADC value (0-4095) to distance in mm
-   */
-  int adcToDistance(int adc, int minDist, int maxDist);
-
-#else
-  // Hardware mode: VL53L0X sensors (uses pins from PinConfig.h)
+  // VL53L0X sensors (uses pins from PinConfig.h)
   // PIN_SENSOR_I2C_SDA, PIN_SENSOR_I2C_SCL
   // PIN_SENSOR_PITCH_XSHUT, PIN_SENSOR_VOLUME_XSHUT
   // I2C_ADDR_SENSOR_PITCH, I2C_ADDR_SENSOR_VOLUME
@@ -103,13 +75,12 @@ class SensorManager {
   VL53L0X_RangingMeasurementData_t volumeMeasure;
 
   /**
-   * Read raw pitch distance from VL53L0X sensor (hardware mode)
+   * Read raw pitch distance from VL53L0X sensor
    */
   int readPitchRaw();
 
   /**
-   * Read raw volume distance from VL53L0X sensor (hardware mode)
+   * Read raw volume distance from VL53L0X sensor
    */
   int readVolumeRaw();
-#endif
 };

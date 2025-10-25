@@ -19,15 +19,7 @@ SensorManager::SensorManager() : pitchIndex(0), volumeIndex(0) {
 
 // Initialize sensors
 bool SensorManager::begin() {
-#ifdef WOKWI_SIMULATION
-  // Simulation mode: configure ADC pins (from PinConfig.h)
-  pinMode(PIN_SENSOR_PITCH_ADC, INPUT);
-  pinMode(PIN_SENSOR_VOLUME_ADC, INPUT);
-  DEBUG_PRINTLN("[SENSOR] Analog inputs configured (GPIO34, GPIO35)");
-  return true;
-
-#else
-  // Hardware mode: initialize I2C and VL53L0X sensors
+  // Initialize I2C and VL53L0X sensors
   Wire.begin(PIN_SENSOR_I2C_SDA, PIN_SENSOR_I2C_SCL);
   DEBUG_PRINTLN("[SENSOR] I2C initialized");
 
@@ -60,7 +52,6 @@ bool SensorManager::begin() {
   DEBUG_PRINTLN("[SENSOR] Volume sensor initialized at 0x29");
 
   return true;
-#endif
 }
 
 // Get smoothed pitch distance
@@ -87,30 +78,6 @@ int SensorManager::smoothReading(int readings[], int& index, int newReading) {
   return sum / SAMPLES;
 }
 
-#ifdef WOKWI_SIMULATION
-// ============================================================================
-// SIMULATION MODE IMPLEMENTATIONS
-// ============================================================================
-
-int SensorManager::readPitchRaw() {
-  int adc = analogRead(PIN_SENSOR_PITCH_ADC);
-  return adcToDistance(adc, PITCH_MIN_DIST, PITCH_MAX_DIST);
-}
-
-int SensorManager::readVolumeRaw() {
-  int adc = analogRead(PIN_SENSOR_VOLUME_ADC);
-  return adcToDistance(adc, VOLUME_MIN_DIST, VOLUME_MAX_DIST);
-}
-
-int SensorManager::adcToDistance(int adc, int minDist, int maxDist) {
-  return map(adc, 0, 4095, minDist, maxDist);
-}
-
-#else
-// ============================================================================
-// HARDWARE MODE IMPLEMENTATIONS
-// ============================================================================
-
 int SensorManager::readPitchRaw() {
   pitchSensor.rangingTest(&pitchMeasure, false);
   // Return measured distance, or max distance if out of range
@@ -122,5 +89,3 @@ int SensorManager::readVolumeRaw() {
   // Return measured distance, or min distance (silent) if out of range
   return (volumeMeasure.RangeStatus != 4) ? volumeMeasure.RangeMilliMeter : VOLUME_MIN_DIST;
 }
-
-#endif

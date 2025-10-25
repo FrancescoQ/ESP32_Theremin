@@ -15,12 +15,6 @@ Theremin::Theremin() : debugEnabled(true) {}
 bool Theremin::begin() {
   DEBUG_PRINTLN("\n=== ESP32 Theremin Initializing ===");
 
-#ifdef WOKWI_SIMULATION
-  DEBUG_PRINTLN("[MODE] Simulation (Potentiometers)");
-#else
-  DEBUG_PRINTLN("[MODE] Hardware (VL53L0X Sensors)");
-#endif
-
   // Initialize sensors
   if (!sensors.begin()) {
     DEBUG_PRINTLN("[ERROR] Sensor initialization failed!");
