@@ -56,6 +56,7 @@ class SensorManager {
   // Exponential smoothing filter parameters
   // Alpha controls responsiveness: 0.0 = very smooth/slow, 1.0 = no smoothing/instant
   // Values 0.3-0.4 provide good balance between smoothness and responsiveness
+  // Alpha value is "how much (percentage) of new value to mix to the existing smoothed value"
   static constexpr float SMOOTHING_ALPHA = 0.25f;
 
   float smoothedPitchDistance;
