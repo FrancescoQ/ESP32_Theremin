@@ -107,8 +107,9 @@ class AudioEngine {
 
   /**
    * Initialize I2S in built-in DAC mode
+   * @return true if initialization succeeded, false otherwise
    */
-  void setupI2S();
+  bool setupI2S();
 
   /**
    * Generate audio buffer and write to I2S

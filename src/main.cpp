@@ -29,7 +29,7 @@ OTAManager ota("Theremin-OTA", "", PIN_OTA_ENABLE);
 
 void setup() {
   // Initialize debug output
-  DEBUG_INIT(9600);
+  DEBUG_INIT(115200);
   delay(100);
 
   // Initialize theremin (sensors + audio)

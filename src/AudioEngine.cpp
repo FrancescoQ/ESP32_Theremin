@@ -20,10 +20,19 @@ AudioEngine::AudioEngine() : currentFrequency(MIN_FREQUENCY), currentAmplitude(0
 
 // Initialize audio hardware
 void AudioEngine::begin() {
-  setupI2S();
+  // Delay to ensure Serial is fully initialized
+  delay(100);
+
+  DEBUG_PRINTLN("[AUDIO] Initializing I2S DAC...");
+
+  if (!setupI2S()) {
+    DEBUG_PRINTLN("[AUDIO] ERROR: I2S initialization failed!");
+    return;  // Don't start audio task if I2S failed
+  }
+
   DEBUG_PRINTLN("[AUDIO] I2S DAC initialized on GPIO25 @ 22050 Hz");
 
-  // Start continuous audio generation task
+  // Start continuous audio generation task only if I2S succeeded
   startAudioTask();
 }
 
@@ -59,7 +68,7 @@ void AudioEngine::update() {
 }
 
 // Initialize I2S in built-in DAC mode
-void AudioEngine::setupI2S() {
+bool AudioEngine::setupI2S() {
   // I2S configuration for built-in DAC
   i2s_config_t i2s_config = {
       .mode = (i2s_mode_t)(I2S_MODE_MASTER | I2S_MODE_TX | I2S_MODE_DAC_BUILT_IN),
@@ -78,13 +87,20 @@ void AudioEngine::setupI2S() {
   // Install I2S driver
   esp_err_t err = i2s_driver_install((i2s_port_t)I2S_NUM, &i2s_config, 0, NULL);
   if (err != ESP_OK) {
-    DEBUG_PRINT("[AUDIO] I2S driver install failed: ");
+    DEBUG_PRINT("[AUDIO] ERROR: I2S driver install failed with error code: ");
     DEBUG_PRINTLN(err);
-    return;
+    return false;
   }
 
   // Set I2S pins for built-in DAC mode (GPIO25 = DAC1)
-  i2s_set_dac_mode(I2S_DAC_CHANNEL_RIGHT_EN);  // Enable DAC on GPIO25
+  err = i2s_set_dac_mode(I2S_DAC_CHANNEL_RIGHT_EN);
+  if (err != ESP_OK) {
+    DEBUG_PRINT("[AUDIO] ERROR: I2S DAC mode setup failed with error code: ");
+    DEBUG_PRINTLN(err);
+    return false;
+  }
+
+  return true;
 }
 
 // Generate audio buffer and write to I2S
