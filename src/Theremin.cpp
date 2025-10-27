@@ -9,7 +9,7 @@
 #include "Debug.h"
 
 // Constructor
-Theremin::Theremin() : debugEnabled(true) {}
+Theremin::Theremin() : debugEnabled(false) {}
 
 // Initialize theremin
 bool Theremin::begin() {
