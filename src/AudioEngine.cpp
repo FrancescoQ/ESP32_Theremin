@@ -15,12 +15,12 @@ AudioEngine::AudioEngine() : currentFrequency(MIN_FREQUENCY), currentAmplitude(0
   oscillator.setOctaveShift(0);
   oscillator.setVolume(1.0);
 
-  oscillator2.setWaveform(Oscillator::SQUARE);
+  oscillator2.setWaveform(Oscillator::SAW);
   oscillator2.setOctaveShift(-1);
   oscillator2.setVolume(0.8);
 
-  oscillator3.setWaveform(Oscillator::SAW);
-  oscillator3.setOctaveShift(0);
+  oscillator3.setWaveform(Oscillator::SINE);
+  oscillator3.setOctaveShift(1);
   oscillator3.setVolume(0.6);
 
   // Create mutex for thread-safe parameter updates
