@@ -54,10 +54,11 @@ void Theremin::update() {
   int frequency = constrain((int)frequencyFloat, AudioEngine::MIN_FREQUENCY, AudioEngine::MAX_FREQUENCY);
 
   // Map volume using integer math (volume doesn't need sub-Hz precision)
+  // Traditional theremin behavior: hand NEAR volume antenna = QUIET, hand FAR = LOUD
   int amplitude =
       map(volumeDistance, SensorManager::VOLUME_MIN_DIST, SensorManager::VOLUME_MAX_DIST,
-          100,   // Max amplitude (closest)
-          0);    // Min amplitude (farthest)
+          0,     // Min amplitude (closest) - near sensor = quiet
+          100);  // Max amplitude (farthest) - far from sensor = loud
   amplitude = constrain(amplitude, 0, 100);
 
   // Update audio engine
