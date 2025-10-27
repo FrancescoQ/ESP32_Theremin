@@ -8,7 +8,9 @@
 
 #pragma once
 #include <Arduino.h>
+#include <driver/i2s.h>
 #include "PinConfig.h"
+#include "Oscillator.h"
 
 class AudioEngine {
  public:
@@ -59,6 +61,12 @@ class AudioEngine {
   static const int MAX_FREQUENCY = 880;  // A5
 
  private:
+  // I2S configuration
+  static const int I2S_NUM = 0;                // I2S port number
+  static const int SAMPLE_RATE = 22050;        // Sample rate in Hz
+  static const int BUFFER_SIZE = 256;          // Samples per buffer
+  static const int DMA_BUFFER_COUNT = 2;       // Number of DMA buffers
+
   // Amplitude smoothing (prevents sudden volume jumps)
   // Tuning guide - adjust to taste:
   //   0.05 = ~2.0s fade time (very smooth, laggy)
@@ -73,4 +81,17 @@ class AudioEngine {
   int currentFrequency;
   int currentAmplitude;     // Target amplitude
   float smoothedAmplitude;  // Actual smoothed amplitude value
+
+  // Oscillator instance
+  Oscillator oscillator;
+
+  /**
+   * Initialize I2S in built-in DAC mode
+   */
+  void setupI2S();
+
+  /**
+   * Generate audio buffer and write to I2S
+   */
+  void generateAudioBuffer();
 };
