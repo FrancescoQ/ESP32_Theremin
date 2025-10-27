@@ -48,15 +48,15 @@ class SensorManager {
 
   // Distance ranges (same for both modes)
   static const int PITCH_MIN_DIST = 50;
-  static const int PITCH_MAX_DIST = 400;
+  static const int PITCH_MAX_DIST = 600;
   static const int VOLUME_MIN_DIST = 50;
-  static const int VOLUME_MAX_DIST = 300;
+  static const int VOLUME_MAX_DIST = 400;
 
  private:
   // Exponential smoothing filter parameters
   // Alpha controls responsiveness: 0.0 = very smooth/slow, 1.0 = no smoothing/instant
   // Values 0.3-0.4 provide good balance between smoothness and responsiveness
-  static constexpr float SMOOTHING_ALPHA = 0.3f;
+  static constexpr float SMOOTHING_ALPHA = 0.25f;
 
   float smoothedPitchDistance;
   float smoothedVolumeDistance;
