@@ -7,9 +7,31 @@
 ## Current Work Focus
 
 ### Project Status
-**Phase:** Phase 1 - Architecture Refactoring Complete ✅
-**Date:** October 19, 2025
+**Phase:** Phase 2 - I2S DAC + Oscillator Implementation ✅ (with known issue)
+**Date:** October 27, 2025
 **v2.0 Vision:** Multi-oscillator synthesizer with effects, professional I/O, and visual feedback
+
+**Major Milestone Achieved:** I2S DAC + Oscillator Architecture Complete!
+
+Successfully transitioned from PWM buzzer to professional I2S DAC output with modular oscillator architecture:
+- **Oscillator Class** (include/Oscillator.h + src/Oscillator.cpp): Digital oscillator with phase accumulator, square wave generation, octave shifting
+- **AudioEngine Updated**: Now uses I2S in built-in DAC mode (GPIO25 @ 22050 Hz)
+- **PWM Removed**: All legacy PWM code cleanly removed
+- **Frequency Range**: 220-880 Hz (A3-A5, 2 octaves exactly)
+
+**Current Status:** ✅ Audio working, ⚠️ Steppy/choppy sound (known issue)
+
+**Test Results (October 27, 2025):**
+- ✅ I2S DAC outputs audio on GPIO25
+- ✅ Oscillator generates square wave
+- ✅ Frequency control works (sensors → frequency changes)
+- ✅ Volume control works (sensors → amplitude changes)
+- ⚠️ Audio is "steppy" - gaps between buffer fills cause discontinuities
+
+**Root Cause of Steppy Audio:**
+Current architecture fills I2S buffer only when `update()` is called from main loop. Between calls, there are gaps (~60ms for sensor reads + processing), causing audible stuttering.
+
+**Next Priority:** Implement continuous audio generation via FreeRTOS task or timer interrupt.
 
 **Major Milestone Achieved:** Architecture Refactoring Complete!
 
