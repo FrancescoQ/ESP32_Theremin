@@ -26,14 +26,23 @@ class SensorManager {
   bool begin();
 
   /**
+   * Update sensor readings - reads both sensors and caches results.
+   * Call this once per loop iteration before getting individual distances.
+   * This ensures sensors are only read once per update cycle.
+   */
+  void updateReadings();
+
+  /**
    * Read and return smoothed pitch distance in millimeters
    * Range: PITCH_MIN_DIST to PITCH_MAX_DIST (typically 50-400mm)
+   * NOTE: Call updateReadings() first to ensure fresh data
    */
   int getPitchDistance();
 
   /**
    * Read and return smoothed volume distance in millimeters
    * Range: VOLUME_MIN_DIST to VOLUME_MAX_DIST (typically 50-300mm)
+   * NOTE: Call updateReadings() first to ensure fresh data
    */
   int getVolumeDistance();
 
@@ -52,6 +61,10 @@ class SensorManager {
   float smoothedPitchDistance;
   float smoothedVolumeDistance;
   bool firstReading;  // Track if this is the first reading (to initialize smoothed values)
+
+  // Cached raw readings (updated by updateReadings())
+  int cachedPitchRaw;
+  int cachedVolumeRaw;
 
   /**
    * Apply exponential weighted moving average (EWMA) smoothing to sensor readings.

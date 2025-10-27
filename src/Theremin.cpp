@@ -36,7 +36,10 @@ float Theremin::mapFloat(float x, float in_min, float in_max, float out_min, flo
 
 // Main update loop
 void Theremin::update() {
-  // Get sensor readings
+  // Update sensor readings (reads both sensors once and caches results)
+  sensors.updateReadings();
+
+  // Get smoothed distances from cached readings
   int pitchDistance = sensors.getPitchDistance();
   int volumeDistance = sensors.getVolumeDistance();
 

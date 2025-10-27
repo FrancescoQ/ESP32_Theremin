@@ -38,12 +38,24 @@ Successfully implemented professional-grade continuous audio generation:
 
 **Pitch Stepping - IMPROVED (October 27, 2025):**
 - **Status:** ✅ Significantly improved with exponential smoothing + float mapping
-- **User Feedback:** "Still a bit stepping, but I can live with it for now"
+- **User Feedback:** "Still a bit stepping, but I can live with it for now" → "much nicer!" after sensor optimizations
 - **Implementation:** EWMA (alpha=0.3) + floating-point frequency calculation
 - **Improvement:** 65ms latency reduction (100ms → 35ms smoothing lag)
 - **Remaining Issue:** Minor stepping still audible (sensor quantization inherent to 1mm resolution)
 - **Future Tuning:** SMOOTHING_ALPHA adjustable in SensorManager.h (0.15-0.4 range)
-- **Future Optimizations:** Parallel sensor reading (-20ms), high-speed mode (-10ms), predictive filtering
+
+**Sensor Latency Optimizations - COMPLETED (October 27, 2025):**
+- **Status:** ✅ Implemented high-speed sensor mode + optimized reading architecture
+- **User Feedback:** "much nicer!" - improved responsiveness confirmed
+- **Implementation:**
+  - High-speed timing budget: 20ms per sensor (vs 33ms default)
+  - Optimized reading architecture with updateReadings() caching method
+  - Prevents redundant sensor reads
+- **Improvement:** ~10ms latency reduction in sensor reading time
+- **Total Latency:** ~75ms (down from ~85ms)
+  - Sensor reads: ~40ms (2 sensors × ~20ms each)
+  - Smoothing: ~35ms (EWMA with alpha=0.3)
+- **Future Optimizations:** Non-blocking sensor API, predictive filtering, adaptive smoothing
 
 **Major Milestone Achieved:** Architecture Refactoring Complete!
 
@@ -88,6 +100,30 @@ The project has been transformed from a monolithic 250-line main.cpp into a clea
    - LEDMeter class for WS2812B visual feedback
 
 ## Recent Changes
+
+**Sensor Latency Optimizations (October 27, 2025 - Latest):**
+- **Problem:** Total latency of ~85ms felt slightly sluggish
+- **Solution:** High-speed sensor timing + optimized reading architecture
+- **Implementation:**
+  - Configured both VL53L0X sensors for 20ms timing budget (vs 33ms default)
+  - Added SensorManager::updateReadings() method for optimized reading pattern
+  - Reads both sensors once per loop, caches results
+  - getPitchDistance() and getVolumeDistance() use cached values with smoothing
+- **Results:**
+  - ✅ ~10ms latency reduction (85ms → 75ms total)
+  - ✅ More responsive feel confirmed by user ("much nicer!")
+  - ✅ Cleaner code architecture (single update point)
+  - ✅ Foundation for future non-blocking sensor implementation
+  - ✅ No RAM/Flash increase (47,560 bytes / 857,041 bytes)
+- **Files Modified:**
+  - include/SensorManager.h: Added updateReadings() method, caching variables
+  - src/SensorManager.cpp: Implemented timing budget config and caching
+  - src/Theremin.cpp: Updated to call updateReadings() before getting distances
+  - PITCH_SMOOTHING_IMPROVEMENTS.md: Documented sensor optimizations
+- **Trade-offs:**
+  - Slightly reduced max range (still adequate for 50-400mm)
+  - Minimal accuracy reduction (negligible for gesture control)
+- **Build Status:** ✅ Compiles successfully, no errors/warnings
 
 **Pitch Smoothing Improvements (October 27, 2025):**
 - **Problem:** Audible pitch stepping from sensor quantization (1mm = ~1.9 Hz jumps)

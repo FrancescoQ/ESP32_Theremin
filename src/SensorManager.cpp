@@ -12,8 +12,11 @@
 SensorManager::SensorManager()
     : smoothedPitchDistance(0.0f),
       smoothedVolumeDistance(0.0f),
-      firstReading(true) {
+      firstReading(true),
+      cachedPitchRaw(0),
+      cachedVolumeRaw(0) {
   // Exponential smoothing values initialized to 0, will be set on first reading
+  // Cached raw values initialized to 0, will be updated by updateReadings()
 }
 
 // Initialize sensors
@@ -41,6 +44,11 @@ bool SensorManager::begin() {
   }
   DEBUG_PRINTLN("[SENSOR] Pitch sensor initialized at 0x30");
 
+  // Configure high-speed timing budget for reduced latency
+  // 20ms vs 33ms default - reduces reading time by ~13ms per sensor
+  pitchSensor.setMeasurementTimingBudgetMicroSeconds(20000);
+  DEBUG_PRINTLN("[SENSOR] Pitch sensor timing budget set to 20ms");
+
   // Initialize volume sensor at default address 0x29
   digitalWrite(PIN_SENSOR_VOLUME_XSHUT, HIGH);
   delay(10);
@@ -50,19 +58,29 @@ bool SensorManager::begin() {
   }
   DEBUG_PRINTLN("[SENSOR] Volume sensor initialized at 0x29");
 
+  // Configure high-speed timing budget for reduced latency
+  volumeSensor.setMeasurementTimingBudgetMicroSeconds(20000);
+  DEBUG_PRINTLN("[SENSOR] Volume sensor timing budget set to 20ms");
+
   return true;
 }
 
-// Get smoothed pitch distance
-int SensorManager::getPitchDistance() {
-  int rawDistance = readPitchRaw();
-  return applyExponentialSmoothing(smoothedPitchDistance, rawDistance, firstReading);
+// Update sensor readings - reads both sensors and caches results
+void SensorManager::updateReadings() {
+  // Read both sensors sequentially and cache results
+  // This ensures each sensor is only read once per update cycle
+  cachedPitchRaw = readPitchRaw();
+  cachedVolumeRaw = readVolumeRaw();
 }
 
-// Get smoothed volume distance
+// Get smoothed pitch distance (uses cached raw value)
+int SensorManager::getPitchDistance() {
+  return applyExponentialSmoothing(smoothedPitchDistance, cachedPitchRaw, firstReading);
+}
+
+// Get smoothed volume distance (uses cached raw value)
 int SensorManager::getVolumeDistance() {
-  int rawDistance = readVolumeRaw();
-  int result = applyExponentialSmoothing(smoothedVolumeDistance, rawDistance, firstReading);
+  int result = applyExponentialSmoothing(smoothedVolumeDistance, cachedVolumeRaw, firstReading);
 
   // After first reading of both sensors, clear the flag
   if (firstReading) {
