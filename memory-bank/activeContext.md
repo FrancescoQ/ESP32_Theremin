@@ -7,31 +7,42 @@
 ## Current Work Focus
 
 ### Project Status
-**Phase:** Phase 2 - I2S DAC + Oscillator Implementation ✅ (with known issue)
+**Phase:** Phase 2 - I2S DAC + Oscillator + Continuous Audio ✅ COMPLETE!
 **Date:** October 27, 2025
 **v2.0 Vision:** Multi-oscillator synthesizer with effects, professional I/O, and visual feedback
 
-**Major Milestone Achieved:** I2S DAC + Oscillator Architecture Complete!
+**Major Milestone Achieved:** Continuous Audio Generation via FreeRTOS Task!
 
-Successfully transitioned from PWM buzzer to professional I2S DAC output with modular oscillator architecture:
+Successfully implemented professional-grade continuous audio generation:
 - **Oscillator Class** (include/Oscillator.h + src/Oscillator.cpp): Digital oscillator with phase accumulator, square wave generation, octave shifting
-- **AudioEngine Updated**: Now uses I2S in built-in DAC mode (GPIO25 @ 22050 Hz)
+- **AudioEngine Updated**: I2S DAC (GPIO25 @ 22050 Hz) + FreeRTOS audio task on Core 1
 - **PWM Removed**: All legacy PWM code cleanly removed
 - **Frequency Range**: 220-880 Hz (A3-A5, 2 octaves exactly)
+- **Continuous Audio**: High-priority task generates buffers continuously, independent of sensor timing
+- **Thread-Safe**: Mutex-protected parameter updates between sensor and audio tasks
 
-**Current Status:** ✅ Audio working, ⚠️ Steppy/choppy sound (known issue)
+**Current Status:** ✅ Audio smooth and continuous! ⚠️ Minor pitch stepping (sensor quantization)
 
 **Test Results (October 27, 2025):**
 - ✅ I2S DAC outputs audio on GPIO25
 - ✅ Oscillator generates square wave
 - ✅ Frequency control works (sensors → frequency changes)
-- ✅ Volume control works (sensors → amplitude changes)
-- ⚠️ Audio is "steppy" - gaps between buffer fills cause discontinuities
+- ✅ Volume control works correctly (near = loud, far = quiet)
+- ✅ **Audio is smooth and continuous - NO stepping/gaps!**
+- ⚠️ Minor pitch stepping (caused by sensor quantization, not audio generation)
 
-**Root Cause of Steppy Audio:**
-Current architecture fills I2S buffer only when `update()` is called from main loop. Between calls, there are gaps (~60ms for sensor reads + processing), causing audible stuttering.
+**Build Results:**
+- RAM: 47,584 bytes (14.5%) - actually improved!
+- Flash: 856,877 bytes (65.4%)
+- Compiles without errors or warnings
 
-**Next Priority:** Implement continuous audio generation via FreeRTOS task or timer interrupt.
+**Known Issue - Pitch Stepping:**
+- **Symptom:** Audible steps in pitch when moving hand smoothly
+- **Root Cause:** VL53L0X returns integer millimeters; 1mm step = ~1.9 Hz jump
+- **Secondary Causes:** Integer map() function, 5-sample smoothing may be insufficient
+- **Impact:** Noticeable but minor - audio quality vastly improved overall
+- **Priority:** Low (polish/refinement for future)
+- **Solutions Identified:** Increase smoothing samples, exponential smoothing, or interpolation
 
 **Major Milestone Achieved:** Architecture Refactoring Complete!
 
@@ -76,6 +87,26 @@ The project has been transformed from a monolithic 250-line main.cpp into a clea
    - LEDMeter class for WS2812B visual feedback
 
 ## Recent Changes
+
+**Continuous Audio Generation via FreeRTOS Task (October 27, 2025):**
+- **Problem Solved:** Audio was steppy/choppy with ~68ms gaps between 11.6ms buffers
+- **Solution:** Dedicated high-priority audio task on Core 1
+- **Implementation:**
+  - Modified AudioEngine.h: Added FreeRTOS task support, mutex, task handle
+  - Modified AudioEngine.cpp: Audio task continuously generates buffers
+  - Thread-safe parameter updates with mutex protection
+  - Audio task blocks on i2s_write(), naturally paced at ~11ms intervals
+  - Sensor reads on Core 0 update parameters asynchronously
+- **Volume Reversal Fix:** Inverted amplitude mapping (near=loud, far=quiet)
+- **Results:**
+  - ✅ Smooth, continuous audio with zero gaps
+  - ✅ RAM improved to 14.5% (47,584 bytes)
+  - ✅ Flash: 65.4% (856,877 bytes)
+  - ✅ Volume control works correctly
+- **Documentation:** Created CONTINUOUS_AUDIO_IMPLEMENTATION.md
+- **Minor Issue:** Pitch stepping from sensor quantization (1mm = ~1.9 Hz)
+  - Not audio generation issue - sensor resolution limitation
+  - Future solutions: increase smoothing, exponential smoothing, interpolation
 
 **OTA Firmware Update System Implemented (October 20, 2025):**
 - Created OTAManager class (include/OTAManager.h + src/OTAManager.cpp)

@@ -9,6 +9,8 @@
 #pragma once
 #include <Arduino.h>
 #include <driver/i2s.h>
+#include <freertos/FreeRTOS.h>
+#include <freertos/task.h>
 #include "PinConfig.h"
 #include "Oscillator.h"
 
@@ -38,9 +40,22 @@ class AudioEngine {
 
   /**
    * Update audio output based on current frequency and amplitude
-   * Call this after setting frequency/amplitude to apply changes
+   * DEPRECATED: No longer needed with continuous audio task
+   * Kept for backward compatibility but does nothing
    */
   void update();
+
+  /**
+   * Start continuous audio generation task
+   * Called automatically by begin()
+   */
+  void startAudioTask();
+
+  /**
+   * Stop continuous audio generation task
+   * Call before destroying AudioEngine instance
+   */
+  void stopAudioTask();
 
   /**
    * Get current frequency
@@ -85,6 +100,11 @@ class AudioEngine {
   // Oscillator instance
   Oscillator oscillator;
 
+  // FreeRTOS task management
+  TaskHandle_t audioTaskHandle;
+  SemaphoreHandle_t paramMutex;  // Protects frequency/amplitude updates
+  volatile bool taskRunning;
+
   /**
    * Initialize I2S in built-in DAC mode
    */
@@ -92,6 +112,19 @@ class AudioEngine {
 
   /**
    * Generate audio buffer and write to I2S
+   * Called continuously by audio task
    */
   void generateAudioBuffer();
+
+  /**
+   * Static wrapper for FreeRTOS task
+   * Required because FreeRTOS expects static function
+   */
+  static void audioTaskFunction(void* parameter);
+
+  /**
+   * Instance method called by task
+   * Continuously generates audio buffers
+   */
+  void audioTaskLoop();
 };

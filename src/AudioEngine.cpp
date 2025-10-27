@@ -9,41 +9,53 @@
 #include "Debug.h"
 
 // Constructor
-AudioEngine::AudioEngine() : currentFrequency(MIN_FREQUENCY), currentAmplitude(0), smoothedAmplitude(0.0) {
+AudioEngine::AudioEngine() : currentFrequency(MIN_FREQUENCY), currentAmplitude(0), smoothedAmplitude(0.0), audioTaskHandle(NULL), paramMutex(NULL), taskRunning(false) {
   // Initialize oscillator with square wave
   oscillator.setWaveform(Oscillator::SQUARE);
   oscillator.setOctaveShift(0);  // No octave shift by default
+
+  // Create mutex for thread-safe parameter updates
+  paramMutex = xSemaphoreCreateMutex();
 }
 
 // Initialize audio hardware
 void AudioEngine::begin() {
   setupI2S();
   DEBUG_PRINTLN("[AUDIO] I2S DAC initialized on GPIO25 @ 22050 Hz");
+
+  // Start continuous audio generation task
+  startAudioTask();
 }
 
-// Set frequency
+// Set frequency (thread-safe)
 void AudioEngine::setFrequency(int freq) {
-  // Constrain to valid range (A3-A5)
-  currentFrequency = constrain(freq, MIN_FREQUENCY, MAX_FREQUENCY);
+  if (paramMutex != NULL && xSemaphoreTake(paramMutex, portMAX_DELAY) == pdTRUE) {
+    // Constrain to valid range (A3-A5)
+    currentFrequency = constrain(freq, MIN_FREQUENCY, MAX_FREQUENCY);
 
-  // Update oscillator frequency
-  oscillator.setFrequency((float)currentFrequency);
+    // Update oscillator frequency
+    oscillator.setFrequency((float)currentFrequency);
+
+    xSemaphoreGive(paramMutex);
+  }
 }
 
-// Set amplitude
+// Set amplitude (thread-safe)
 void AudioEngine::setAmplitude(int amplitude) {
-  // Constrain to 0-100%
-  currentAmplitude = constrain(amplitude, 0, 100);
+  if (paramMutex != NULL && xSemaphoreTake(paramMutex, portMAX_DELAY) == pdTRUE) {
+    // Constrain to 0-100%
+    currentAmplitude = constrain(amplitude, 0, 100);
+
+    xSemaphoreGive(paramMutex);
+  }
 }
 
 // Update audio output
+// DEPRECATED: No longer needed with continuous audio task
 void AudioEngine::update() {
-  // Apply exponential smoothing to amplitude
-  // This creates smooth fade-in/fade-out instead of sudden volume jumps
-  smoothedAmplitude += (currentAmplitude - smoothedAmplitude) * SMOOTHING_FACTOR;
-
-  // Generate and write audio buffer to I2S
-  generateAudioBuffer();
+  // This function is now a no-op
+  // Audio generation happens continuously in background task
+  // Kept for backward compatibility
 }
 
 // Initialize I2S in built-in DAC mode
@@ -79,6 +91,14 @@ void AudioEngine::setupI2S() {
 void AudioEngine::generateAudioBuffer() {
   int16_t buffer[BUFFER_SIZE];
 
+  // Lock mutex to safely read parameters
+  if (paramMutex != NULL && xSemaphoreTake(paramMutex, 0) == pdTRUE) {
+    // Apply exponential smoothing to amplitude
+    smoothedAmplitude += (currentAmplitude - smoothedAmplitude) * SMOOTHING_FACTOR;
+
+    xSemaphoreGive(paramMutex);
+  }
+
   // Calculate gain from smoothed amplitude (0-100% → 0.0-1.0)
   float gain = smoothedAmplitude / 100.0f;
 
@@ -91,7 +111,74 @@ void AudioEngine::generateAudioBuffer() {
     buffer[i] = (int16_t)(sample * gain);
   }
 
-  // Write buffer to I2S
+  // Write buffer to I2S (blocks until DMA buffer available)
   size_t bytes_written = 0;
   i2s_write((i2s_port_t)I2S_NUM, buffer, BUFFER_SIZE * sizeof(int16_t), &bytes_written, portMAX_DELAY);
+}
+
+// Start continuous audio generation task
+void AudioEngine::startAudioTask() {
+  if (taskRunning) {
+    DEBUG_PRINTLN("[AUDIO] Task already running");
+    return;
+  }
+
+  taskRunning = true;
+
+  // Create high-priority task on Core 1 (app core)
+  // Stack: 4096 bytes, Priority: 2 (higher than default 1), Core: 1
+  xTaskCreatePinnedToCore(
+      audioTaskFunction,      // Task function
+      "AudioTask",            // Task name
+      4096,                   // Stack size (bytes)
+      this,                   // Parameter (this pointer)
+      2,                      // Priority (higher = more important)
+      &audioTaskHandle,       // Task handle
+      1                       // Core ID (1 = app core)
+  );
+
+  DEBUG_PRINTLN("[AUDIO] Continuous audio task started on Core 1");
+}
+
+// Stop continuous audio generation task
+void AudioEngine::stopAudioTask() {
+  if (!taskRunning) {
+    return;
+  }
+
+  taskRunning = false;
+
+  // Delete task
+  if (audioTaskHandle != NULL) {
+    vTaskDelete(audioTaskHandle);
+    audioTaskHandle = NULL;
+  }
+
+  DEBUG_PRINTLN("[AUDIO] Continuous audio task stopped");
+}
+
+// Static wrapper for FreeRTOS task
+void AudioEngine::audioTaskFunction(void* parameter) {
+  // Cast parameter back to AudioEngine instance
+  AudioEngine* engine = static_cast<AudioEngine*>(parameter);
+
+  // Call instance method
+  engine->audioTaskLoop();
+}
+
+// Audio task loop - runs continuously
+void AudioEngine::audioTaskLoop() {
+  DEBUG_PRINTLN("[AUDIO] Audio task loop started");
+
+  while (taskRunning) {
+    // Generate and write one buffer to I2S
+    // This blocks until DMA buffer is available (~11ms at 22050Hz)
+    generateAudioBuffer();
+
+    // No delay needed - i2s_write() naturally paces us
+    // It blocks until hardware needs next buffer
+  }
+
+  DEBUG_PRINTLN("[AUDIO] Audio task loop exited");
+  vTaskDelete(NULL);  // Delete self
 }
