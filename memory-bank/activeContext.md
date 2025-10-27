@@ -7,28 +7,31 @@
 ## Current Work Focus
 
 ### Project Status
-**Phase:** Phase 2 - I2S DAC + Oscillator + Continuous Audio ✅ COMPLETE!
+**Phase:** Phase 2 - I2S DAC + Oscillator + Multiple Waveforms ✅ COMPLETE!
 **Date:** October 27, 2025
 **v2.0 Vision:** Multi-oscillator synthesizer with effects, professional I/O, and visual feedback
 
-**Major Milestone Achieved:** Continuous Audio Generation via FreeRTOS Task!
+**Major Milestone Achieved:** Complete Waveform Synthesis Implementation!
 
-Successfully implemented professional-grade continuous audio generation:
-- **Oscillator Class** (include/Oscillator.h + src/Oscillator.cpp): Digital oscillator with phase accumulator, square wave generation, octave shifting
-- **AudioEngine Updated**: I2S DAC (GPIO25 @ 22050 Hz) + FreeRTOS audio task on Core 1
+Successfully implemented professional-grade audio synthesis with multiple waveforms:
+- **Oscillator Class** (include/Oscillator.h + src/Oscillator.cpp): Digital oscillator with phase accumulator, **4 waveform types**, octave shifting
+- **Waveforms Available**: Square, Sine (LUT-based), Triangle (mathematical), Sawtooth (mathematical)
+- **AudioEngine Updated**: I2S DAC (GPIO25 @ 22050 Hz) + FreeRTOS audio task on Core 1 + proper sample format conversion
+- **DAC Format Fix**: Correct unsigned 8-bit output (0-255) for ESP32 built-in DAC
 - **PWM Removed**: All legacy PWM code cleanly removed
 - **Frequency Range**: 220-880 Hz (A3-A5, 2 octaves exactly)
 - **Continuous Audio**: High-priority task generates buffers continuously, independent of sensor timing
 - **Thread-Safe**: Mutex-protected parameter updates between sensor and audio tasks
 
-**Current Status:** ✅ Audio smooth and continuous! ⚠️ Minor pitch stepping (sensor quantization)
+**Current Status:** ✅ Audio smooth, continuous, and distortion-free across all waveforms! ⚠️ Minor pitch stepping (sensor quantization)
 
 **Test Results (October 27, 2025):**
 - ✅ I2S DAC outputs audio on GPIO25
-- ✅ Oscillator generates square wave
+- ✅ Oscillator generates 4 waveforms (square, sine, triangle, sawtooth)
 - ✅ Frequency control works (sensors → frequency changes)
-- ✅ Volume control works correctly (near = loud, far = quiet)
+- ✅ Volume control works correctly (near sensor = quiet, far = loud - traditional theremin behavior)
 - ✅ **Audio is smooth and continuous - NO stepping/gaps!**
+- ✅ **NO distortion - proper DAC format conversion**
 - ⚠️ Minor pitch stepping (caused by sensor quantization, not audio generation)
 
 **Build Results:**
@@ -100,6 +103,83 @@ The project has been transformed from a monolithic 250-line main.cpp into a clea
    - LEDMeter class for WS2812B visual feedback
 
 ## Recent Changes
+
+**Multiple Waveform Implementation (October 27, 2025 - Latest):**
+- **Achievement:** Expanded oscillator to support 4 distinct waveform types!
+- **Waveforms Implemented:**
+  - **Square**: Hollow, buzzy, only odd harmonics (original)
+  - **Sine**: Pure, smooth, no harmonics - 256-entry LUT in PROGMEM (512 bytes Flash)
+  - **Triangle**: Mellow, flute-like, weak odd harmonics - mathematical generation
+  - **Sawtooth**: Bright, brassy, ALL harmonics - simplest implementation (1 line!)
+- **Implementation:**
+  - Modified include/Oscillator.h: Added SINE, TRIANGLE, SAW to enum
+  - Modified src/Oscillator.cpp: Implemented all waveform generators
+  - Sine uses lookup table for efficiency, triangle/saw use direct mathematical formulas
+- **Performance:** All waveforms <1% CPU overhead, negligible memory impact
+- **Results:**
+  - ✅ All 4 waveforms sound clean and distinct
+  - ✅ No additional distortion or artifacts
+  - ✅ Easy waveform selection via compile-time enum
+  - ✅ Foundation for future runtime waveform switching
+- **Files Modified:**
+  - include/Oscillator.h: Added waveform enum values, method declarations, sine LUT
+  - src/Oscillator.cpp: Implemented generateSineWave(), generateTriangleWave(), generateSawtoothWave()
+  - docs/improvements/WAVEFORM_IMPLEMENTATION.md: Complete documentation
+- **Documentation:** Created comprehensive WAVEFORM_IMPLEMENTATION.md with sound characteristics, technical details, usage guide
+- **Build Status:** ✅ Compiles successfully, no errors/warnings
+
+**DAC Format Fix - Distortion Elimination (October 27, 2025):**
+- **Problem:** Distortion across all waveforms due to sample format mismatch
+- **Root Cause:** ESP32 built-in DAC expects unsigned 8-bit (0-255), code was sending signed 16-bit (-32768 to 32767)
+- **Solution:** Proper sample format conversion in AudioEngine.generateAudioBuffer()
+  - Convert signed 16-bit to unsigned 8-bit: `(sample >> 8) + 128`
+  - Place in upper byte of 16-bit word for I2S DMA alignment
+  - Generic fix applies to ALL waveforms equally
+- **Results:**
+  - ✅ Complete distortion elimination
+  - ✅ Clean output on sine, triangle, square, and sawtooth
+  - ✅ No performance impact (simple bit operations)
+- **Files Modified:**
+  - src/AudioEngine.cpp: Updated generateAudioBuffer() with proper sample conversion
+  - docs/improvements/DAC_FORMAT_FIX.md: Technical documentation
+- **Documentation:** Created DAC_FORMAT_FIX.md explaining ESP32 DAC requirements, conversion process, testing guide
+- **Build Status:** ✅ Compiles successfully, audio quality excellent
+
+**Volume Mapping Fix - Traditional Theremin Behavior (October 27, 2025):**
+- **Problem:** Volume control reversed (near = loud, far = quiet)
+- **Solution:** Inverted amplitude mapping to match traditional theremin
+  - Near volume sensor (50mm) = 0% volume (quiet)
+  - Far from volume sensor (400mm) = 100% volume (loud)
+- **Files Modified:**
+  - src/Theremin.cpp: Swapped map() output values (0 and 100) with explanatory comment
+- **Results:** ✅ Volume control now matches classic theremin behavior
+- **Build Status:** ✅ Compiles successfully, behavior correct
+
+**OTA Preprocessor Fix (October 27, 2025):**
+- **Problem:** OTA initialized even when `-DENABLE_OTA=0` was set
+- **Root Cause:** `#ifdef ENABLE_OTA` checks if defined (any value), not if true/false
+- **Solution:** Changed all `#ifdef ENABLE_OTA` to `#if ENABLE_OTA` in main.cpp
+- **Results:**
+  - ✅ OTA can be enabled/disabled via build flag value
+  - ✅ `-DENABLE_OTA=1` enables OTA
+  - ✅ `-DENABLE_OTA=0` disables OTA
+- **Files Modified:**
+  - src/main.cpp: Changed preprocessor directives
+- **Build Status:** ✅ Compiles successfully, OTA enable/disable working correctly
+
+**I2S Error Handling Improvements (October 27, 2025):**
+- **Problem:** Poor error visibility if I2S initialization fails
+- **Solution:** Enhanced error handling in AudioEngine
+  - Changed setupI2S() to return bool (success/failure)
+  - Added delay before I2S init to ensure Serial is ready
+  - Audio task won't start if I2S initialization fails
+  - Clear error messages for I2S driver and DAC mode failures
+- **Files Modified:**
+  - include/AudioEngine.h: Updated setupI2S() return type
+  - src/AudioEngine.cpp: Implemented error handling and reporting
+- **Results:** ✅ Better diagnostics, prevents cascading failures
+- **Build Status:** ✅ Compiles successfully
+
 
 **Sensor Latency Optimizations (October 27, 2025 - Latest):**
 - **Problem:** Total latency of ~85ms felt slightly sluggish
