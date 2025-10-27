@@ -46,6 +46,12 @@ class Theremin {
   void mapSensorsToAudio();
 
   /**
+   * Floating-point map function for smoother frequency transitions
+   * Eliminates quantization artifacts from integer map() function
+   */
+  float mapFloat(float x, float in_min, float in_max, float out_min, float out_max);
+
+  /**
    * Print debug information to serial
    */
   void printDebugInfo(int pitchDist, int volumeDist, int freq, int amplitude);

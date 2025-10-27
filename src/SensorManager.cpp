@@ -9,12 +9,11 @@
 #include "Debug.h"
 
 // Constructor
-SensorManager::SensorManager() : pitchIndex(0), volumeIndex(0) {
-  // Initialize smoothing arrays to zero
-  for (int i = 0; i < SAMPLES; i++) {
-    pitchReadings[i] = 0;
-    volumeReadings[i] = 0;
-  }
+SensorManager::SensorManager()
+    : smoothedPitchDistance(0.0f),
+      smoothedVolumeDistance(0.0f),
+      firstReading(true) {
+  // Exponential smoothing values initialized to 0, will be set on first reading
 }
 
 // Initialize sensors
@@ -57,25 +56,33 @@ bool SensorManager::begin() {
 // Get smoothed pitch distance
 int SensorManager::getPitchDistance() {
   int rawDistance = readPitchRaw();
-  return smoothReading(pitchReadings, pitchIndex, rawDistance);
+  return applyExponentialSmoothing(smoothedPitchDistance, rawDistance, firstReading);
 }
 
 // Get smoothed volume distance
 int SensorManager::getVolumeDistance() {
   int rawDistance = readVolumeRaw();
-  return smoothReading(volumeReadings, volumeIndex, rawDistance);
+  int result = applyExponentialSmoothing(smoothedVolumeDistance, rawDistance, firstReading);
+
+  // After first reading of both sensors, clear the flag
+  if (firstReading) {
+    firstReading = false;
+  }
+
+  return result;
 }
 
-// Apply moving average smoothing
-int SensorManager::smoothReading(int readings[], int& index, int newReading) {
-  readings[index] = newReading;
-  index = (index + 1) % SAMPLES;
-
-  long sum = 0;
-  for (int i = 0; i < SAMPLES; i++) {
-    sum += readings[i];
+// Apply exponential weighted moving average (EWMA) smoothing
+int SensorManager::applyExponentialSmoothing(float& smoothedValue, int newReading, bool isFirstReading) {
+  if (isFirstReading) {
+    // On first reading, initialize the smoothed value
+    smoothedValue = (float)newReading;
+  } else {
+    // Apply EWMA formula: smoothed = alpha * new + (1 - alpha) * previous
+    smoothedValue = (SMOOTHING_ALPHA * newReading) + ((1.0f - SMOOTHING_ALPHA) * smoothedValue);
   }
-  return sum / SAMPLES;
+
+  return (int)smoothedValue;
 }
 
 int SensorManager::readPitchRaw() {

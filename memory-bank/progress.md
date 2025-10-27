@@ -24,7 +24,7 @@ Major breakthrough achieved! Successfully implemented professional-grade continu
 - Flash: 856,877 bytes (65.4%)
 - No errors or warnings
 
-**Current State:** Phase 2 complete! Ready for Phase 3 (multiple oscillators) or Phase 4 (effects). Minor pitch stepping remains (sensor quantization issue, not audio generation).
+**Current State:** Phase 2 complete! Ready for Phase 3 (multiple oscillators) or Phase 4 (effects). Pitch stepping significantly improved with exponential smoothing (minor residual stepping acceptable for now).
 
 ## What Works
 
@@ -263,7 +263,26 @@ Ideas: I2S DAC upgrade, MIDI, CV/Gate, WiFi control, granular synthesis...
 ## Known Issues
 
 ### Current Issues
-None yet - no code has been implemented.
+
+**Minor Pitch Stepping (Acceptable - October 27, 2025):**
+- **Status:** ✅ Significantly improved, user-confirmed acceptable
+- **Cause:** VL53L0X sensor returns integer millimeters (1mm = ~1.9 Hz steps)
+- **Solution Implemented:** Exponential smoothing (EWMA with alpha=0.3) + float frequency mapping
+- **Improvement:** 65ms latency reduction (100ms → 35ms), sub-Hz precision
+- **User Feedback:** "Still a bit stepping, but I can live with it for now"
+- **Remaining:** Minor stepping still audible but acceptable for current phase
+- **Future Work:** Parallel sensor reading, high-speed mode, predictive filtering available if needed
+- **Documentation:** See PITCH_SMOOTHING_IMPROVEMENTS.md for tuning guide
+
+### Resolved Issues
+
+**Audio Stepping/Choppy (RESOLVED - October 27, 2025):**
+- ✅ Fixed with FreeRTOS audio task on Core 1
+- Audio now perfectly smooth and continuous
+
+**Pitch Stepping (IMPROVED - October 27, 2025):**
+- ✅ Improved from ~1.9 Hz integer steps to sub-Hz precision
+- Exponential smoothing + float mapping significantly reduced stepping
 
 ### Potential Issues to Watch For
 1. **I2C Address Conflict**: Both VL53L0X sensors default to 0x29

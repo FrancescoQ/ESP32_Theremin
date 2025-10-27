@@ -44,25 +44,28 @@ class SensorManager {
   static const int VOLUME_MAX_DIST = 300;
 
  private:
-  // Smoothing filter parameters
-  static const int SAMPLES = 5;
-  int pitchReadings[SAMPLES];
-  int volumeReadings[SAMPLES];
-  int pitchIndex;
-  int volumeIndex;
+  // Exponential smoothing filter parameters
+  // Alpha controls responsiveness: 0.0 = very smooth/slow, 1.0 = no smoothing/instant
+  // Values 0.3-0.4 provide good balance between smoothness and responsiveness
+  static constexpr float SMOOTHING_ALPHA = 0.3f;
+
+  float smoothedPitchDistance;
+  float smoothedVolumeDistance;
+  bool firstReading;  // Track if this is the first reading (to initialize smoothed values)
 
   /**
-   * Apply moving average smoothing to sensor readings using a circular buffer.
-   * Stores the new reading in the buffer, advances the buffer position (wrapping at SAMPLES),
-   * then calculates and returns the average of all readings in the buffer.
-   * This reduces sensor noise by averaging the most recent SAMPLES readings.
+   * Apply exponential weighted moving average (EWMA) smoothing to sensor readings.
+   * Formula: smoothed = alpha * newReading + (1 - alpha) * previousSmoothed
    *
-   * @param readings Array of recent readings (circular buffer)
-   * @param index Current position in circular buffer (passed by reference, auto-increments)
-   * @param newReading New raw reading to add to the buffer
-   * @return Smoothed value (average of last SAMPLES readings)
+   * This provides better responsiveness than simple moving average while maintaining
+   * smooth transitions. Lower alpha = smoother but slower response.
+   *
+   * @param smoothedValue Current smoothed value (passed by reference, updated in-place)
+   * @param newReading New raw reading from sensor
+   * @param isFirstReading If true, initialize smoothedValue to newReading
+   * @return Smoothed value
    */
-  int smoothReading(int readings[], int& index, int newReading);
+  int applyExponentialSmoothing(float& smoothedValue, int newReading, bool isFirstReading);
 
   // VL53L0X sensors (uses pins from PinConfig.h)
   // PIN_SENSOR_I2C_SDA, PIN_SENSOR_I2C_SCL

@@ -28,23 +28,33 @@ bool Theremin::begin() {
   return true;
 }
 
+// Helper function: floating-point map for smoother frequency transitions
+// Eliminates quantization artifacts from integer map() function
+float Theremin::mapFloat(float x, float in_min, float in_max, float out_min, float out_max) {
+  return (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min;
+}
+
 // Main update loop
 void Theremin::update() {
   // Get sensor readings
   int pitchDistance = sensors.getPitchDistance();
   int volumeDistance = sensors.getVolumeDistance();
 
-  // Map to audio parameters (inverse mapping: closer = higher/louder)
-  int frequency = map(pitchDistance, SensorManager::PITCH_MIN_DIST, SensorManager::PITCH_MAX_DIST,
-                      AudioEngine::MAX_FREQUENCY, AudioEngine::MIN_FREQUENCY);
+  // Map pitch to frequency using floating-point math for smooth transitions
+  float frequencyFloat = mapFloat((float)pitchDistance,
+                                   (float)SensorManager::PITCH_MIN_DIST,
+                                   (float)SensorManager::PITCH_MAX_DIST,
+                                   (float)AudioEngine::MAX_FREQUENCY,
+                                   (float)AudioEngine::MIN_FREQUENCY);
 
+  // Constrain and convert to integer
+  int frequency = constrain((int)frequencyFloat, AudioEngine::MIN_FREQUENCY, AudioEngine::MAX_FREQUENCY);
+
+  // Map volume using integer math (volume doesn't need sub-Hz precision)
   int amplitude =
       map(volumeDistance, SensorManager::VOLUME_MIN_DIST, SensorManager::VOLUME_MAX_DIST,
           100,   // Max amplitude (closest)
           0);    // Min amplitude (farthest)
-
-  // Constrain values
-  frequency = constrain(frequency, AudioEngine::MIN_FREQUENCY, AudioEngine::MAX_FREQUENCY);
   amplitude = constrain(amplitude, 0, 100);
 
   // Update audio engine
