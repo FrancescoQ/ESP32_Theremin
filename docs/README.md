@@ -60,6 +60,12 @@ Detailed documentation of major improvements, optimizations, and implementation 
   - Sound characteristics comparison
   - Usage and testing guide
 
+- **[DAC_FORMAT_FIX.md](improvements/DAC_FORMAT_FIX.md)**
+  - ESP32 built-in DAC sample format requirements
+  - Signed 16-bit to unsigned 8-bit conversion
+  - Distortion elimination fix
+  - Technical explanation and testing guide
+
 ### Sensor System
 
 - **[PITCH_SMOOTHING_IMPROVEMENTS.md](improvements/PITCH_SMOOTHING_IMPROVEMENTS.md)**

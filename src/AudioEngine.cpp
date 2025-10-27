@@ -89,7 +89,10 @@ void AudioEngine::setupI2S() {
 
 // Generate audio buffer and write to I2S
 void AudioEngine::generateAudioBuffer() {
-  int16_t buffer[BUFFER_SIZE];
+  // ESP32 built-in DAC expects unsigned 8-bit samples (0-255)
+  // We use uint16_t buffer for proper I2S DMA alignment (2 bytes per sample)
+  // Only the upper byte is used by the DAC
+  uint16_t buffer[BUFFER_SIZE];
 
   // Lock mutex to safely read parameters
   if (paramMutex != NULL && xSemaphoreTake(paramMutex, 0) == pdTRUE) {
@@ -104,16 +107,23 @@ void AudioEngine::generateAudioBuffer() {
 
   // Generate audio samples
   for (int i = 0; i < BUFFER_SIZE; i++) {
-    // Get full-scale sample from oscillator
+    // Get full-scale sample from oscillator (-32768 to 32767)
     int16_t sample = oscillator.getNextSample((float)SAMPLE_RATE);
 
     // Apply amplitude scaling
-    buffer[i] = (int16_t)(sample * gain);
+    int16_t scaledSample = (int16_t)(sample * gain);
+
+    // Convert signed 16-bit to unsigned 8-bit for DAC:
+    // 1. Take upper 8 bits (>> 8): -32768..32767 → -128..127
+    // 2. Add 128 for DC offset: -128..127 → 0..255
+    // 3. Store in upper byte of 16-bit word (DAC reads upper byte)
+    uint8_t dacSample = (uint8_t)((scaledSample >> 8) + 128);
+    buffer[i] = ((uint16_t)dacSample) << 8;  // Put 8-bit sample in upper byte
   }
 
   // Write buffer to I2S (blocks until DMA buffer available)
   size_t bytes_written = 0;
-  i2s_write((i2s_port_t)I2S_NUM, buffer, BUFFER_SIZE * sizeof(int16_t), &bytes_written, portMAX_DELAY);
+  i2s_write((i2s_port_t)I2S_NUM, buffer, BUFFER_SIZE * sizeof(uint16_t), &bytes_written, portMAX_DELAY);
 }
 
 // Start continuous audio generation task
