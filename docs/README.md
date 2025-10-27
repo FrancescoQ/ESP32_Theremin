@@ -54,6 +54,12 @@ Detailed documentation of major improvements, optimizations, and implementation 
   - I2S DAC configuration
   - Performance measurements
 
+- **[WAVEFORM_IMPLEMENTATION.md](improvements/WAVEFORM_IMPLEMENTATION.md)**
+  - Multiple waveform types (square, sine, triangle)
+  - Lookup table vs mathematical generation
+  - Sound characteristics comparison
+  - Usage and testing guide
+
 ### Sensor System
 
 - **[PITCH_SMOOTHING_IMPROVEMENTS.md](improvements/PITCH_SMOOTHING_IMPROVEMENTS.md)**

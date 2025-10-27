@@ -11,7 +11,7 @@
 // Constructor
 AudioEngine::AudioEngine() : currentFrequency(MIN_FREQUENCY), currentAmplitude(0), smoothedAmplitude(0.0), audioTaskHandle(NULL), paramMutex(NULL), taskRunning(false) {
   // Initialize oscillator with square wave
-  oscillator.setWaveform(Oscillator::SQUARE);
+  oscillator.setWaveform(Oscillator::SINE);
   oscillator.setOctaveShift(0);  // No octave shift by default
 
   // Create mutex for thread-safe parameter updates

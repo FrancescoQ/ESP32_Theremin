@@ -3,8 +3,8 @@
  *
  * Digital oscillator for ESP32 Theremin.
  * Implements phase accumulator with waveform generation.
- * Currently supports square wave (simplest for initial implementation).
- * Designed for easy expansion to sine, sawtooth, triangle waveforms.
+ * Supports square, sine, and triangle waveforms.
+ * Additional waveforms (sawtooth) can be easily added.
  */
 
 #pragma once
@@ -19,10 +19,10 @@ class Oscillator {
   enum Waveform {
     OFF = 0,
     SQUARE = 1,
+    SINE = 2,
+    TRIANGLE = 3,
     // Future waveforms:
-    // SINE = 2,
-    // SAW = 3,
-    // TRIANGLE = 4
+    // SAW = 4
   };
 
   /**
@@ -86,4 +86,20 @@ class Oscillator {
    * Simple phase comparison, no LUT needed
    */
   int16_t generateSquareWave() const;
+
+  /**
+   * Generate sine wave sample
+   * Uses lookup table for efficiency
+   */
+  int16_t generateSineWave() const;
+
+  /**
+   * Generate triangle wave sample
+   * Mathematical generation, no LUT needed
+   */
+  int16_t generateTriangleWave() const;
+
+  // Sine wave lookup table (256 entries)
+  // Stored in Flash memory to save RAM
+  static const int16_t SINE_TABLE[256] PROGMEM;
 };
