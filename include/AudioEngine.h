@@ -2,19 +2,20 @@
  * AudioEngine.h
  *
  * Manages audio synthesis for the ESP32 Theremin.
- * Currently implements PWM-based square wave generation.
- * Designed to be extensible for future DAC and waveform support.
+ * Uses ESP32 internal DAC with I2S peripheral for DMA-driven audio output.
  */
 
 #pragma once
 #include <Arduino.h>
+#include <driver/i2s.h>
 #include "PinConfig.h"
+#include "Oscillator.h"
 
 class AudioEngine {
- public:
+public:
   /**
-     * Constructor
-     */
+   * Constructor
+   */
   AudioEngine();
 
   /**
@@ -55,42 +56,28 @@ class AudioEngine {
   }
 
   // Audio range constants
-  static const int MIN_FREQUENCY = 100;
-  static const int MAX_FREQUENCY = 2000;
+  static const int MIN_FREQUENCY = 220;  // A3
+  static const int MAX_FREQUENCY = 880;  // A5
 
- private:
-  static const int PWM_CHANNEL = 0;
-  static const int PWM_RESOLUTION = 8;
-  static const int PWM_FREQUENCY = 2000;
-
-  // Duty cycle range (0-255 for 8-bit PWM)
-  static const int MIN_DUTY_CYCLE = 0;
-  static const int MAX_DUTY_CYCLE = 128;   // 50% max for square wave
-  static const int SILENCE_THRESHOLD = 5;  // Below this, output silence
+private:
+  // Oscillator instance
+  Oscillator oscillator;
 
   // Amplitude smoothing (prevents sudden volume jumps)
-  // Tuning guide - adjust to taste:
-  //   0.05 = ~2.0s fade time (very smooth, laggy)
-  //   0.10 = ~1.2s fade time (smooth, professional)
-  //   0.15 = ~0.8s fade time (balanced - current setting)
-  //   0.25 = ~0.5s fade time (responsive, slight smoothing)
-  //   0.50 = ~0.2s fade time (minimal smoothing)
-  //   1.00 = instant (no smoothing, like before)
   static constexpr float SMOOTHING_FACTOR = 0.15;  // 0.0-1.0 (lower = smoother)
 
   // Current state
   int currentFrequency;
-  int currentAmplitude;     // Target amplitude
-  float smoothedAmplitude;  // Actual smoothed amplitude value
-  int dutyCycle;
+  int currentAmplitude;      // Target amplitude (0-100%)
+  float smoothedAmplitude;   // Actual smoothed amplitude value
+
+  // I2S configuration
+  static const int I2S_SAMPLE_RATE = 22050;   // 22.05 kHz
+  static const int I2S_BUFFER_SIZE = 512;      // Samples per buffer
+  uint16_t audioBuffer[I2S_BUFFER_SIZE];       // I2S requires 16-bit samples
 
   /**
-   * Map amplitude percentage to PWM duty cycle
+   * Fill buffer with audio samples from oscillator
    */
-  void calculateDutyCycle();
-
-  /**
-   * Apply current settings to PWM hardware
-   */
-  void updatePWM();
+  void fillBuffer();
 };

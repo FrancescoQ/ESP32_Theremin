@@ -1,279 +1,236 @@
-# Active Context - ESP32 Theremin
+Active Context - ESP32 Theremin
 
 > **📌 Context Alignment:**
-> This tracks current work on the **Phase 1 foundation**.
-> For the full v2.0 roadmap (Phases 0-7), see `/productbrief.md` and `progress.md`.
+> This tracks current work on **Phase 2: PWM → DAC Migration**
+> For the full v2.0 roadmap (Phases 0-7), see `/productbrief.md` and `progress.md`
 
 ## Current Work Focus
 
 ### Project Status
-**Phase:** Phase 1 - Architecture Refactoring Complete ✅
-**Date:** October 19, 2025
-**v2.0 Vision:** Multi-oscillator synthesizer with effects, professional I/O, and visual feedback
+**Phase:** Phase 2 - DAC Migration (IN PROGRESS - DEBUGGING)
+**Date:** October 25, 2025
+**Goal:** Replace PWM square wave with DAC sine wave synthesis
 
-**Major Milestone Achieved:** Architecture Refactoring Complete!
+### Critical Issue: PWM → DAC Migration Debugging Session
 
-The project has been transformed from a monolithic 250-line main.cpp into a clean, modular, object-oriented architecture with separate classes:
-- **SensorManager** (include/SensorManager.h + src/SensorManager.cpp): Handles all sensor input (simulation and hardware)
-- **AudioEngine** (include/AudioEngine.h + src/AudioEngine.cpp): Manages audio synthesis (currently PWM, designed for DAC upgrade)
-- **Theremin** (include/Theremin.h + src/Theremin.cpp): Coordinates sensors and audio
+**Hardware Status:** ✅ DAC → Amplifier → Speaker verified working
+- Simple 440Hz test produces tone (F/F# due to timing, but confirms audio chain works)
 
-**Key Achievement:**
-- Code now organized into reusable, testable classes with clear separation of concerns
-- main.cpp reduced to just ~40 lines
-- Architecture is future-proof and ready for v2.0 features:
-  - DAC audio with wavetable synthesis
-  - Multiple oscillators with AudioMixer
-  - Effects chain (Delay, Chorus, Reverb)
-  - OLED display with DisplayManager
-  - LED meters and visual feedback
-  - Professional I/O (line-out, amp control)
+**Current Problem:** Audio task running on Core 1 - now completely silent
 
-### Immediate Next Steps
+### What We've Tried (October 25, 2025 Session)
 
-1. **Test Phase 1 Foundation**
-   - Test in Wokwi simulator to verify refactored code works
-   - Verify all functionality intact after refactoring
-   - Check serial output format unchanged
-   - Validate sensor smoothing still working
-   - Build for hardware when components acquired
+**Attempt 1: Timer Interrupts (FAILED - Crashes)**
+- Used `hw_timer_t` with ISR at 10-22 kHz
+- Tried static DRAM_ATTR for all oscillator data
+- Result: Guru Meditation Error (LoadProhibited) - ISR accessing non-DRAM memory
+- Root cause: ESP32 ISR can ONLY access DRAM, but complex class structures still in Flash
+- Abandoned approach: Too complex to make all data ISR-safe
 
-2. **Prepare for Phase 2 (v2.0 Begins)**
-   - Design Oscillator class with wavetable generation
-   - Design AudioMixer class for multiple oscillators
-   - Plan DAC output implementation in AudioEngine
-   - Research SSD1306 display integration
-   - Order Phase 2 components (PAM8403, speaker, display)
+**Attempt 2: Loop-Based Generation (FAILED - Ticking)**
+- Main loop generates samples, no interrupts
+- Generated 10, then 500, then 2000 samples per `update()` call
+- Result: "Ticking" sound - audio bursts with gaps
+- Root cause: Main loop ~14 Hz (sensor I2C delays) creates gaps between sample bursts
+- Even with 2000 samples, tremolo/ticking effect audible
 
-3. **Future v2.0 Architecture Extensions**
-   - Oscillator class hierarchy for different waveforms (sine/square/saw)
-   - AudioMixer for summing multiple oscillator outputs
-   - EffectsChain class (Delay, Chorus, optional Reverb)
-   - DisplayManager class for OLED integration
-   - SwitchController class for MCP23017 GPIO expander
-   - LEDMeter class for WS2812B visual feedback
+**Attempt 3: Dual-Core Audio Task on Core 0 (PARTIAL - Ticking Layer)**
+- Created FreeRTOS task on Core 0 for continuous audio generation
+- Main loop (Core 1) handles sensors/OTA
+- Result: Background tone with "ticking second layer"
+- Theory: Core 0 handles WiFi/BT protocol stack, causing interference
 
-## Recent Changes
+**Attempt 4: Dual-Core Audio Task on Core 1 (CURRENT - SILENT)**
+- Moved audio task to Core 1 with priority 2 (higher than main loop priority 1)
+- Theory: Avoid WiFi interference from Core 0
+- **Result: Completely silent - no audio output at all**
+- Status: Need to debug why audio stopped
 
-**OTA Firmware Update System Implemented (October 20, 2025):**
-- Created OTAManager class (include/OTAManager.h + src/OTAManager.cpp)
-- Implemented WiFi Access Point mode (ESP32 creates "Theremin-OTA" network)
-- Integrated ElegantOTA library v3.1.7 for web interface
-- Fixed IP address: 192.168.4.1/update
-- HTTP Basic Authentication for security (admin/theremin)
-- Conditional compilation with `#ifdef ENABLE_OTA` for zero-overhead when disabled
-- Non-blocking operation - theremin continues playing during OTA
-- **Optional button activation feature** - saves RAM when OTA not needed
-  - OTA_ENABLE_PIN macro in main.cpp (-1 = always on, >=0 = check button)
-  - Button logic encapsulated in OTAManager.begin()
-  - Saves ~50-70KB RAM when button not pressed during boot
-  - Active LOW with internal pullup (connect button between GPIO and GND)
-- Created comprehensive OTA_SETUP.md documentation
-- Updated all project documentation (ARCHITECTURE.md, productbrief.md, progress.md, README.md)
-- **Build Status:** ✅ Compiles successfully (RAM: 48KB, Flash: 847KB)
-- **Key Benefits:** Wireless updates when enclosed + RAM savings with button activation
+### Current Code State
 
-**Product Brief Updated to v2.0 (October 19, 2025):**
-- Root `/productbrief.md` now describes complete v2.0 vision (Phases 0-7)
-- Includes multi-oscillator architecture, effects chain, professional I/O
-- BOM, performance budgets, and detailed technical specifications
-- Memory-bank files updated to reflect v1.0 → v2.0 evolution
-- Current Phase 1 foundation positioned as stepping stone to v2.0
+**Files modified:**
+- `include/Oscillator.h` - Oscillator class with static DRAM wavetable, 10 kHz sample rate
+- `src/Oscillator.cpp` - Sine wavetable generation, phase accumulation
+- `include/AudioEngine.h` - Removed timer, added FreeRTOS task, volatile state variables
+- `src/AudioEngine.cpp` - Audio task on Core 1 priority 2, continuous `generateSample()` loop
+- `src/main.cpp` - OTA restored with proper constructor
 
-**Major Architecture Refactoring (October 18, 2025):**
-- Extracted all sensor logic into SensorManager class (header + implementation)
-- Extracted all audio logic into AudioEngine class (header + implementation)
-- Created Theremin coordinator class to manage sensors and audio
-- Simplified main.cpp from 250+ lines to ~60 lines (with OTA)
-- Added comprehensive ARCHITECTURE.md documentation
-- **Build Status:** ✅ Compiles successfully for simulation
-- All functionality preserved, but now organized and extensible
-- Foundation ready for v2.0 expansion
+**Architecture:**
+```
+Core 1 (Application Core):
+├── Audio Task (Priority 2) - audioTask() infinite loop calling generateSample()
+└── Main Loop (Priority 1) - Theremin.update() → sensors + AudioEngine.update() smoothing
 
-## Active Decisions
+Core 0 (Protocol Core):
+└── WiFi/BT stack (OTA when active)
+```
 
-### Phase 1 Design Choices (Current)
-1. **Sensor Selection:** VL53L0X Time-of-Flight sensors
-   - Reason: High precision (±3%), no interference, fast reading (<30ms)
-   - Trade-off: More expensive than ultrasonic, but worth it for quality
-   - v2.0 note: Same sensors will work for advanced features
+**Key Implementation Details:**
+- Oscillator: 256-sample sine LUT, static DRAM_ATTR for ISR safety (legacy from interrupt attempt)
+- Sample rate: 10,000 Hz configured (SAMPLE_RATE constant)
+- AudioEngine: `volatile` state variables for thread safety
+- Audio task: Infinite `while(true)` loop, no delay, maximum sample rate
+- Main loop: Only calls `AudioEngine::update()` for amplitude smoothing
 
-2. **Audio Output:** Start with passive buzzer + PWM
-   - Reason: Simplest implementation for learning Phase 1 fundamentals
-   - **v2.0 upgrade path:** ESP32 DAC → PAM8403 amp → speaker + line-out
-   - Clear migration strategy in AudioEngine class
+**Build Status:**
+- ✅ Compiles: RAM 14.6% (47,808 bytes), Flash 64.6% (846,941 bytes)
+- ✅ Uploads successfully
+- ❌ Audio: Silent (no output)
 
-3. **Development Approach:** Virtual prototyping first
-   - Reason: Validate logic before hardware assembly
-   - Risk mitigation: Avoid damaging components during learning
-   - **Status:** ✅ Wokwi simulation ready
+## Next Session Actions
 
-4. **I2C Address Management:** XSHUT pin method
-   - Reason: Simpler than multiplexer for 2 sensors
-   - Implementation: Sequential initialization with address reassignment
-   - v2.0 note: Will add MCP23017 expander, SSD1306 display on same bus
+### Immediate Debug Steps
 
-### v2.0 Strategic Decisions
-5. **Modular Architecture:** Separate classes for each subsystem
-   - Reason: Easier to add v2.0 features without rewriting
-   - **Benefit:** Can test SensorManager, AudioEngine independently
-   - Future: Easy to add Oscillator, EffectsChain, DisplayManager classes
+1. **Check if audio task is actually running:**
+   - Add debug prints in `audioTask()` loop (e.g., every 10000 samples)
+   - Verify task created successfully
+   - Check for watchdog timeouts
 
-6. **Incremental Feature Addition:** Checkpoints after each phase
-   - Reason: Monitor CPU/RAM usage before adding more features
-   - Critical checkpoints: After Phase 2 (1 osc), Phase 3 (2-3 osc), Phase 4 (effects)
-   - Plan B ready: Drop from 3 to 2 oscillators if CPU >80%
+2. **Verify generateSample() is being called:**
+   - Add counter in `generateSample()` and print periodically
+   - Check if DAC writes are happening
+   - Monitor with oscilloscope if available
 
-7. **Performance Budget:** Reserve CPU headroom
-   - Target: <75% CPU usage sustained
-   - Latency: <20ms sensor-to-sound
-   - Audio dropout rate: 0 (critical)
-   - See `/productbrief.md` Section 5 for detailed budgets
+3. **Check for task starvation:**
+   - Audio task priority 2 might be too high, starving watchdog
+   - Try priority 1 (same as main loop)
+   - Add `taskYIELD()` or tiny `delayMicroseconds(1)` in audio task
 
-### Open Questions
-- When to acquire Phase 2 components (DAC amp, speaker, OLED)?
-- Which specific ESP32 board variant (standard DevKit sufficient)?
-- Physical layout: Sensor positioning for ergonomics?
-- Enclosure design: Wait until Phase 6 or prototype earlier?
-- MCP23017 vs direct GPIO: When to add expander?
+4. **Verify oscillator state:**
+   - Check if `frequency` is set correctly (not 0)
+   - Check if `smoothedAmplitude` is non-zero
+   - Print oscillator values from audio task
+
+5. **Try removing OTA temporarily:**
+   - Disable `#ifdef ENABLE_OTA` to see if WiFi interfering
+   - Test with minimal main loop
+
+### Alternative Approaches to Consider
+
+**Option A: Hybrid Timer + Core 1**
+- Use timer interrupt BUT with minimal ISR (just set flag)
+- Audio task on Core 1 waits for flag, generates batch of samples
+- Avoids DRAM issues while maintaining timing
+
+**Option B: ESP32 I2S DAC Mode**
+- Use I2S peripheral in DAC mode (DMA-driven)
+- Pre-fill buffer, DMA handles output
+- Professional approach, more complex setup
+
+**Option C: Accept Lower Sample Rate**
+- Use timer interrupt at 2-4 kHz (lower than Nyquist but might work)
+- Simpler interrupt, less DRAM pressure
+- Test if 4 kHz is "good enough" for 220-880 Hz range
+
+**Option D: Go Back to PWM**
+- Accept that PWM square wave is "good enough" for Phase 2
+- Move forward with other v2.0 features (oscillators, UI, effects)
+- Revisit DAC in later phase when more experienced
 
 ## Important Patterns & Preferences
 
-### Code Style
-- Object-oriented design with clear separation of concerns
-- Each class has single, well-defined responsibility
-- Public interfaces documented with comments
-- Meaningful class and method names (e.g., `SensorManager::getPitchDistance()`)
-- Clean abstractions that hide implementation details
-- Future-proof design allowing easy feature additions
-
 ### Development Philosophy
-- Build incrementally: test each component before integration
-- Fail gracefully: handle errors without crashing
-- Debug visibility: comprehensive serial output during development
-- Documentation first: understand requirements before coding
+- **Incremental progress:** Each step should produce testable result
+- **Hardware verification first:** Simple tests (like 440Hz) before complex features
+- **When stuck:** Step back, simplify, verify fundamentals
+- **Documentation:** Capture what we tried so we don't repeat mistakes
+
+### Code Style
+- Object-oriented with clear separation of concerns
+- Volatile variables for shared data between tasks/cores
+- Static DRAM_ATTR for ISR-accessed data (if we return to interrupts)
+- Debug prints during development (can remove later)
 
 ### Error Handling Strategy
-- Log all errors to Serial
-- Use last valid reading on sensor timeout
-- Continue operation despite single sensor failure if possible
-- Clear initialization failure messages
+- If audio fails, log to Serial and continue (don't crash)
+- Graceful degradation (e.g., fall back to PWM if DAC fails)
+- Clear initialization messages
 
 ## Learnings & Project Insights
 
-### Architectural Insights
+### ESP32 Audio Architecture Challenges
 
-**Modular Design Benefits (Phase 1 Foundation Complete):**
-Successfully refactored from monolithic code to modular architecture:
-- **Separation of Concerns**: Each class handles one aspect (input, output, coordination)
-- **Testability**: Can test SensorManager without AudioEngine and vice versa
-- **Extensibility**: Adding v2.0 features requires minimal changes to existing code
-- **Maintainability**: Easy to locate and fix bugs in specific subsystems
-- **Reusability**: Classes can be used in other ESP32 projects
+**ISR Memory Access is HARD:**
+- ESP32 ISRs can ONLY access DRAM (not Flash)
+- C++ class instances often stored in Flash by default
+- Making everything ISR-safe requires:
+  - Static class members with DRAM_ATTR
+  - All accessed data explicitly placed in DRAM
+  - Complex and error-prone
 
-**Class Design Pattern:**
-The three-layer architecture works well:
-1. **SensorManager** - Input abstraction layer
-2. **AudioEngine** - Output abstraction layer
-3. **Theremin** - Business logic / coordination layer
+**FreeRTOS Task Considerations:**
+- ESP32 dual-core allows parallel processing
+- Core 0: Protocol CPU (WiFi/BT)
+- Core 1: Application CPU (Arduino code)
+- Task priorities matter (1 = default loop, 2 = higher priority)
+- Watchdog must be fed (either by yielding or short execution time)
 
-This mirrors MVC pattern and makes v2.0 expansion straightforward.
+**Sample Rate Reality Check:**
+- Theoretical max: ~240 MHz CPU / instructions per sample
+- Practical max: ~100-200 kHz with simple synthesis
+- Our target: 10 kHz (more than enough for 880 Hz max frequency)
+- Nyquist theorem: Need 2× max frequency (so 1.76 kHz minimum)
 
-**v2.0 Extension Path (Planned Architecture):**
-Adding new features is now clean:
-- **Phase 2:** Oscillator class with wavetable generation → Integrate into AudioEngine
-- **Phase 2:** DisplayManager class for OLED → Add to Theremin coordinator
-- **Phase 3:** AudioMixer class → Sum multiple Oscillator outputs in AudioEngine
-- **Phase 3:** SwitchController class for MCP23017 → Add to Theremin for user controls
-- **Phase 4:** EffectsChain class (Delay, Chorus, Reverb) → Insert between Oscillator and output
-- **Phase 4:** LEDMeter class for WS2812B strips → Add to Theremin for visual feedback
+### What Worked vs. What Didn't
 
-See `/productbrief.md` Section 4.4 for complete v2.0 class structure.
+**✅ Worked:**
+- Simple 440Hz test in main loop (verified hardware chain)
+- Oscillator class with wavetable generation
+- Dual-core task creation (task starts, just doesn't output audio)
 
-### Key Technical Insights
+**❌ Didn't Work:**
+- Timer interrupts (DRAM access violations)
+- Loop-based generation (gaps create tremolo)
+- Core 0 audio task (WiFi interference?)
+- Core 1 audio task (silent - current mystery)
 
-**I2C Multi-Device Challenge:**
-Both VL53L0X sensors ship with identical I2C address (0x29). This is a common issue with I2C sensors. The XSHUT (shutdown) pin provides elegant solution:
-1. Keep both sensors in shutdown
-2. Enable first sensor, change its address to 0x30
-3. Enable second sensor at default 0x29
-4. Both now independently addressable
-
-**PWM Audio Limitations:**
-Passive buzzer with PWM provides only square wave. This means:
-- Harsh, buzzy sound (not smooth like sine wave)
-- Limited volume control (duty cycle has minimal effect on perceived loudness)
-- Still adequate for demonstrating theremin concept
-- Clear upgrade path exists (DAC + amplifier)
-
-**Latency Considerations:**
-Each VL53L0X reading takes ~20-30ms. With two sensors in sequence, that's ~50ms minimum loop time. This is acceptable for musical control (humans perceive latency >50-100ms as laggy). No optimization needed at this stage.
-
-**Smoothing vs. Responsiveness Trade-off:**
-Moving average filter (5 samples) provides stability but adds ~100ms latency (5 readings × 20ms each). This is acceptable trade-off for eliminating jitter. Can adjust SAMPLES constant if too sluggish.
-
-### Development Strategy Insights
-
-**Simulation Benefits:**
-Wokwi allows testing without hardware:
-- Validate I2C communication logic
-- Test distance-to-frequency mapping
-- Debug initialization sequence
-- Build confidence before hardware investment
-
-**Limitation:** If VL53L0X not available in Wokwi, HC-SR04 serves as functional equivalent for logic testing. Core concepts (read sensor → map value → generate audio) remain identical.
-
-**Phased Approach Rationale:**
-Don't attempt everything at once:
-1. Single sensor + serial output = validate sensor reading
-2. Single sensor + audio = validate audio generation
-3. Dual sensors = solve I2C addressing
-4. Full integration = combine all parts
-5. Refinement = smoothing, calibration, optimization
-
-This approach isolates problems and makes debugging tractable.
+**🤔 Learned:**
+- ESP32 audio is non-trivial (professionals use I2S + DMA for good reason)
+- Our oscillator code is solid (verified in simple test)
+- Issue is in audio task scheduling/execution, not synthesis logic
 
 ## Context for Next Session
 
-When resuming work on this project:
+**Current Mystery: Why is Core 1 audio task silent?**
 
-1. **Read this activeContext.md first** - it contains current state
-2. **Check progress.md** - see what's been completed
-3. **Review systemPatterns.md** - understand architecture before coding
-4. **Refer to techContext.md** - for library usage and configuration details
+Possibilities:
+1. Task not actually running (created but suspended?)
+2. Task running but generateSample() not being called
+3. generateSample() called but DAC not updating
+4. Watchdog killing task (no yield, tight loop)
+5. Priority issue (task starving or being starved)
+6. Core 1 contention with main loop
 
-### Quick Start Checklist
-- [ ] Verify PlatformIO is installed
-- [ ] Verify Wokwi access (if using simulation)
-- [ ] Check if hardware has been acquired
-- [ ] Review which phase we're in (see progress.md)
-- [ ] Check for any code files in project directory
+**Key Files:**
+- `src/AudioEngine.cpp` - Audio task implementation (line 60: audioTask())
+- `include/AudioEngine.h` - Task handle and declarations
+- `src/Oscillator.cpp` - Sample generation (should be working, tested separately)
 
-### Key Files to Monitor
-- `platformio.ini` - PlatformIO configuration (will be created)
-- `src/main.cpp` - Main Arduino code (will be created)
-- `diagram.json` - Wokwi circuit diagram (will be created if using Wokwi)
-- `wokwi.toml` - Wokwi configuration (will be created if using Wokwi)
+**Quick Resume Checklist:**
+- [ ] Read this activeContext.md fully
+- [ ] Review src/AudioEngine.cpp audioTask() function
+- [ ] Add debug prints to verify task is running
+- [ ] Test with oscilloscope if available
+- [ ] Consider simpler approaches if debugging takes too long
 
 ## Notes & Reminders
 
-**Critical Path Items:**
-- XSHUT initialization MUST happen before sensor.begin() calls
-- Sensor addresses must be set in correct order (0x30 first, then 0x29)
-- PWM channel must be set up before ledcWriteTone() calls
-- Serial.begin() should be first line in setup() for debug output
+**What We Know For Sure:**
+- ✅ DAC hardware works (simple 440Hz test confirmed)
+- ✅ Oscillator synthesis works (wavetable generation correct)
+- ✅ Code compiles and uploads successfully
+- ✅ No crashes (unlike timer interrupt approach)
+- ❌ Audio task on Core 1 produces no sound
 
-**Common Pitfalls to Avoid:**
-- Don't confuse active vs. passive buzzers (need PASSIVE)
-- Don't forget 100Ω series resistor for buzzer protection
-- Don't use delay() in tight loops (increases latency)
-- Don't call ledcWriteTone() without ledcSetup() first
-- Don't assume VL53L0X readings are instantaneous (they take time)
+**Don't Forget:**
+- User has working hardware (DAC → amp → speaker)
+- User is patient but getting fatigued with debugging
+- Simple working solution > complex broken solution
+- Can always return to PWM if DAC proves too complex
 
-**Success Indicators:**
-- Both sensors initialize without errors
-- Serial output shows stable distance readings
-- Frequency changes smoothly with hand movement
-- Volume control works independently
-- No I2C bus hangs or timeouts
-- System runs continuously without crashing
+**Success Criteria:**
+- Continuous smooth tone (no ticking/tremolo)
+- Hand movement controls pitch (220-880 Hz)
+- Volume sensor controls amplitude
+- No crashes, no watchdog resets
+- Acceptable latency (<50ms)

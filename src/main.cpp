@@ -1,67 +1,191 @@
 /*
  * ESP32 Theremin - Main Entry Point
  *
- * Clean, modular architecture using separate classes for:
- * - SensorManager: Handles distance sensor input (VL53L0X sensors)
- * - AudioEngine: Manages audio synthesis (currently PWM, future DAC support)
- * - Theremin: Coordinates sensors and audio
+ * Hardware: ESP32 + 2x VL53L0X sensors + DAC audio output
+ */
+
+/*
+ * I2S test with volume sensor
+ * Fixed 440Hz pitch, volume controlled by sensor
  */
 
 #include <Arduino.h>
-#include "Debug.h"
-#include "Theremin.h"
+#include <driver/i2s.h>
+#include <Wire.h>
+#include <Adafruit_VL53L0X.h>
+#include "Oscillator.h"
 #include "PinConfig.h"
+#include "Debug.h"
 
-#ifdef ENABLE_OTA
-#include "OTAManager.h"
-#endif
+// SAMPLE_RATE is defined in Oscillator.h
+const int BUFFER_SIZE = 512;
+uint16_t audioBuffer[BUFFER_SIZE];
 
-// Create theremin instance
-Theremin theremin;
+// XSHUT pins for sensor address assignment
+const int PITCH_XSHUT_PIN = 16;
+const int VOLUME_XSHUT_PIN = 17;
 
-#ifdef ENABLE_OTA
-// Create OTA manager instance
-// AP Name: "Theremin-OTA", AP Password: "" (open network)
-// OTA Auth: username "admin", password "theremin"
-// Enable pin: PIN_OTA_ENABLE from PinConfig.h (-1 = always active, >=0 = button)
-OTAManager ota("Theremin-OTA", "", PIN_OTA_ENABLE);
-#endif
+// Sensors
+Adafruit_VL53L0X pitchSensor = Adafruit_VL53L0X();
+Adafruit_VL53L0X volumeSensor = Adafruit_VL53L0X();
+
+// Oscillator (with wavetable lookup - FAST!)
+Oscillator oscillator;
+int currentAmplitude = 100;  // 0-100%
 
 void setup() {
-  // Initialize debug output
-  DEBUG_INIT(9600);
-  delay(100);
+  Serial.begin(115200);
+  delay(1000);
+  DEBUG_PRINTLN("\n=== ESP32 Theremin with I2S Audio ===");
+  DEBUG_PRINTLN("Pitch + Volume sensors, 220-880 Hz range");
 
-  // Initialize theremin (sensors + audio)
-  if (!theremin.begin()) {
-    DEBUG_PRINTLN("\n[FATAL] Theremin initialization failed!");
-    DEBUG_PRINTLN("System halted.");
-    while (1) {
-      delay(1000);
-    }
+  // Initialize I2C
+  Wire.begin();
+  DEBUG_PRINTLN("I2C initialized");
+
+  // Initialize XSHUT pins
+  pinMode(PITCH_XSHUT_PIN, OUTPUT);
+  pinMode(VOLUME_XSHUT_PIN, OUTPUT);
+
+  // Reset both sensors (active LOW)
+  digitalWrite(PITCH_XSHUT_PIN, LOW);
+  digitalWrite(VOLUME_XSHUT_PIN, LOW);
+  delay(10);
+
+  // Enable pitch sensor and set to 0x30
+  digitalWrite(PITCH_XSHUT_PIN, HIGH);
+  delay(10);
+  if (!pitchSensor.begin(I2C_ADDR_SENSOR_PITCH)) {
+    DEBUG_PRINTLN("ERROR: Pitch sensor init failed!");
+    while(1) delay(1000);
+  }
+  DEBUG_PRINTLN("Pitch sensor initialized at 0x30");
+
+  // Enable volume sensor at default 0x29
+  digitalWrite(VOLUME_XSHUT_PIN, HIGH);
+  delay(10);
+  if (!volumeSensor.begin(I2C_ADDR_SENSOR_VOLUME)) {
+    DEBUG_PRINTLN("ERROR: Volume sensor init failed!");
+    while(1) delay(1000);
+  }
+  DEBUG_PRINTLN("Volume sensor initialized at 0x29");
+
+  // Configure I2S in built-in DAC mode
+  i2s_config_t i2s_config = {
+    .mode = (i2s_mode_t)(I2S_MODE_MASTER | I2S_MODE_TX | I2S_MODE_DAC_BUILT_IN),
+    .sample_rate = SAMPLE_RATE,
+    .bits_per_sample = I2S_BITS_PER_SAMPLE_16BIT,
+    .channel_format = I2S_CHANNEL_FMT_ONLY_RIGHT,
+    .communication_format = I2S_COMM_FORMAT_STAND_MSB,
+    .intr_alloc_flags = ESP_INTR_FLAG_LEVEL1,
+    .dma_buf_count = 2,
+    .dma_buf_len = BUFFER_SIZE,
+    .use_apll = false,
+    .tx_desc_auto_clear = true,
+    .fixed_mclk = 0
+  };
+
+  // Install I2S driver
+  esp_err_t result = i2s_driver_install(I2S_NUM_0, &i2s_config, 0, NULL);
+  if (result != ESP_OK) {
+    DEBUG_PRINT("I2S install failed: ");
+    DEBUG_PRINTLN(result);
+    while(1) delay(1000);
   }
 
-  DEBUG_PRINTLN("=== Ready to Play! ===\n");
+  // Enable built-in DAC
+  i2s_set_dac_mode(I2S_DAC_CHANNEL_RIGHT_EN);
 
-#ifdef ENABLE_OTA
-  // Initialize OTA manager
-  if (ota.begin("admin", "theremin")) {
-    DEBUG_PRINTLN("[OTA] OTA updates enabled");
-  } else {
-    DEBUG_PRINTLN("[OTA] Failed to start OTA manager");
-  }
-#endif
+  DEBUG_PRINTLN("I2S initialized");
 }
 
 void loop() {
-  // Update theremin (read sensors, generate audio)
-  theremin.update();
+  static unsigned long lastSensorRead = 0;
+  static unsigned long lastDebug = 0;
+  static unsigned long lastLoop = micros();
 
-  #ifdef ENABLE_OTA
-    // Handle OTA requests (non-blocking)
-    ota.handle();
-  #endif
+  // Stagger sensor reads to reduce I2C overhead per loop
+  // Alternate between pitch and volume every 10ms
+  // Each sensor updates every 20ms (2.5× faster than before!)
+  static bool readPitch = true;
 
-  // Small delay for stability (~50Hz update rate)
-  delay(20);
+  if (millis() - lastSensorRead > 10) {
+    if (readPitch) {
+      // Read pitch sensor
+      VL53L0X_RangingMeasurementData_t pitchMeasure;
+      pitchSensor.rangingTest(&pitchMeasure, false);
+
+      if (pitchMeasure.RangeStatus != 4) {  // 4 = out of range
+        int pitchDistance = pitchMeasure.RangeMilliMeter;
+        // Map distance: NEAR (50mm) = HIGH (880Hz), FAR (400mm) = LOW (220Hz)
+        float frequency = map(constrain(pitchDistance, 50, 400), 50, 400, 880, 220);
+        // Update oscillator frequency (wavetable lookup, not sin()!)
+        oscillator.setFrequency(frequency);
+      }
+    } else {
+      // Read volume sensor
+      VL53L0X_RangingMeasurementData_t volumeMeasure;
+      volumeSensor.rangingTest(&volumeMeasure, false);
+
+      if (volumeMeasure.RangeStatus != 4) {  // 4 = out of range
+        int volumeDistance = volumeMeasure.RangeMilliMeter;
+        // Map distance 50-400mm to amplitude 0-100%
+        currentAmplitude = map(constrain(volumeDistance, 50, 400), 50, 400, 0, 100);
+      }
+    }
+
+    readPitch = !readPitch;  // Alternate for next time
+    lastSensorRead = millis();
+  }
+
+  // Pre-fill and send 4 buffers per loop to prevent gaps
+  // 4 buffers × 512 samples = 2048 samples = 92.9ms audio
+  // More resilient to sensor I2C delays
+  for (int bufferNum = 0; bufferNum < 4; bufferNum++) {
+    // Fill buffer with wavetable samples (FAST - just array lookup!)
+    for (int i = 0; i < BUFFER_SIZE; i++) {
+      // Get next sample from wavetable oscillator (-128 to 127)
+      int8_t sample = oscillator.getNextSample();
+
+      // Apply amplitude (0-100%)
+      int16_t scaledValue = (int16_t)(sample * currentAmplitude / 100.0f);
+      uint8_t dacValue = 128 + scaledValue;
+
+      audioBuffer[i] = (uint16_t)(dacValue << 8);
+    }
+
+    // Send to I2S (DMA will output continuously)
+    size_t bytes_written;
+    i2s_write(I2S_NUM_0, audioBuffer, BUFFER_SIZE * sizeof(uint16_t), &bytes_written, portMAX_DELAY);
+  }
+
+  // Debug output every 2 seconds (AFTER buffer filling to avoid audio interruption)
+  if (millis() - lastDebug > 2000) {
+    // RAM stats
+    uint32_t freeHeap = ESP.getFreeHeap();
+    uint32_t totalHeap = ESP.getHeapSize();
+    uint32_t usedHeap = totalHeap - freeHeap;
+    float ramPercent = (usedHeap * 100.0f) / totalHeap;
+
+    // Loop timing
+    unsigned long loopTime = micros() - lastLoop;
+
+    DEBUG_PRINT("Freq: ");
+    DEBUG_PRINT((int)oscillator.getFrequency());
+    DEBUG_PRINT("Hz | Amp: ");
+    DEBUG_PRINT(currentAmplitude);
+    DEBUG_PRINT("% | RAM: ");
+    DEBUG_PRINT(usedHeap / 1024);
+    DEBUG_PRINT("KB/");
+    DEBUG_PRINT(totalHeap / 1024);
+    DEBUG_PRINT("KB (");
+    DEBUG_PRINT(ramPercent, 1);
+    DEBUG_PRINT("%) | Loop: ");
+    DEBUG_PRINT(loopTime / 1000.0f, 2);
+    DEBUG_PRINTLN("ms");
+
+    lastDebug = millis();
+  }
+
+  lastLoop = micros();
 }
