@@ -72,6 +72,10 @@ int16_t Oscillator::getNextSample(float sampleRate) {
       sample = generateTriangleWave();
       break;
 
+    case SAW:
+      sample = generateSawtoothWave();
+      break;
+
     case OFF:
       // Already handled above, but include for completeness
       sample = 0;
@@ -155,4 +159,13 @@ int16_t Oscillator::generateTriangleWave() const {
   }
 
   return sample;
+}
+
+// Generate sawtooth wave sample
+int16_t Oscillator::generateSawtoothWave() const {
+  // Sawtooth wave: linear rise from -32768 to 32767
+  // Simplest waveform - direct linear mapping of phase to amplitude
+  // Phase 0.0 → -32768, Phase 1.0 → 32767
+
+  return (int16_t)((phase * 65535.0f) - 32768.0f);
 }

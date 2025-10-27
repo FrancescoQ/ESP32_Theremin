@@ -1,11 +1,11 @@
 # Waveform Implementation - Multiple Oscillator Shapes
 
 **Implementation Date:** October 27, 2025
-**Status:** ✅ Complete - Sine and Triangle waveforms added
+**Status:** ✅ Complete - Sine, Triangle, and Sawtooth waveforms added
 
 ## Overview
 
-Expanded the Oscillator class to support multiple waveform types beyond the initial square wave. The theremin now supports three distinct sound characters through sine, square, and triangle waveforms.
+Expanded the Oscillator class to support multiple waveform types beyond the initial square wave. The theremin now supports four distinct sound characters through square, sine, triangle, and sawtooth waveforms.
 
 ## Implemented Waveforms
 
@@ -47,6 +47,23 @@ sample = (phase * 2.0f * 65535.0f) - 32768.0f;
 sample = ((1.0f - phase) * 2.0f * 65535.0f) - 32768.0f;
 ```
 
+### 4. Sawtooth Wave (New)
+- **Sound Character:** Bright, brassy, aggressive, buzzy
+- **Harmonic Content:** ALL harmonics (both even and odd)
+- **Implementation:** Mathematical generation (direct linear mapping)
+- **Memory Cost:** 0 bytes (calculated on-the-fly)
+- **CPU Cost:** Minimal (~15 cycles - one float multiply + cast)
+- **Use Case:** Synthesizer brass, aggressive leads, rich bass tones
+
+**Technical Details:**
+```cpp
+// Direct linear mapping: phase (0.0-1.0) → amplitude (-32768 to 32767)
+return (int16_t)((phase * 65535.0f) - 32768.0f);
+```
+
+**Why Sawtooth is the Simplest:**
+Despite containing the richest harmonic content, sawtooth is the simplest to generate - just a single line of code! It's a direct linear ramp from minimum to maximum amplitude.
+
 ## Usage
 
 ### Compile-Time Waveform Selection
@@ -62,6 +79,9 @@ oscillator.setWaveform(Oscillator::SINE);
 
 // Triangle wave (mellow, flute-like)
 oscillator.setWaveform(Oscillator::TRIANGLE);
+
+// Sawtooth wave (bright, brassy)
+oscillator.setWaveform(Oscillator::SAW);
 ```
 
 Recompile and upload to test each waveform.
@@ -74,7 +94,7 @@ For dynamic waveform selection (e.g., via button press), add to your main loop:
 // Example: Cycle through waveforms with a button
 static int currentWaveform = Oscillator::SQUARE;
 if (buttonPressed) {
-  currentWaveform = (currentWaveform + 1) % 4; // Cycle: SQUARE → SINE → TRIANGLE → SQUARE
+  currentWaveform = (currentWaveform + 1) % 5; // Cycle through all waveforms
   if (currentWaveform == Oscillator::OFF) currentWaveform++; // Skip OFF
   audioEngine.getOscillator().setWaveform((Oscillator::Waveform)currentWaveform);
 }
@@ -90,6 +110,7 @@ if (buttonPressed) {
 ### CPU Usage
 All waveforms are highly efficient:
 - **Square:** ~5 CPU cycles (one comparison)
+- **Sawtooth:** ~15 CPU cycles (one float multiply + cast)
 - **Sine:** ~20 CPU cycles (index calculation + PROGMEM read)
 - **Triangle:** ~30 CPU cycles (float operations + conditional)
 
@@ -98,44 +119,27 @@ At 22,050 Hz sample rate, total CPU overhead is < 1% for any waveform.
 ## Sound Comparison
 
 | Waveform | Brightness | Harmonics | Character | Theremin Use |
-|----------|-----------|-----------|-----------|--------------|
+|----------|-----------|-----------|-----------|--------------||
 | **Sine** | Darkest | None | Pure, smooth | Classical theremin |
 | **Triangle** | Mild | Odd (weak) | Mellow, woody | Soft melodies |
 | **Square** | Bright | Odd (strong) | Buzzy, hollow | Aggressive leads |
+| **Sawtooth** | Brightest | All (even+odd) | Brassy, rich | Synthesizer brass, aggressive bass |
 
-## Future Expansion: Sawtooth Wave
-
-To add sawtooth (bright, brassy sound):
-
-1. Add `SAW = 4` to enum in `Oscillator.h`
-2. Implement `generateSawtoothWave()`:
-```cpp
-int16_t Oscillator::generateSawtoothWave() const {
-  // Direct linear mapping: phase (0.0-1.0) → amplitude (-32768 to 32767)
-  return (int16_t)((phase * 65535.0f) - 32768.0f);
-}
-```
-3. Add case to switch statement in `getNextSample()`
-
-**Sawtooth characteristics:**
-- Contains ALL harmonics (both even and odd)
-- Brightest, most harmonically rich waveform
-- No LUT needed (simplest implementation)
-- CPU cost: ~15 cycles (float multiply + cast)
 
 ## Implementation Files
 
 ### Modified Files
 - `include/Oscillator.h`
-  - Added SINE and TRIANGLE to Waveform enum
+  - Added SINE, TRIANGLE, and SAW to Waveform enum
   - Added sine LUT declaration (`SINE_TABLE[256]`)
-  - Added `generateSineWave()` and `generateTriangleWave()` declarations
+  - Added `generateSineWave()`, `generateTriangleWave()`, and `generateSawtoothWave()` declarations
 
 - `src/Oscillator.cpp`
   - Added 256-entry sine lookup table in PROGMEM
   - Implemented `generateSineWave()` using LUT
-  - Implemented `generateTriangleWave()` using math
-  - Updated switch statement in `getNextSample()` for new waveforms
+  - Implemented `generateTriangleWave()` using piecewise linear math
+  - Implemented `generateSawtoothWave()` using direct linear mapping
+  - Updated switch statement in `getNextSample()` for all waveforms
 
 ### No Changes Required
 - AudioEngine integration works automatically (uses oscillator polymorphically)
@@ -153,6 +157,7 @@ int16_t Oscillator::generateSawtoothWave() const {
    - **Sine:** Should be perfectly smooth, no buzzing
    - **Triangle:** Slightly hollow but not harsh
    - **Square:** Buzzy but not distorted
+   - **Sawtooth:** Bright and brassy but clean
 
 3. **Performance check:**
    - Monitor serial output for timing issues
