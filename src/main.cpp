@@ -12,14 +12,14 @@
 #include "Theremin.h"
 #include "PinConfig.h"
 
-#ifdef ENABLE_OTA
+#if ENABLE_OTA
 #include "OTAManager.h"
 #endif
 
 // Create theremin instance
 Theremin theremin;
 
-#ifdef ENABLE_OTA
+#if ENABLE_OTA
 // Create OTA manager instance
 // AP Name: "Theremin-OTA", AP Password: "" (open network)
 // OTA Auth: username "admin", password "theremin"
@@ -43,7 +43,7 @@ void setup() {
 
   DEBUG_PRINTLN("=== Ready to Play! ===\n");
 
-#ifdef ENABLE_OTA
+#if ENABLE_OTA
   // Initialize OTA manager
   if (ota.begin("admin", "theremin")) {
     DEBUG_PRINTLN("[OTA] OTA updates enabled");
@@ -57,7 +57,7 @@ void loop() {
   // Update theremin (read sensors, generate audio)
   theremin.update();
 
-  #ifdef ENABLE_OTA
+  #if ENABLE_OTA
     // Handle OTA requests (non-blocking)
     ota.handle();
   #endif
