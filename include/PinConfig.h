@@ -23,9 +23,9 @@
 #define I2C_ADDR_SENSOR_VOLUME    0x29  // Volume sensor (default)
 
 //=============================================================================
-// AUDIO PINS - Current: PWM, Future: DAC + Amplifier
+// AUDIO PINS - I2S DAC Output
 //=============================================================================
-#define PIN_AUDIO_OUTPUT          25  // Current: PWM to buzzer, Future: DAC1
+#define PIN_AUDIO_OUTPUT          25  // DAC1 output via I2S (built-in DAC mode)
 
 // Future v2.0 pins (uncomment when implementing Phase 2)
 // #define PIN_AUDIO_AMP_ENABLE      26  // PAM8403 amplifier enable/disable
@@ -94,7 +94,7 @@
  *   17  - Sensor XSHUT (volume)
  *   21  - I2C SDA (shared bus)
  *   22  - I2C SCL (shared bus)
- *   25  - Audio PWM output (buzzer)
+ *   25  - Audio DAC output (I2S built-in DAC mode)
  *
  * Future GPIO Allocation (Phase 2+):
  * -----------------------------------
@@ -135,7 +135,7 @@
 // Hardware change log:
 // v1.0 (October 2025) - Initial Phase 1 implementation
 //   - 2x VL53L0X sensors on I2C
-//   - Passive buzzer on GPIO 25 (PWM)
+//   - I2S DAC audio output on GPIO 25 (built-in DAC mode)
 //   - OTA with optional button activation
 
 // Planned v2.0 (Future)

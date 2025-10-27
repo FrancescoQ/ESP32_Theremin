@@ -2,8 +2,8 @@
  * AudioEngine.h
  *
  * Manages audio synthesis for the ESP32 Theremin.
- * Currently implements PWM-based square wave generation.
- * Designed to be extensible for future DAC and waveform support.
+ * Uses I2S in built-in DAC mode for audio output (GPIO25).
+ * Designed for modular oscillator architecture.
  */
 
 #pragma once
@@ -13,8 +13,8 @@
 class AudioEngine {
  public:
   /**
-     * Constructor
-     */
+   * Constructor
+   */
   AudioEngine();
 
   /**
@@ -54,20 +54,11 @@ class AudioEngine {
     return currentAmplitude;
   }
 
-  // Audio range constants
-  static const int MIN_FREQUENCY = 100;
-  static const int MAX_FREQUENCY = 2000;
+  // Audio range constants (A3 to A5, 2 octaves)
+  static const int MIN_FREQUENCY = 220;  // A3
+  static const int MAX_FREQUENCY = 880;  // A5
 
  private:
-  static const int PWM_CHANNEL = 0;
-  static const int PWM_RESOLUTION = 8;
-  static const int PWM_FREQUENCY = 2000;
-
-  // Duty cycle range (0-255 for 8-bit PWM)
-  static const int MIN_DUTY_CYCLE = 0;
-  static const int MAX_DUTY_CYCLE = 128;   // 50% max for square wave
-  static const int SILENCE_THRESHOLD = 5;  // Below this, output silence
-
   // Amplitude smoothing (prevents sudden volume jumps)
   // Tuning guide - adjust to taste:
   //   0.05 = ~2.0s fade time (very smooth, laggy)
@@ -82,15 +73,4 @@ class AudioEngine {
   int currentFrequency;
   int currentAmplitude;     // Target amplitude
   float smoothedAmplitude;  // Actual smoothed amplitude value
-  int dutyCycle;
-
-  /**
-   * Map amplitude percentage to PWM duty cycle
-   */
-  void calculateDutyCycle();
-
-  /**
-   * Apply current settings to PWM hardware
-   */
-  void updatePWM();
 };
