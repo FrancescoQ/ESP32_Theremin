@@ -221,6 +221,72 @@ int smoothedRead(int newValue) {
 */
 ```
 
+### 2a. Multi-Oscillator Mixing Pattern (October 27, 2025)
+```cpp
+// Per-Oscillator Volume Control Pattern
+// Each oscillator has independent volume (0.0-1.0)
+// Volume applied before mixing in Oscillator::getNextSample()
+
+class Oscillator {
+private:
+    float volume;  // 0.0 = silent, 1.0 = full volume
+
+public:
+    void setVolume(float vol) {
+        volume = constrain(vol, 0.0f, 1.0f);
+    }
+
+    int16_t getNextSample(float sampleRate) {
+        // ... generate waveform sample ...
+
+        // Apply volume control before returning
+        return (int16_t)(sample * volume);
+    }
+};
+
+// Multi-Oscillator Mixing with Automatic Clipping Prevention
+// Sum all active oscillators, then average by count
+// Math guarantees no clipping: max = (32767 + 19660 + 13107) / 3 = 21,845
+
+void generateAudioBuffer() {
+    for (int i = 0; i < BUFFER_SIZE; i++) {
+        int activeCount = 0;
+        int32_t mixedSample = 0;  // Use int32_t to prevent overflow
+
+        // Add samples from all active oscillators (already volume-scaled)
+        if (oscillator.isActive()) {
+            mixedSample += oscillator.getNextSample((float)SAMPLE_RATE);
+            activeCount++;
+        }
+        if (oscillator2.isActive()) {
+            mixedSample += oscillator2.getNextSample((float)SAMPLE_RATE);
+            activeCount++;
+        }
+        if (oscillator3.isActive()) {
+            mixedSample += oscillator3.getNextSample((float)SAMPLE_RATE);
+            activeCount++;
+        }
+
+        // Average to prevent clipping and maintain consistent volume
+        int16_t sample = (activeCount > 0) ? (mixedSample / activeCount) : 0;
+
+        // Apply global amplitude/gain if needed
+        // ...
+    }
+}
+
+// Example Configuration:
+// oscillator.setWaveform(Oscillator::SINE);
+// oscillator.setVolume(1.0);     // 100% - Full volume
+//
+// oscillator2.setWaveform(Oscillator::SQUARE);
+// oscillator2.setOctaveShift(-1); // One octave down (sub-bass)
+// oscillator2.setVolume(0.6);     // 60% - Quieter
+//
+// oscillator3.setWaveform(Oscillator::OFF);
+// oscillator3.setVolume(0.4);     // 40% - Quietest (when enabled)
+```
+
 ### 3. Range Mapping Pattern
 ```cpp
 // Floating-point map for smooth frequency transitions (October 27, 2025)

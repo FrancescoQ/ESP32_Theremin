@@ -104,7 +104,40 @@ The project has been transformed from a monolithic 250-line main.cpp into a clea
 
 ## Recent Changes
 
-**Multiple Waveform Implementation (October 27, 2025 - Latest):**
+**Multi-Oscillator Volume Control Implementation (October 27, 2025 - Latest):**
+- **Achievement:** Implemented per-oscillator volume control with intelligent mixing!
+- **Architecture:** 3 oscillators with independent volume levels
+  - Oscillator 1 (SINE): 100% volume (full)
+  - Oscillator 2 (SQUARE, -1 octave): 60% volume (quieter sub-bass)
+  - Oscillator 3 (OFF): 40% volume (quietest when enabled)
+- **Implementation:**
+  - Added volume member variable (float, 0.0-1.0) to Oscillator class
+  - Added setVolume() method with constraint checking
+  - Volume applied in getNextSample() before returning sample
+  - Each oscillator scales its own output independently
+- **Mixing Strategy:** Simple averaging with automatic clipping prevention
+  - Sum all active oscillator samples (after volume scaling)
+  - Divide by number of active oscillators
+  - No complex normalization needed - math guarantees no clipping
+  - Example: Max possible = (32767 + 19660 + 13107) / 3 = 21,845 (well within ±32768 range)
+- **Benefits:**
+  - Modular design - each oscillator self-contained
+  - Runtime adjustable - setVolume() can be called anytime
+  - Perfect for presets - combine waveform + volume changes
+  - Thread-safe - simple atomic writes
+  - Maintains consistent loudness regardless of oscillator count
+- **Results:**
+  - ✅ Rich, layered sound with balanced mix
+  - ✅ No clipping or distortion
+  - ✅ Volume ratios preserved correctly
+  - ✅ Clean architecture for future expansion
+- **Files Modified:**
+  - include/Oscillator.h: Added volume member, setVolume() declaration
+  - src/Oscillator.cpp: Implemented setVolume(), volume application in getNextSample()
+  - src/AudioEngine.cpp: Set initial volumes in constructor
+- **Build Status:** ✅ Compiles successfully, no errors/warnings
+
+**Multiple Waveform Implementation (October 27, 2025):**
 - **Achievement:** Expanded oscillator to support 4 distinct waveform types!
 - **Waveforms Implemented:**
   - **Square**: Hollow, buzzy, only odd harmonics (original)

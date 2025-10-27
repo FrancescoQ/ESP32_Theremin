@@ -132,6 +132,15 @@ Major milestone achieved! Successfully implemented professional-grade audio synt
 
 **Status:** ✅ Complete - All features implemented and tested on real hardware
 
+- [x] **Multi-Oscillator Volume Control (October 27, 2025 - Latest)**
+  - [x] Added per-oscillator volume control with setVolume() method
+  - [x] Volume member variable (float, 0.0-1.0) in Oscillator class
+  - [x] Volume applied in getNextSample() before returning sample
+  - [x] 3 oscillators with independent volume levels configured
+  - [x] Intelligent mixing with automatic clipping prevention
+  - [x] Runtime adjustable - perfect for presets
+  - [x] Tested on real hardware - rich, layered sound with no clipping!
+
 - [x] **Oscillator Class Implementation (October 27, 2025)**
   - [x] Created Oscillator class (include/Oscillator.h + src/Oscillator.cpp)
   - [x] Implemented digital oscillator with phase accumulator
@@ -191,8 +200,10 @@ Major milestone achieved! Successfully implemented professional-grade audio synt
 - ✅ Both sensors functional - tested extensively
 - ✅ Smooth and responsive control - user confirmed "much nicer!"
 - ✅ Multiple waveforms implemented and working
+- ✅ Per-oscillator volume control implemented
+- ✅ Multi-oscillator mixing with clipping prevention working
 - ✅ Professional audio quality achieved
-- ✅ Phase 2 complete - ready for Phase 3 (multiple oscillators)
+- ✅ Phase 2 complete - ready for Phase 3 expansion!
 
 ---
 
@@ -200,7 +211,16 @@ Major milestone achieved! Successfully implemented professional-grade audio synt
 
 **Goal:** Add 2nd and 3rd oscillators with independent controls
 
-**Status:** Not Started
+**Status:** Partially Started (Foundation Complete)
+
+**Completed:**
+- ✅ 3 oscillators defined in AudioEngine (oscillator, oscillator2, oscillator3)
+- ✅ Per-oscillator volume control implemented (setVolume method)
+- ✅ Mixing architecture with averaging and clipping prevention
+- ✅ Initial configuration:
+  - Oscillator 1: SINE at 100% volume
+  - Oscillator 2: SQUARE at 60% volume, -1 octave (sub-bass)
+  - Oscillator 3: OFF at 40% volume (ready to enable)
 
 - [ ] **AudioMixer Class**
   - [ ] Implement AudioMixer to sum multiple oscillator outputs
