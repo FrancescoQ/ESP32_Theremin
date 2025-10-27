@@ -266,6 +266,61 @@ The project has been transformed from a monolithic 250-line main.cpp into a clea
 - Debug visibility: comprehensive serial output during development
 - Documentation first: understand requirements before coding
 
+### Documentation Organization
+
+**Documentation Structure (October 27, 2025):**
+The project uses an organized `docs/` directory structure to keep the root clean and professional:
+
+```
+theremin/
+├── README.md                    # Project overview (root only)
+├── productbrief.md              # Project vision (root only)
+├── docs/
+│   ├── README.md                # Documentation index
+│   ├── architecture/            # System design decisions
+│   ├── guides/                  # How-to and setup instructions
+│   └── improvements/            # Implementation notes & optimizations
+└── memory-bank/                 # Project knowledge base
+```
+
+**File Placement Rules:**
+- **Architecture documentation** → `docs/architecture/`
+  - System design decisions
+  - Class structure explanations
+  - Design pattern rationale
+  - Example: `ARCHITECTURE.md`
+
+- **Setup/How-to guides** → `docs/guides/`
+  - Installation instructions
+  - Configuration guides
+  - Troubleshooting steps
+  - Examples: `OTA_SETUP.md`, `DEBUG_GUIDE.md`, `WOKWI_SIMULATION_PLAN.md`
+
+- **Implementation notes** → `docs/improvements/`
+  - Feature implementation details
+  - Optimization documentation
+  - Issue analysis and solutions
+  - Examples: `CONTINUOUS_AUDIO_IMPLEMENTATION.md`, `PITCH_SMOOTHING_IMPROVEMENTS.md`
+
+**Naming Conventions:**
+- Use `SCREAMING_SNAKE_CASE.md` for all documentation files
+- Be descriptive but concise
+- Include date in file content (not filename)
+
+**When Creating New Documentation:**
+1. Choose the appropriate `docs/` subdirectory
+2. Create the file with clear structure:
+   - Title and implementation date
+   - Problem/goal statement
+   - Solution details with code examples
+   - Results and measurements
+   - Related files
+3. **Update `docs/README.md`** to add the new file to the index
+4. Cross-reference from related docs if applicable
+
+**Root Directory:**
+Only `README.md` and `productbrief.md` belong in project root. All other documentation goes in `docs/`.
+
 ### Error Handling Strategy
 - Log all errors to Serial
 - Use last valid reading on sensor timeout
