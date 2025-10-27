@@ -99,6 +99,8 @@ class AudioEngine {
 
   // Oscillator instance
   Oscillator oscillator;
+  Oscillator oscillator2;
+  Oscillator oscillator3;
 
   // FreeRTOS task management
   TaskHandle_t audioTaskHandle;

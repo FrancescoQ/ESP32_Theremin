@@ -47,6 +47,12 @@ class Oscillator {
   void setOctaveShift(int shift);
 
   /**
+   * Set oscillator volume (0.0 - 1.0)
+   * @param vol Volume level (0.0 = silent, 1.0 = full volume)
+   */
+  void setVolume(float vol);
+
+  /**
    * Generate next audio sample
    * @param sampleRate Sample rate in Hz (e.g., 22050)
    * @return 16-bit signed audio sample (-32768 to 32767)
@@ -73,6 +79,7 @@ class Oscillator {
   float frequency;    // Base frequency in Hz
   Waveform waveform;  // Current waveform
   int octaveShift;    // Octave shift (-1, 0, +1)
+  float volume;       // Volume level (0.0 - 1.0)
 
   /**
    * Calculate frequency with octave shift applied

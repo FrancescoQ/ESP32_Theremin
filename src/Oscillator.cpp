@@ -30,7 +30,7 @@ const int16_t Oscillator::SINE_TABLE[256] PROGMEM = {
 };
 
 // Constructor
-Oscillator::Oscillator() : phase(0.0f), frequency(440.0f), waveform(SQUARE), octaveShift(0) {}
+Oscillator::Oscillator() : phase(0.0f), frequency(440.0f), waveform(SQUARE), octaveShift(0), volume(1.0f) {}
 
 // Set frequency
 void Oscillator::setFrequency(float freq) {
@@ -47,6 +47,12 @@ void Oscillator::setWaveform(Waveform wf) {
 void Oscillator::setOctaveShift(int shift) {
   // Constrain to -1, 0, +1
   octaveShift = constrain(shift, -1, 1);
+}
+
+// Set volume
+void Oscillator::setVolume(float vol) {
+  // Constrain to 0.0-1.0 range
+  volume = constrain(vol, 0.0f, 1.0f);
 }
 
 // Get next audio sample
@@ -99,7 +105,8 @@ int16_t Oscillator::getNextSample(float sampleRate) {
     phase -= 1.0f;
   }
 
-  return sample;
+  // Apply volume control before returning
+  return (int16_t)(sample * volume);
 }
 
 // Get effective frequency (with octave shift)

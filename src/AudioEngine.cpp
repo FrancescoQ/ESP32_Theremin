@@ -10,9 +10,18 @@
 
 // Constructor
 AudioEngine::AudioEngine() : currentFrequency(MIN_FREQUENCY), currentAmplitude(0), smoothedAmplitude(0.0), audioTaskHandle(NULL), paramMutex(NULL), taskRunning(false) {
-  // Initialize oscillator with square wave
+  // Initialize oscillators
   oscillator.setWaveform(Oscillator::SINE);
-  oscillator.setOctaveShift(0);  // No octave shift by default
+  oscillator.setOctaveShift(0);
+  oscillator.setVolume(1.0);
+
+  oscillator2.setWaveform(Oscillator::SQUARE);
+  oscillator2.setOctaveShift(-1);
+  oscillator2.setVolume(0.8);
+
+  oscillator3.setWaveform(Oscillator::SAW);
+  oscillator3.setOctaveShift(0);
+  oscillator3.setVolume(0.6);
 
   // Create mutex for thread-safe parameter updates
   paramMutex = xSemaphoreCreateMutex();
@@ -42,8 +51,10 @@ void AudioEngine::setFrequency(int freq) {
     // Constrain to valid range (A3-A5)
     currentFrequency = constrain(freq, MIN_FREQUENCY, MAX_FREQUENCY);
 
-    // Update oscillator frequency
+    // Update all oscillator frequencies
     oscillator.setFrequency((float)currentFrequency);
+    oscillator2.setFrequency((float)currentFrequency);
+    oscillator3.setFrequency((float)currentFrequency);
 
     xSemaphoreGive(paramMutex);
   }
@@ -123,8 +134,26 @@ void AudioEngine::generateAudioBuffer() {
 
   // Generate audio samples
   for (int i = 0; i < BUFFER_SIZE; i++) {
-    // Get full-scale sample from oscillator (-32768 to 32767)
-    int16_t sample = oscillator.getNextSample((float)SAMPLE_RATE);
+    // Mix multiple oscillators with automatic gain adjustment
+    int activeCount = 0;
+    int32_t mixedSample = 0;  // Use int32_t to prevent overflow during addition
+
+    // Add samples from all active oscillators
+    if (oscillator.isActive()) {
+      mixedSample += oscillator.getNextSample((float)SAMPLE_RATE);
+      activeCount++;
+    }
+    if (oscillator2.isActive()) {
+      mixedSample += oscillator2.getNextSample((float)SAMPLE_RATE);
+      activeCount++;
+    }
+    if (oscillator3.isActive()) {
+      mixedSample += oscillator3.getNextSample((float)SAMPLE_RATE);
+      activeCount++;
+    }
+
+    // Average to prevent clipping and maintain consistent volume
+    int16_t sample = (activeCount > 0) ? (mixedSample / activeCount) : 0;
 
     // Apply amplitude scaling
     int16_t scaledSample = (int16_t)(sample * gain);
