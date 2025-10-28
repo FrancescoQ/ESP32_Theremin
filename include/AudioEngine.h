@@ -86,11 +86,11 @@ class AudioEngine {
   // Tuning guide - adjust to taste:
   //   0.05 = ~2.0s fade time (very smooth, laggy)
   //   0.10 = ~1.2s fade time (smooth, professional)
-  //   0.15 = ~0.8s fade time (balanced - current setting)
+  //   0.15 = ~0.8s fade time (balanced)
   //   0.25 = ~0.5s fade time (responsive, slight smoothing)
   //   0.50 = ~0.2s fade time (minimal smoothing)
   //   1.00 = instant (no smoothing, like before)
-  static constexpr float SMOOTHING_FACTOR = 0.15;  // 0.0-1.0 (lower = smoother)
+  static constexpr float SMOOTHING_FACTOR = 0.80;  // 0.0-1.0 (lower = smoother)
 
   // DAC conversion constants (16-bit signed → 8-bit unsigned)
   static constexpr uint8_t DAC_ZERO_OFFSET = 128;  // DC offset for unsigned conversion

@@ -15,13 +15,13 @@ AudioEngine::AudioEngine() : currentFrequency(MIN_FREQUENCY), currentAmplitude(0
   oscillator1.setOctaveShift(Oscillator::OCTAVE_BASE);
   oscillator1.setVolume(1.0);
 
-  oscillator2.setWaveform(Oscillator::SAW);
-  oscillator2.setOctaveShift(Oscillator::OCTAVE_DOWN);
-  oscillator2.setVolume(0.8);
+  oscillator2.setWaveform(Oscillator::OFF);
+  oscillator2.setOctaveShift(Oscillator::OCTAVE_BASE);
+  oscillator2.setVolume(1.0);
 
-  oscillator3.setWaveform(Oscillator::SINE);
-  oscillator3.setOctaveShift(Oscillator::OCTAVE_UP);
-  oscillator3.setVolume(0.6);
+  oscillator3.setWaveform(Oscillator::OFF);
+  oscillator3.setOctaveShift(Oscillator::OCTAVE_BASE);
+  oscillator3.setVolume(1.0);
 
   // Create mutex for thread-safe parameter updates
   paramMutex = xSemaphoreCreateMutex();
