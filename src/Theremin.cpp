@@ -57,9 +57,9 @@ void Theremin::update() {
   // Traditional theremin behavior: hand NEAR volume antenna = QUIET, hand FAR = LOUD
   int amplitude =
       map(volumeDistance, SensorManager::VOLUME_MIN_DIST, SensorManager::VOLUME_MAX_DIST,
-          0,     // Min amplitude (closest) - near sensor = quiet
-          100);  // Max amplitude (farthest) - far from sensor = loud
-  amplitude = constrain(amplitude, 0, 100);
+          MIN_AMPLITUDE_PERCENT,     // Min amplitude (closest) - near sensor = quiet
+          MAX_AMPLITUDE_PERCENT);    // Max amplitude (farthest) - far from sensor = loud
+  amplitude = constrain(amplitude, MIN_AMPLITUDE_PERCENT, MAX_AMPLITUDE_PERCENT);
 
   // Update audio engine
   audio.setFrequency(frequency);
@@ -82,7 +82,7 @@ void Theremin::setDebugMode(bool enabled) {
 void Theremin::printDebugInfo(int pitchDist, int volumeDist, int freq, int amplitude) {
   static unsigned int loopCounter = 0;  // Static local - only increments when debug is enabled
 
-  if (loopCounter % 10 == 0) {  // Print only when counter is divisible by 10
+  if (loopCounter % DEBUG_THROTTLE_FACTOR == 0) {  // Print only when counter is divisible by throttle factor
     DEBUG_PRINT("[PITCH] ");
     DEBUG_PRINT(pitchDist);
     DEBUG_PRINT("mm → ");

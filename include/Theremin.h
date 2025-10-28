@@ -39,6 +39,13 @@ class Theremin {
   AudioEngine audio;
   bool debugEnabled;
 
+  // Amplitude range constants (internal use only)
+  static const int MIN_AMPLITUDE_PERCENT = 0;
+  static const int MAX_AMPLITUDE_PERCENT = 100;
+
+  // Debug output throttling (internal use only)
+  static const int DEBUG_THROTTLE_FACTOR = 10;  // Print every Nth loop iteration
+
   /**
    * Map sensor distances to audio parameters
    * Closer distance = higher frequency and louder volume

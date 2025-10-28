@@ -12,15 +12,15 @@
 AudioEngine::AudioEngine() : currentFrequency(MIN_FREQUENCY), currentAmplitude(0), smoothedAmplitude(0.0), audioTaskHandle(NULL), paramMutex(NULL), taskRunning(false) {
   // Initialize oscillators
   oscillator.setWaveform(Oscillator::SINE);
-  oscillator.setOctaveShift(0);
+  oscillator.setOctaveShift(Oscillator::OCTAVE_BASE);
   oscillator.setVolume(1.0);
 
   oscillator2.setWaveform(Oscillator::SAW);
-  oscillator2.setOctaveShift(-1);
+  oscillator2.setOctaveShift(Oscillator::OCTAVE_DOWN);
   oscillator2.setVolume(0.8);
 
   oscillator3.setWaveform(Oscillator::SINE);
-  oscillator3.setOctaveShift(1);
+  oscillator3.setOctaveShift(Oscillator::OCTAVE_UP);
   oscillator3.setVolume(0.6);
 
   // Create mutex for thread-safe parameter updates
@@ -159,11 +159,11 @@ void AudioEngine::generateAudioBuffer() {
     int16_t scaledSample = (int16_t)(sample * gain);
 
     // Convert signed 16-bit to unsigned 8-bit for DAC:
-    // 1. Take upper 8 bits (>> 8): -32768..32767 → -128..127
-    // 2. Add 128 for DC offset: -128..127 → 0..255
+    // 1. Take upper 8 bits (>> DAC_BIT_SHIFT): -32768..32767 → -128..127
+    // 2. Add DAC_ZERO_OFFSET for DC offset: -128..127 → 0..255
     // 3. Store in upper byte of 16-bit word (DAC reads upper byte)
-    uint8_t dacSample = (uint8_t)((scaledSample >> 8) + 128);
-    buffer[i] = ((uint16_t)dacSample) << 8;  // Put 8-bit sample in upper byte
+    uint8_t dacSample = (uint8_t)((scaledSample >> DAC_BIT_SHIFT) + DAC_ZERO_OFFSET);
+    buffer[i] = ((uint16_t)dacSample) << DAC_BIT_SHIFT;  // Put 8-bit sample in upper byte
   }
 
   // Write buffer to I2S (blocks until DMA buffer available)

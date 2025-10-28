@@ -45,8 +45,8 @@ void Oscillator::setWaveform(Waveform wf) {
 
 // Set octave shift
 void Oscillator::setOctaveShift(int shift) {
-  // Constrain to -1, 0, +1
-  octaveShift = constrain(shift, -1, 1);
+  // Constrain to OCTAVE_DOWN, OCTAVE_BASE, OCTAVE_UP
+  octaveShift = constrain(shift, OCTAVE_DOWN, OCTAVE_UP);
 }
 
 // Set volume
@@ -118,32 +118,32 @@ float Oscillator::getEffectiveFrequency() const {
 float Oscillator::calculateShiftedFrequency() const {
   switch (octaveShift) {
     case -1:
-      return frequency * 0.5f;  // One octave down (half frequency)
+      return frequency / OCTAVE_MULTIPLIER;  // One octave down (half frequency)
     case 1:
-      return frequency * 2.0f;  // One octave up (double frequency)
+      return frequency * OCTAVE_MULTIPLIER;  // One octave up (double frequency)
     case 0:
     default:
-      return frequency;         // No shift
+      return frequency;                      // No shift
   }
 }
 
 // Generate square wave sample
 int16_t Oscillator::generateSquareWave() const {
-  // Simple square wave: compare phase to 0.5
+  // Simple square wave: compare phase to half cycle
   // First half of cycle: maximum value
   // Second half of cycle: minimum value
 
-  if (phase < 0.5f) {
-    return 32767;   // Maximum positive value (16-bit)
+  if (phase < PHASE_HALF_CYCLE) {
+    return SAMPLE_MAX;  // Maximum positive value (16-bit)
   } else {
-    return -32768;  // Maximum negative value (16-bit)
+    return SAMPLE_MIN;  // Maximum negative value (16-bit)
   }
 }
 
 // Generate sine wave sample
 int16_t Oscillator::generateSineWave() const {
   // Convert phase (0.0 - 1.0) to table index (0 - 255)
-  uint8_t index = (uint8_t)(phase * 256.0f);
+  uint8_t index = (uint8_t)(phase * (float)SINE_TABLE_SIZE);
 
   // Read from Flash memory lookup table
   return pgm_read_word(&SINE_TABLE[index]);
@@ -152,17 +152,17 @@ int16_t Oscillator::generateSineWave() const {
 // Generate triangle wave sample
 int16_t Oscillator::generateTriangleWave() const {
   // Triangle wave: linear rise and fall
-  // Phase 0.0 - 0.5: rising from -32768 to 32767
-  // Phase 0.5 - 1.0: falling from 32767 to -32768
+  // Phase 0.0 - 0.5: rising from SAMPLE_MIN to SAMPLE_MAX
+  // Phase 0.5 - 1.0: falling from SAMPLE_MAX to SAMPLE_MIN
 
   int16_t sample;
 
-  if (phase < 0.5f) {
-    // Rising edge: map 0.0-0.5 to -32768 to 32767
-    sample = (int16_t)((phase * 2.0f * 65535.0f) - 32768.0f);
+  if (phase < PHASE_HALF_CYCLE) {
+    // Rising edge: map 0.0-0.5 to SAMPLE_MIN to SAMPLE_MAX
+    sample = (int16_t)((phase * OCTAVE_MULTIPLIER * (float)SAMPLE_RANGE) - (float)SAMPLE_MAX - 1.0f);
   } else {
-    // Falling edge: map 0.5-1.0 to 32767 to -32768
-    sample = (int16_t)(((1.0f - phase) * 2.0f * 65535.0f) - 32768.0f);
+    // Falling edge: map 0.5-1.0 to SAMPLE_MAX to SAMPLE_MIN
+    sample = (int16_t)(((1.0f - phase) * OCTAVE_MULTIPLIER * (float)SAMPLE_RANGE) - (float)SAMPLE_MAX - 1.0f);
   }
 
   return sample;
@@ -170,9 +170,9 @@ int16_t Oscillator::generateTriangleWave() const {
 
 // Generate sawtooth wave sample
 int16_t Oscillator::generateSawtoothWave() const {
-  // Sawtooth wave: linear rise from -32768 to 32767
+  // Sawtooth wave: linear rise from SAMPLE_MIN to SAMPLE_MAX
   // Simplest waveform - direct linear mapping of phase to amplitude
-  // Phase 0.0 → -32768, Phase 1.0 → 32767
+  // Phase 0.0 → SAMPLE_MIN, Phase 1.0 → SAMPLE_MAX
 
-  return (int16_t)((phase * 65535.0f) - 32768.0f);
+  return (int16_t)((phase * (float)SAMPLE_RANGE) - (float)SAMPLE_MAX - 1.0f);
 }

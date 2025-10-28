@@ -52,6 +52,11 @@ class Oscillator {
    */
   void setVolume(float vol);
 
+  // Octave shift constants
+  static constexpr int OCTAVE_DOWN = -1;  // One octave down (half frequency)
+  static constexpr int OCTAVE_BASE = 0;   // No shift (base frequency)
+  static constexpr int OCTAVE_UP = 1;     // One octave up (double frequency)
+
   /**
    * Generate next audio sample
    * @param sampleRate Sample rate in Hz (e.g., 22050)
@@ -113,4 +118,12 @@ class Oscillator {
   // Sine wave lookup table (256 entries)
   // Stored in Flash memory to save RAM
   static const int16_t SINE_TABLE[256] PROGMEM;
+
+  // Audio sample constants (16-bit signed audio)
+  static constexpr int16_t SAMPLE_MAX = 32767;
+  static constexpr int16_t SAMPLE_MIN = -32768;
+  static constexpr uint32_t SAMPLE_RANGE = 65535;
+  static constexpr uint16_t SINE_TABLE_SIZE = 256;
+  static constexpr float PHASE_HALF_CYCLE = 0.5f;
+  static constexpr float OCTAVE_MULTIPLIER = 2.0f;
 };

@@ -92,6 +92,10 @@ class AudioEngine {
   //   1.00 = instant (no smoothing, like before)
   static constexpr float SMOOTHING_FACTOR = 0.15;  // 0.0-1.0 (lower = smoother)
 
+  // DAC conversion constants (16-bit signed → 8-bit unsigned)
+  static constexpr uint8_t DAC_ZERO_OFFSET = 128;  // DC offset for unsigned conversion
+  static constexpr uint8_t DAC_BIT_SHIFT = 8;      // Bit shift from 16-bit to 8-bit
+
   // Current state
   int currentFrequency;
   int currentAmplitude;     // Target amplitude

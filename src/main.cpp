@@ -16,6 +16,9 @@
 #include "OTAManager.h"
 #endif
 
+// Main loop timing
+static const int UPDATE_INTERVAL_MS = 20;  // ~50Hz update rate
+
 // Create theremin instance
 Theremin theremin;
 
@@ -62,6 +65,6 @@ void loop() {
     ota.handle();
   #endif
 
-  // Small delay for stability (~50Hz update rate)
-  delay(20);
+  // Small delay for stability
+  delay(UPDATE_INTERVAL_MS);
 }
