@@ -1,3 +1,8 @@
+# DEPRECATED: this was useful in phase 0 to test with the buzzer without real
+# hardware but starting from phase 1 with DAC and real audio this is not useful
+# anymore.
+# We keep this to show what was done in the beginning.
+
 [wokwi]
 version = 1
 
