@@ -102,7 +102,7 @@ class AudioEngine {
   float smoothedAmplitude;  // Actual smoothed amplitude value
 
   // Oscillator instance
-  Oscillator oscillator;
+  Oscillator oscillator1;
   Oscillator oscillator2;
   Oscillator oscillator3;
 

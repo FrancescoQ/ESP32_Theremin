@@ -11,9 +11,9 @@
 // Constructor
 AudioEngine::AudioEngine() : currentFrequency(MIN_FREQUENCY), currentAmplitude(0), smoothedAmplitude(0.0), audioTaskHandle(NULL), paramMutex(NULL), taskRunning(false) {
   // Initialize oscillators
-  oscillator.setWaveform(Oscillator::SINE);
-  oscillator.setOctaveShift(Oscillator::OCTAVE_BASE);
-  oscillator.setVolume(1.0);
+  oscillator1.setWaveform(Oscillator::SINE);
+  oscillator1.setOctaveShift(Oscillator::OCTAVE_BASE);
+  oscillator1.setVolume(1.0);
 
   oscillator2.setWaveform(Oscillator::SAW);
   oscillator2.setOctaveShift(Oscillator::OCTAVE_DOWN);
@@ -52,7 +52,7 @@ void AudioEngine::setFrequency(int freq) {
     currentFrequency = constrain(freq, MIN_FREQUENCY, MAX_FREQUENCY);
 
     // Update all oscillator frequencies
-    oscillator.setFrequency((float)currentFrequency);
+    oscillator1.setFrequency((float)currentFrequency);
     oscillator2.setFrequency((float)currentFrequency);
     oscillator3.setFrequency((float)currentFrequency);
 
@@ -139,8 +139,8 @@ void AudioEngine::generateAudioBuffer() {
     int32_t mixedSample = 0;  // Use int32_t to prevent overflow during addition
 
     // Add samples from all active oscillators
-    if (oscillator.isActive()) {
-      mixedSample += oscillator.getNextSample((float)SAMPLE_RATE);
+    if (oscillator1.isActive()) {
+      mixedSample += oscillator1.getNextSample((float)SAMPLE_RATE);
       activeCount++;
     }
     if (oscillator2.isActive()) {
