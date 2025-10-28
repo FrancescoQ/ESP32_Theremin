@@ -64,6 +64,8 @@ void Theremin::update() {
   // Update audio engine
   audio.setFrequency(frequency);
   audio.setAmplitude(amplitude);
+
+  // This now do nothing, FreeRTOS task handles audio updates
   audio.update();
 
   // Debug output (throttled to every 10th loop)
