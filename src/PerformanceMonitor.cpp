@@ -37,6 +37,11 @@ void PerformanceMonitor::recordAudioWork(uint32_t workTimeUs) {
   latestAudioWorkTimeUs = workTimeUs;
 
   // Check if audio processing is taking too long
+  // Why "11ms" is the target:
+  // - Audio buffer duration = 256 samples / 22050 Hz = 11.6ms
+  // - Audio task must finish computation before next buffer needed
+  // - If CPU work exceeds 11ms, audio will start dropping samples (distortion)
+  // - Current typical values: ~0.3ms (2-3% of available time)
   if (workTimeUs > AUDIO_WARN_US) {
     // Throttle warnings (don't spam console)
     uint32_t now = millis();
@@ -77,6 +82,10 @@ void PerformanceMonitor::printStatus() {
   if (now - lastStatusReport > STATUS_INTERVAL_MS) {
     uint32_t freeHeap = ESP.getFreeHeap();
 
+    // Display format: "Audio: X.Xms/11ms (Y%)"
+    // - X.Xms = actual CPU time spent generating audio samples
+    // - 11ms = time available per buffer (256 samples / 22050 Hz)
+    // - Y% = CPU utilization (should stay well below 100%)
     DEBUG_PRINT("[OK] System OK - Audio: ");
     DEBUG_PRINT(latestAudioWorkTimeUs / 1000);
     DEBUG_PRINT(".");

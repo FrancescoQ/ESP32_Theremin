@@ -86,6 +86,14 @@ class AudioEngine {
   static const int BUFFER_SIZE = 256;          // Samples per buffer
   static const int DMA_BUFFER_COUNT = 2;       // Number of DMA buffers
 
+  // Audio Buffer Timing: Why 11ms?
+  // Buffer duration = BUFFER_SIZE / SAMPLE_RATE = 256 / 22050 = 11.6ms
+  // This means the audio task generates a new buffer every ~11ms, which is:
+  // - Independent of main loop timing (runs on separate FreeRTOS task on Core 1)
+  // - Naturally paced by i2s_write() blocking until DMA buffer is consumed
+  // - Why sensor speed (main loop) doesn't affect audio quality
+  // - Why reducing main loop delay improves vibrato response without affecting audio
+
   // Amplitude smoothing (prevents sudden volume jumps)
   // Tuning guide - adjust to taste:
   //   0.05 = ~2.0s fade time (very smooth, laggy)

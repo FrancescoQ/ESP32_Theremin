@@ -182,8 +182,14 @@ void AudioEngine::generateAudioBuffer() {
   // Stop CPU measurement (sample calculation done)
   uint32_t computeTime = micros() - computeStart;
 
-  // Write buffer to I2S (blocks until DMA buffer available ~10ms)
-  // NOTE: This is I/O waiting, NOT CPU work, so we don't measure it
+  // Write buffer to I2S (blocks until DMA buffer available ~11ms)
+  // Why this blocks for ~11ms:
+  // - ESP32 I2S hardware consumes samples at exactly SAMPLE_RATE (22050 Hz)
+  // - 256 samples / 22050 Hz = 11.6ms to consume one buffer
+  // - i2s_write() blocks until DMA has space (natural flow control)
+  // - This is GOOD: prevents buffer overruns, perfectly paced audio output
+  // - This blocking is I/O waiting, NOT CPU work (CPU is free for other tasks)
+  // - Audio task sleeps here, wakes up when hardware needs next buffer
   size_t bytes_written = 0;
   i2s_write((i2s_port_t)I2S_NUM, buffer, BUFFER_SIZE * sizeof(uint16_t), &bytes_written, portMAX_DELAY);
 
