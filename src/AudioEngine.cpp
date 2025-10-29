@@ -41,6 +41,7 @@ void AudioEngine::begin() {
   delay(100);
 
   DEBUG_PRINTLN("[AUDIO] Initializing I2S DAC...");
+  delay(50);  // Let Serial transmit before continuing
 
   if (!setupI2S()) {
     DEBUG_PRINTLN("[AUDIO] ERROR: I2S initialization failed!");
@@ -48,6 +49,7 @@ void AudioEngine::begin() {
   }
 
   DEBUG_PRINTLN("[AUDIO] I2S DAC initialized on GPIO25 @ 22050 Hz");
+  delay(50);  // Let Serial transmit before continuing
 
   // Start continuous audio generation task only if I2S succeeded
   startAudioTask();
@@ -213,6 +215,7 @@ void AudioEngine::startAudioTask() {
   );
 
   DEBUG_PRINTLN("[AUDIO] Continuous audio task started on Core 1");
+  delay(50);  // Let Serial transmit before continuing
 }
 
 // Stop continuous audio generation task

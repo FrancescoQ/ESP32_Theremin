@@ -24,6 +24,7 @@ bool SensorManager::begin() {
   // Initialize I2C and VL53L0X sensors
   Wire.begin(PIN_SENSOR_I2C_SDA, PIN_SENSOR_I2C_SCL);
   DEBUG_PRINTLN("[SENSOR] I2C initialized");
+  delay(50);  // Let Serial transmit before continuing
 
   // Configure XSHUT pins
   pinMode(PIN_SENSOR_PITCH_XSHUT, OUTPUT);
@@ -43,11 +44,14 @@ bool SensorManager::begin() {
     return false;
   }
   DEBUG_PRINTLN("[SENSOR] Pitch sensor initialized at 0x30");
+  delay(50);  // Let Serial transmit before continuing
 
+  // Configure high-speed timing budget for reduced latency
   // Configure high-speed timing budget for reduced latency
   // 20ms vs 33ms default - reduces reading time by ~13ms per sensor
   pitchSensor.setMeasurementTimingBudgetMicroSeconds(20000);
   DEBUG_PRINTLN("[SENSOR] Pitch sensor timing budget set to 20ms");
+  delay(50);  // Let Serial transmit before continuing
 
   // Initialize volume sensor at default address 0x29
   digitalWrite(PIN_SENSOR_VOLUME_XSHUT, HIGH);
@@ -57,10 +61,12 @@ bool SensorManager::begin() {
     return false;
   }
   DEBUG_PRINTLN("[SENSOR] Volume sensor initialized at 0x29");
+  delay(50);  // Let Serial transmit before continuing
 
   // Configure high-speed timing budget for reduced latency
   volumeSensor.setMeasurementTimingBudgetMicroSeconds(20000);
   DEBUG_PRINTLN("[SENSOR] Volume sensor timing budget set to 20ms");
+  delay(50);  // Let Serial transmit before continuing
 
   return true;
 }

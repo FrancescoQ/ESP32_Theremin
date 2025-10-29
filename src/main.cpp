@@ -37,6 +37,13 @@ OTAManager ota("Theremin-OTA", "", PIN_OTA_ENABLE);
 void setup() {
   // Initialize debug output
   DEBUG_INIT(115200);
+  delay(500);  // Increased delay to let Serial stabilize
+
+  // Clear startup banner to separate from bootloader output
+  DEBUG_PRINTLN("\n\n========================================");
+  DEBUG_PRINTLN("   ESP32 Theremin Starting...");
+  DEBUG_PRINTLN("========================================\n");
+  Serial.flush();  // Ensure banner is sent before continuing
   delay(100);
 
   // Initialize theremin (sensors + audio)
@@ -49,6 +56,8 @@ void setup() {
   }
 
   DEBUG_PRINTLN("=== Ready to Play! ===\n");
+  Serial.flush();  // Ensure initialization messages are sent
+  delay(100);
 
   // Initialize performance monitoring
   performanceMonitor.begin();
