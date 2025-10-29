@@ -18,7 +18,7 @@
 #endif
 
 // Main loop timing
-static const int UPDATE_INTERVAL_MS = 20;  // ~50Hz update rate
+static const int UPDATE_INTERVAL_MS = 5; // ms update interval in the main loop
 
 // Create performance monitor instance (must be created before Theremin)
 PerformanceMonitor performanceMonitor;
