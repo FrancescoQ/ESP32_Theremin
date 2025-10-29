@@ -9,7 +9,8 @@
 #include "Debug.h"
 
 // Constructor
-Theremin::Theremin() : debugEnabled(false) {}
+Theremin::Theremin(PerformanceMonitor* perfMon)
+    : audio(perfMon), debugEnabled(false) {}
 
 // Initialize theremin
 bool Theremin::begin() {

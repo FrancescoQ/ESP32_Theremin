@@ -6,21 +6,29 @@
  */
 
 #include "AudioEngine.h"
+#include "PerformanceMonitor.h"
 #include "Debug.h"
 
 // Constructor
-AudioEngine::AudioEngine() : currentFrequency(MIN_FREQUENCY), currentAmplitude(0), smoothedAmplitude(0.0), audioTaskHandle(NULL), paramMutex(NULL), taskRunning(false) {
+AudioEngine::AudioEngine(PerformanceMonitor* perfMon)
+    : currentFrequency(MIN_FREQUENCY),
+      currentAmplitude(0),
+      smoothedAmplitude(0.0),
+      audioTaskHandle(NULL),
+      paramMutex(NULL),
+      taskRunning(false),
+      performanceMonitor(perfMon) {
   // Initialize oscillators
-  oscillator1.setWaveform(Oscillator::SINE);
+  oscillator1.setWaveform(Oscillator::TRIANGLE);
   oscillator1.setOctaveShift(Oscillator::OCTAVE_BASE);
   oscillator1.setVolume(1.0);
 
-  oscillator2.setWaveform(Oscillator::OFF);
-  oscillator2.setOctaveShift(Oscillator::OCTAVE_BASE);
+  oscillator2.setWaveform(Oscillator::SINE);
+  oscillator2.setOctaveShift(Oscillator::OCTAVE_UP);
   oscillator2.setVolume(1.0);
 
-  oscillator3.setWaveform(Oscillator::OFF);
-  oscillator3.setOctaveShift(Oscillator::OCTAVE_BASE);
+  oscillator3.setWaveform(Oscillator::TRIANGLE);
+  oscillator3.setOctaveShift(Oscillator::OCTAVE_DOWN);
   oscillator3.setVolume(1.0);
 
   // Create mutex for thread-safe parameter updates
@@ -121,6 +129,9 @@ void AudioEngine::generateAudioBuffer() {
   // Only the upper byte is used by the DAC
   uint16_t buffer[BUFFER_SIZE];
 
+  // Start CPU measurement (only measure actual computation, not blocking I/O)
+  uint32_t computeStart = micros();
+
   // Lock mutex to safely read parameters
   if (paramMutex != NULL && xSemaphoreTake(paramMutex, 0) == pdTRUE) {
     // Apply exponential smoothing to amplitude
@@ -166,9 +177,18 @@ void AudioEngine::generateAudioBuffer() {
     buffer[i] = ((uint16_t)dacSample) << DAC_BIT_SHIFT;  // Put 8-bit sample in upper byte
   }
 
-  // Write buffer to I2S (blocks until DMA buffer available)
+  // Stop CPU measurement (sample calculation done)
+  uint32_t computeTime = micros() - computeStart;
+
+  // Write buffer to I2S (blocks until DMA buffer available ~10ms)
+  // NOTE: This is I/O waiting, NOT CPU work, so we don't measure it
   size_t bytes_written = 0;
   i2s_write((i2s_port_t)I2S_NUM, buffer, BUFFER_SIZE * sizeof(uint16_t), &bytes_written, portMAX_DELAY);
+
+  // Report only the actual CPU work time (not the blocking time)
+  if (performanceMonitor != nullptr) {
+    performanceMonitor->recordAudioWork(computeTime);
+  }
 }
 
 // Start continuous audio generation task
@@ -225,13 +245,15 @@ void AudioEngine::audioTaskFunction(void* parameter) {
 void AudioEngine::audioTaskLoop() {
   DEBUG_PRINTLN("[AUDIO] Audio task loop started");
 
+  // Initialize CPU measurement
+  if (performanceMonitor != nullptr) {
+    performanceMonitor->beginAudioMeasurement();
+  }
+
   while (taskRunning) {
     // Generate and write one buffer to I2S
-    // This blocks until DMA buffer is available (~11ms at 22050Hz)
+    // CPU measurement happens inside generateAudioBuffer() (excludes blocking I/O)
     generateAudioBuffer();
-
-    // No delay needed - i2s_write() naturally paces us
-    // It blocks until hardware needs next buffer
   }
 
   DEBUG_PRINTLN("[AUDIO] Audio task loop exited");

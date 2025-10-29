@@ -11,6 +11,7 @@
 #include "Debug.h"
 #include "Theremin.h"
 #include "PinConfig.h"
+#include "PerformanceMonitor.h"
 
 #if ENABLE_OTA
 #include "OTAManager.h"
@@ -19,8 +20,11 @@
 // Main loop timing
 static const int UPDATE_INTERVAL_MS = 20;  // ~50Hz update rate
 
-// Create theremin instance
-Theremin theremin;
+// Create performance monitor instance (must be created before Theremin)
+PerformanceMonitor performanceMonitor;
+
+// Create theremin instance (pass performance monitor for CPU tracking)
+Theremin theremin(&performanceMonitor);
 
 #if ENABLE_OTA
 // Create OTA manager instance
@@ -46,6 +50,9 @@ void setup() {
 
   DEBUG_PRINTLN("=== Ready to Play! ===\n");
 
+  // Initialize performance monitoring
+  performanceMonitor.begin();
+
 #if ENABLE_OTA
   // Initialize OTA manager
   if (ota.begin("admin", "theremin")) {
@@ -64,6 +71,9 @@ void loop() {
     // Handle OTA requests (non-blocking)
     ota.handle();
   #endif
+
+  // Update monitoring (checks RAM, prints periodic status)
+  performanceMonitor.update();
 
   // Small delay for stability
   delay(UPDATE_INTERVAL_MS);

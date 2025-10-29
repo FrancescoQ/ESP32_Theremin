@@ -9,12 +9,16 @@
 #include "SensorManager.h"
 #include "AudioEngine.h"
 
+// Forward declaration
+class PerformanceMonitor;
+
 class Theremin {
  public:
   /**
    * Constructor
+   * @param perfMon Pointer to PerformanceMonitor instance (optional)
    */
-  Theremin();
+  Theremin(PerformanceMonitor* perfMon = nullptr);
 
   /**
    * Initialize theremin (sensors and audio)

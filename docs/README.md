@@ -80,6 +80,15 @@ Detailed documentation of major improvements, optimizations, and implementation 
   - Proposed solutions comparison
   - Implementation recommendations
 
+### System Monitoring
+
+- **[PERFORMANCE_MONITORING.md](improvements/PERFORMANCE_MONITORING.md)**
+  - Watchdog-style threshold monitoring
+  - Audio real-time deadline tracking (11ms buffer period)
+  - RAM usage alerts
+  - Silent when OK, alerts only on thresholds
+  - Lightweight and accurate (excludes I/O blocking)
+
 ---
 
 ## 📝 Documentation Conventions
@@ -140,6 +149,7 @@ Each documentation file should include:
 - CONTINUOUS_AUDIO_IMPLEMENTATION.md
 - PITCH_SMOOTHING_IMPROVEMENTS.md
 - PITCH_STEPPING_ISSUE.md
+- PERFORMANCE_MONITORING.md
 
 **Future Phases:**
 - Documentation will be added as features are implemented
@@ -153,6 +163,7 @@ Current documentation covers:
 - ✅ OTA update system
 - ✅ Audio system improvements
 - ✅ Sensor optimizations
+- ✅ System performance monitoring
 - ✅ Debug workflows
 - ✅ Virtual prototyping
 
@@ -188,4 +199,4 @@ When adding new documentation:
 
 ---
 
-**Last Updated:** October 27, 2025
+**Last Updated:** October 29, 2025

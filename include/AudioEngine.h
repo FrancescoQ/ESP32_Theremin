@@ -14,12 +14,16 @@
 #include "PinConfig.h"
 #include "Oscillator.h"
 
+// Forward declaration to avoid circular dependency
+class PerformanceMonitor;
+
 class AudioEngine {
  public:
   /**
    * Constructor
+   * @param perfMon Pointer to PerformanceMonitor instance (optional)
    */
-  AudioEngine();
+  AudioEngine(PerformanceMonitor* perfMon = nullptr);
 
   /**
    * Initialize audio hardware (must be called in setup())
@@ -110,6 +114,9 @@ class AudioEngine {
   TaskHandle_t audioTaskHandle;
   SemaphoreHandle_t paramMutex;  // Protects frequency/amplitude updates
   volatile bool taskRunning;
+
+  // Performance monitoring
+  PerformanceMonitor* performanceMonitor;  // Optional monitoring (nullptr = disabled)
 
   /**
    * Initialize I2S in built-in DAC mode
