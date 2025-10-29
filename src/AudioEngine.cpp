@@ -95,12 +95,12 @@ void AudioEngine::playMelody(const int notes[], const int durations[], int lengt
   // Save current state to restore later
   int savedFrequency = currentFrequency;
   int savedAmplitude = currentAmplitude;
-  Oscillator::Waveform savedWaveform1 = oscillator1.isActive() ? Oscillator::SINE : Oscillator::OFF;
-  Oscillator::Waveform savedWaveform2 = oscillator2.isActive() ? Oscillator::SINE : Oscillator::OFF;
-  Oscillator::Waveform savedWaveform3 = oscillator3.isActive() ? Oscillator::SINE : Oscillator::OFF;
+  Oscillator::Waveform savedWaveform1 = oscillator1.getWaveform();
+  Oscillator::Waveform savedWaveform2 = oscillator2.getWaveform();
+  Oscillator::Waveform savedWaveform3 = oscillator3.getWaveform();
 
   // Configure specified oscillator for melody, silence others
-  setAmplitude(60);  // Good volume for melodies
+  setAmplitude(50);
 
   for (int i = 1; i <= 3; i++) {
     if (i == oscNum) {

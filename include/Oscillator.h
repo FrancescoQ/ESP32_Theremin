@@ -73,6 +73,14 @@ class Oscillator {
   }
 
   /**
+   * Get current waveform type
+   * @return Current waveform
+   */
+  Waveform getWaveform() const {
+    return waveform;
+  }
+
+  /**
    * Get current frequency (with octave shift applied)
    * @return Effective frequency in Hz
    */
