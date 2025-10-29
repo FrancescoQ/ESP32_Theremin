@@ -43,6 +43,27 @@ class AudioEngine {
   void setAmplitude(int amplitude);
 
   /**
+   * Set waveform for specific oscillator
+   * @param oscNum Oscillator number (1-3)
+   * @param wf Waveform type (OFF, SQUARE, SINE, TRIANGLE, SAW)
+   */
+  void setOscillatorWaveform(int oscNum, Oscillator::Waveform wf);
+
+  /**
+   * Set octave shift for specific oscillator
+   * @param oscNum Oscillator number (1-3)
+   * @param octave Octave shift (-1, 0, +1)
+   */
+  void setOscillatorOctave(int oscNum, int octave);
+
+  /**
+   * Set volume for specific oscillator
+   * @param oscNum Oscillator number (1-3)
+   * @param volume Volume level (0.0 = silent, 1.0 = full)
+   */
+  void setOscillatorVolume(int oscNum, float volume);
+
+  /**
    * Update audio output based on current frequency and amplitude
    * DEPRECATED: No longer needed with continuous audio task
    * Kept for backward compatibility but does nothing

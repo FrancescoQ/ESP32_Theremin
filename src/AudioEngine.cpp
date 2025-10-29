@@ -268,3 +268,106 @@ void AudioEngine::audioTaskLoop() {
   DEBUG_PRINTLN("[AUDIO] Audio task loop exited");
   vTaskDelete(NULL);  // Delete self
 }
+
+// Set waveform for specific oscillator
+void AudioEngine::setOscillatorWaveform(int oscNum, Oscillator::Waveform wf) {
+  // Validate oscillator number
+  if (oscNum < 1 || oscNum > 3) {
+    DEBUG_PRINT("[AUDIO] Invalid oscillator number: ");
+    DEBUG_PRINTLN(oscNum);
+    return;
+  }
+
+  // Thread-safe parameter update
+  if (paramMutex != NULL && xSemaphoreTake(paramMutex, portMAX_DELAY) == pdTRUE) {
+    switch (oscNum) {
+      case 1:
+        oscillator1.setWaveform(wf);
+        break;
+      case 2:
+        oscillator2.setWaveform(wf);
+        break;
+      case 3:
+        oscillator3.setWaveform(wf);
+        break;
+    }
+
+    DEBUG_PRINT("[AUDIO] Oscillator ");
+    DEBUG_PRINT(oscNum);
+    DEBUG_PRINT(" waveform set to ");
+    DEBUG_PRINTLN((int)wf);
+
+    xSemaphoreGive(paramMutex);
+  }
+}
+
+// Set octave shift for specific oscillator
+void AudioEngine::setOscillatorOctave(int oscNum, int octave) {
+  // Validate oscillator number
+  if (oscNum < 1 || oscNum > 3) {
+    DEBUG_PRINT("[AUDIO] Invalid oscillator number: ");
+    DEBUG_PRINTLN(oscNum);
+    return;
+  }
+
+  // Validate octave range
+  if (octave < -1 || octave > 1) {
+    DEBUG_PRINT("[AUDIO] Invalid octave shift: ");
+    DEBUG_PRINTLN(octave);
+    return;
+  }
+
+  // Thread-safe parameter update
+  if (paramMutex != NULL && xSemaphoreTake(paramMutex, portMAX_DELAY) == pdTRUE) {
+    switch (oscNum) {
+      case 1:
+        oscillator1.setOctaveShift(octave);
+        break;
+      case 2:
+        oscillator2.setOctaveShift(octave);
+        break;
+      case 3:
+        oscillator3.setOctaveShift(octave);
+        break;
+    }
+
+    DEBUG_PRINT("[AUDIO] Oscillator ");
+    DEBUG_PRINT(oscNum);
+    DEBUG_PRINT(" octave shift set to ");
+    DEBUG_PRINTLN(octave);
+
+    xSemaphoreGive(paramMutex);
+  }
+}
+
+// Set volume for specific oscillator
+void AudioEngine::setOscillatorVolume(int oscNum, float volume) {
+  // Validate oscillator number
+  if (oscNum < 1 || oscNum > 3) {
+    DEBUG_PRINT("[AUDIO] Invalid oscillator number: ");
+    DEBUG_PRINTLN(oscNum);
+    return;
+  }
+
+  // Thread-safe parameter update
+  if (paramMutex != NULL && xSemaphoreTake(paramMutex, portMAX_DELAY) == pdTRUE) {
+    switch (oscNum) {
+      case 1:
+        oscillator1.setVolume(volume);
+        break;
+      case 2:
+        oscillator2.setVolume(volume);
+        break;
+      case 3:
+        oscillator3.setVolume(volume);
+        break;
+    }
+
+    DEBUG_PRINT("[AUDIO] Oscillator ");
+    DEBUG_PRINT(oscNum);
+    DEBUG_PRINT(" volume set to ");
+    DEBUG_PRINTLN(volume);
+
+    xSemaphoreGive(paramMutex);
+  }
+}

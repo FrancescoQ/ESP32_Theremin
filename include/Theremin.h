@@ -38,6 +38,12 @@ class Theremin {
    */
   void setDebugMode(bool enabled);
 
+  /**
+   * Get pointer to AudioEngine instance (for direct control access)
+   * @return Pointer to AudioEngine
+   */
+  AudioEngine* getAudioEngine() { return &audio; }
+
  private:
   SensorManager sensors;
   AudioEngine audio;
