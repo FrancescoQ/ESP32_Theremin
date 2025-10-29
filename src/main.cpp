@@ -43,7 +43,7 @@ void setup() {
   DEBUG_PRINTLN("\n\n========================================");
   DEBUG_PRINTLN("   ESP32 Theremin Starting...");
   DEBUG_PRINTLN("========================================\n");
-  Serial.flush();  // Ensure banner is sent before continuing
+  DEBUG_FLUSH();  // Ensure banner is sent before continuing
   delay(100);
 
   // Initialize theremin (sensors + audio)
@@ -56,42 +56,16 @@ void setup() {
   }
 
   DEBUG_PRINTLN("=== Ready to Play! ===\n");
-  Serial.flush();  // Ensure initialization messages are sent
+  DEBUG_FLUSH();  // Ensure initialization messages are sent
   delay(100);
-
-  // Test Phase A: Direct API calls
-  DEBUG_PRINTLN("\n[TEST] Testing oscillator control API...");
-  theremin.getAudioEngine()->setFrequency(440);  // A4 - concert pitch
-  theremin.getAudioEngine()->setAmplitude(50);   // 50% volume
-  delay(2000);  // Play default sound for 2 seconds
-
-  // Change oscillator 1 to sawtooth
-  DEBUG_PRINTLN("[TEST] Changing OSC1 to sawtooth...");
-  theremin.getAudioEngine()->setOscillatorWaveform(1, Oscillator::TRIANGLE);
-  theremin.getAudioEngine()->setOscillatorWaveform(2, Oscillator::OFF);
-  theremin.getAudioEngine()->setOscillatorWaveform(3, Oscillator::OFF);
-  delay(2000);
-
-  // Change oscillator 1 octave down
-  DEBUG_PRINTLN("[TEST] Shifting OSC1 down one octave...");
-  theremin.getAudioEngine()->setOscillatorOctave(1, Oscillator::OCTAVE_UP);
-  delay(2000);
-
-  // Change oscillator 1 volume to 50%
-  DEBUG_PRINTLN("[TEST] Setting OSC1 volume to 50%...");
-  theremin.getAudioEngine()->setOscillatorVolume(1, 0.5);
-  delay(2000);
-
-  DEBUG_PRINTLN("[TEST] Restoring default settings...");
-  theremin.getAudioEngine()->setOscillatorWaveform(1, Oscillator::SINE);
-  theremin.getAudioEngine()->setOscillatorOctave(1, Oscillator::OCTAVE_BASE);
-  theremin.getAudioEngine()->setOscillatorVolume(1, 1.0);
-  delay(2000);
-
-  DEBUG_PRINTLN("[TEST] Phase A test complete!\n");
 
   // Initialize performance monitoring
   performanceMonitor.begin();
+
+  // Run system test
+  theremin.getAudioEngine()->systemTest();
+  theremin.getAudioEngine()->playStartupSound();
+  delay(500);
 
 #if ENABLE_OTA
   // Initialize OTA manager

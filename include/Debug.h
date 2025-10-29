@@ -27,12 +27,14 @@
   #define DEBUG_PRINT(x) Serial.print(x)
   #define DEBUG_PRINTLN(x) Serial.println(x)
   #define DEBUG_PRINTF(fmt, ...) Serial.printf(fmt, __VA_ARGS__)
+  #define DEBUG_FLUSH() Serial.flush()
 #else
   // Debug mode DISABLED: Macros expand to nothing (removed by compiler)
   #define DEBUG_INIT(baudrate) ((void)0)
   #define DEBUG_PRINT(x) ((void)0)
   #define DEBUG_PRINTLN(x) ((void)0)
   #define DEBUG_PRINTF(fmt, ...) ((void)0)
+  #define DEBUG_FLUSH() ((void)0)
 #endif
 
 /*

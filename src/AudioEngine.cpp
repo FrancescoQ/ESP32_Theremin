@@ -70,6 +70,128 @@ void AudioEngine::setFrequency(int freq) {
   }
 }
 
+// Play the startup sound: FF7 Victory Fanfare
+void AudioEngine::playStartupSound() {
+  // FF7 Victory Fanfare (simplified version)
+  DEBUG_PRINTLN("\n[STARTUP] Playing Final Fantasy VII Victory Theme...");
+  const int ff7_melody[] = {
+      NOTE_C5,  NOTE_C5,   NOTE_C5, NOTE_C5,
+      NOTE_GS4, NOTE_AS4,  NOTE_C5, NOTE_REST, NOTE_AS4, NOTE_C5
+  };
+  const int ff7_durations[] = {
+      150, 150, 150, 450, // Quick notes then hold
+      450, 450, 150, 150, 150, 600   // Final ascending phrase with long ending
+  };
+  constexpr int ff7_length = sizeof(ff7_melody) / sizeof(ff7_melody[0]);
+  playMelody(ff7_melody, ff7_durations, ff7_length, 1, Oscillator::SQUARE);
+  delay(500);  // Brief pause after melody
+}
+
+// Play a melody sequence
+void AudioEngine::playMelody(const int notes[], const int durations[], int length,
+                             int oscNum, Oscillator::Waveform waveform, float staccato) {
+  DEBUG_PRINTLN("[AUDIO] Playing melody...");
+
+  // Save current state to restore later
+  int savedFrequency = currentFrequency;
+  int savedAmplitude = currentAmplitude;
+  Oscillator::Waveform savedWaveform1 = oscillator1.isActive() ? Oscillator::SINE : Oscillator::OFF;
+  Oscillator::Waveform savedWaveform2 = oscillator2.isActive() ? Oscillator::SINE : Oscillator::OFF;
+  Oscillator::Waveform savedWaveform3 = oscillator3.isActive() ? Oscillator::SINE : Oscillator::OFF;
+
+  // Configure specified oscillator for melody, silence others
+  setAmplitude(60);  // Good volume for melodies
+
+  for (int i = 1; i <= 3; i++) {
+    if (i == oscNum) {
+      setOscillatorWaveform(i, waveform);
+      setOscillatorVolume(i, 1.0);
+    } else {
+      setOscillatorWaveform(i, Oscillator::OFF);
+    }
+  }
+
+  // Play each note
+  for (int i = 0; i < length; i++) {
+    if (notes[i] == NOTE_REST) {
+      // Rest = silence for full duration
+      setAmplitude(0);
+      delay(durations[i]);
+    } else {
+      // Play note with staccato articulation
+      setFrequency(notes[i]);
+      setAmplitude(60);
+
+      // Apply staccato: play for X% of duration, then gap
+      int soundDuration = (int)(durations[i] * staccato);
+      int gapDuration = durations[i] - soundDuration;
+
+      delay(soundDuration);  // Note sounds
+
+      // Add gap after note (if staccato < 1.0)
+      if (gapDuration > 0) {
+        setAmplitude(0);  // Silence
+        delay(gapDuration);
+      }
+    }
+  }
+
+  // Restore previous state
+  setFrequency(savedFrequency);
+  setAmplitude(0);
+  setOscillatorWaveform(1, savedWaveform1);
+  setOscillatorWaveform(2, savedWaveform2);
+  setOscillatorWaveform(3, savedWaveform3);
+
+  DEBUG_PRINTLN("[AUDIO] Melody complete");
+}
+
+// System test sequence
+void AudioEngine::systemTest() {
+  DEBUG_PRINTLN("\n[TEST] Starting system test...");
+
+  // Test configuration: single oscillator with clear tones
+  setFrequency(440);  // A4 - concert pitch
+  setAmplitude(50);   // 50% volume
+
+  // Turn off oscillators 2 and 3 for clarity
+  setOscillatorWaveform(2, Oscillator::OFF);
+  setOscillatorWaveform(3, Oscillator::OFF);
+
+  // Test 1: Default configuration (oscillator 1, sine wave)
+  DEBUG_PRINTLN("[TEST] Test 1: Default oscillator 1 (sine, base octave, 100% volume)");
+  setOscillatorWaveform(1, Oscillator::SINE);
+  setOscillatorOctave(1, Oscillator::OCTAVE_BASE);
+  setOscillatorVolume(1, 1.0);
+  delay(1500);
+
+  // Test 2: Waveform change
+  DEBUG_PRINTLN("[TEST] Test 2: Changing to triangle wave");
+  setOscillatorWaveform(1, Oscillator::TRIANGLE);
+  delay(1500);
+
+  // Test 3: Octave shift up
+  DEBUG_PRINTLN("[TEST] Test 3: Shifting up one octave");
+  setOscillatorOctave(1, Oscillator::OCTAVE_UP);
+  delay(1500);
+
+  // Test 4: Volume reduction
+  DEBUG_PRINTLN("[TEST] Test 4: Reducing volume to 50%");
+  setOscillatorVolume(1, 0.5);
+  delay(1500);
+
+  // Test 5: Restore defaults
+  DEBUG_PRINTLN("[TEST] Test 5: Restoring defaults");
+  setAmplitude(0);
+  delay(1000);
+  setOscillatorWaveform(1, Oscillator::SINE);
+  setOscillatorOctave(1, Oscillator::OCTAVE_BASE);
+  setOscillatorVolume(1, 1.0);
+
+
+  DEBUG_PRINTLN("[TEST] System test complete!\n");
+}
+
 // Set amplitude (thread-safe)
 void AudioEngine::setAmplitude(int amplitude) {
   if (paramMutex != NULL && xSemaphoreTake(paramMutex, portMAX_DELAY) == pdTRUE) {
