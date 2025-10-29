@@ -95,7 +95,7 @@ int16_t Oscillator::getNextSample(float sampleRate) {
 
   // Advance phase accumulator
   // Phase increment = frequency / sample rate
-  float effectiveFreq = calculateShiftedFrequency();
+  float effectiveFreq = getEffectiveFrequency();
   float phaseIncrement = effectiveFreq / sampleRate;
 
   phase += phaseIncrement;
