@@ -473,8 +473,8 @@ The 4-position rotary switches (Off/Sine/Square/Saw) are not just waveform selec
 
 ---
 
-### Phase 2 - Audio Upgrade: DAC + Amplifier
-**Goal:** Replace buzzer with real audio output (speaker + line-out)
+### Phase 2 - Audio Upgrade: DAC + Amplifier ✅ COMPLETE
+**Goal:** Replace buzzer with real audio output and implement multiple waveforms
 
 **Tasks:**
 - [ ] Implement first Oscillator class with wavetable (sine/square/saw)

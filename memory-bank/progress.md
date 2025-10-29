@@ -6,9 +6,9 @@
 
 ## Current Status
 
-**Project Phase:** Phase 2 - I2S DAC + Oscillator + Multiple Waveforms ✅ COMPLETE
-**Overall Completion:** ~35-40% (Phase 0 + Phase 1 + Phase 2 complete, ready for Phase 3)
-**Last Updated:** October 27, 2025
+**Project Phase:** Phase 2 ✅ COMPLETE - Ready for Phase 3
+**Overall Completion:** ~40% (Phases 0, 1, 2 complete - foundation stable and working)
+**Last Updated:** October 29, 2025
 
 ### Status Summary
 Major milestone achieved! Successfully implemented professional-grade audio synthesis with **4 waveform types** on **real hardware**:
@@ -29,7 +29,7 @@ Major milestone achieved! Successfully implemented professional-grade audio synt
 - No errors or warnings
 - ✅ Running successfully on physical hardware
 
-**Current State:** Phase 2 complete! Professional-grade audio synthesis with multiple waveforms fully implemented and tested. Hardware assembled and functioning perfectly. All 4 waveforms sound clean and distinct. Sensor latency optimized (85ms → 75ms). DAC format issues resolved. System stable and ready for Phase 3 (multiple oscillators). User feedback: "much nicer!" - confirmed responsive and high-quality sound.
+**Current State:** Phase 2 complete and stable! Professional-grade audio synthesis with 3 oscillators (software foundation), 4 waveform types, I2S DAC output, and continuous FreeRTOS-based audio generation all working perfectly on real hardware. Both sensors (pitch and volume) functioning correctly. System ready for Phase 3 hardware expansion (controls + display). Parameters currently compile-time only; runtime control hardware not yet implemented.
 
 ## What Works
 
@@ -209,41 +209,51 @@ Major milestone achieved! Successfully implemented professional-grade audio synt
 
 ### Phase 3: Multiple Oscillators Expansion (v2.0 Feature)
 
-**Goal:** Add 2nd and 3rd oscillators with independent controls
+**Goal:** Add runtime control hardware (MCP23017 + switches) and optional display
 
-**Status:** Partially Started (Foundation Complete)
+**Status:** Foundation Ready, Hardware Not Started
 
-**Completed:**
-- ✅ 3 oscillators defined in AudioEngine (oscillator, oscillator2, oscillator3)
-- ✅ Per-oscillator volume control implemented (setVolume method)
-- ✅ Mixing architecture with averaging and clipping prevention
-- ✅ Initial configuration:
+**Software Foundation Complete:**
+- ✅ 3 oscillators implemented in AudioEngine with mixing capability
+- ✅ Per-oscillator volume control (setVolume method)
+- ✅ Waveform switching capability (4 types: SINE, SQUARE, TRIANGLE, SAW, OFF)
+- ✅ Octave shifting implemented (-1, 0, +1)
+- ✅ Intelligent mixing with automatic clipping prevention
+- ✅ Current configuration (compile-time):
   - Oscillator 1: SINE at 100% volume
   - Oscillator 2: SQUARE at 60% volume, -1 octave (sub-bass)
   - Oscillator 3: OFF at 40% volume (ready to enable)
 
-- [ ] **AudioMixer Class**
-  - [ ] Implement AudioMixer to sum multiple oscillator outputs
-  - [ ] Add 2nd Oscillator instance
-  - [ ] **BENCHMARK:** Test CPU load with 2 oscillators
-  - [ ] If CPU <60%, add 3rd Oscillator
+**Hardware To Be Implemented:**
 
-- [ ] **Control Expansion**
-  - [ ] Add MCP23017 I2C GPIO expander
+- [ ] **Runtime Control Hardware**
+  - [ ] Add MCP23017 I2C GPIO expander module
   - [ ] Wire rotary switches for waveform selection (3x 4-position)
   - [ ] Wire toggle switches for octave control (3x 3-position)
   - [ ] Implement SwitchController class with interrupt handling
+  - [ ] Connect switches to read user input in real-time
+
+- [ ] **Display Integration** (May be done together with controls)
+  - [ ] Connect SSD1306 OLED (I2C address 0x3C)
+  - [ ] Create DisplayManager class
+  - [ ] Show real-time CPU usage and free RAM
+  - [ ] Show current oscillator states (waveform, octave, volume)
+  - [ ] Show frequency and sensor distances
+  - [ ] Refresh rate: 20-30Hz
 
 - [ ] **CHECKPOINT 2: Performance Test**
-  - [ ] Test CPU/RAM with 2-3 oscillators
-  - [ ] Monitor for audio glitches/dropouts
-  - [ ] **DECISION:** Keep 3 osc OR drop to 2
+  - [ ] Test CPU/RAM with runtime control overhead
+  - [ ] Monitor for audio glitches during parameter changes
+  - [ ] Verify I2C bus stability with all devices (sensors + expander + display)
 
 **Success Criteria:**
-- ✓ 2 oscillators: CPU <60%, no audio glitches
-- ✓ 3 oscillators (if attempted): CPU <75%, audio stable
-- ✓ All switches respond correctly via MCP23017
-- ✓ Latency still <20ms
+- ✓ All switches respond correctly via MCP23017 (no I2C conflicts)
+- ✓ Runtime waveform/octave changes work smoothly (no audio glitches)
+- ✓ Display updates without affecting audio latency
+- ✓ Total system latency still <20ms with all hardware active
+- ✓ CPU usage <75% with oscillators + controls + display
+
+**Note:** Controls and display may be implemented together for practical assembly reasons (physical layout and wiring convenience).
 
 ---
 
