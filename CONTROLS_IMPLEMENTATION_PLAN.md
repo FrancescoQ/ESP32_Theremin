@@ -1,0 +1,1062 @@
+# Controls Implementation Plan
+**ESP32 Theremin - Runtime Oscillator Control System**
+
+**Date:** October 29, 2025
+**Goal:** Implement runtime control of oscillator parameters (waveform, octave, volume)
+**Approach:** Phased implementation with serial testing before hardware integration
+
+---
+
+## Overview
+
+This plan implements a control system that allows runtime modification of oscillator parameters. The implementation is split into 5 phases, each building on the previous one, allowing for incremental testing and debugging.
+
+### Key Architectural Principles
+
+1. **Thread Safety:** AudioEngine runs on Core 1 (FreeRTOS task), controls read on Core 0 (main loop)
+2. **Mutex Protection:** All parameter changes must be protected by `paramMutex`
+3. **Separation of Concerns:** AudioEngine provides API, ControlHandler manages input sources
+4. **Test-First:** Serial commands enable testing without hardware
+5. **Single Source of Truth:** Both serial and GPIO trigger the same AudioEngine methods
+
+### Thread Safety Explanation
+
+Your audio runs in a **separate FreeRTOS task** on Core 1:
+```cpp
+// Core 1 - Running continuously
+void audioTaskLoop() {
+    while (taskRunning) {
+        generateAudioBuffer();  // Reading oscillator parameters
+    }
+}
+```
+
+Meanwhile, your main loop runs on Core 0:
+```cpp
+// Core 0 - Your main loop
+void loop() {
+    theremin.update();  // Might want to change oscillator parameters
+}
+```
+
+**The Problem:** Both cores could access the same memory at the same time = data corruption!
+
+**The Solution:** Mutex (mutual exclusion) acts like a "talking stick":
+```cpp
+// Core 0 asks: "Can I change parameters?"
+xSemaphoreTake(paramMutex, portMAX_DELAY);  // Wait for stick
+
+// Now Core 0 has exclusive access
+oscillator1.setFrequency(440.0);  // SAFE to change
+
+// Core 0 returns the stick
+xSemaphoreGive(paramMutex);  // Core 1 can use it now
+```
+
+In `generateAudioBuffer()`, Core 1 also requests the mutex before reading parameters, ensuring no conflicts.
+
+---
+
+## Phase A: AudioEngine Control Methods
+**Goal:** Add thread-safe API to AudioEngine for changing oscillator parameters
+**Testing:** Call methods directly from `setup()` to verify they work
+**Files Modified:** `include/AudioEngine.h`, `src/AudioEngine.cpp`
+
+### Implementation Steps
+
+#### Step A1: Add Method Declarations to AudioEngine.h
+
+Add these public methods after `setAmplitude()`:
+
+```cpp
+/**
+ * Set waveform for specific oscillator
+ * @param oscNum Oscillator number (1-3)
+ * @param wf Waveform type (OFF, SQUARE, SINE, TRIANGLE, SAW)
+ */
+void setOscillatorWaveform(int oscNum, Oscillator::Waveform wf);
+
+/**
+ * Set octave shift for specific oscillator
+ * @param oscNum Oscillator number (1-3)
+ * @param octave Octave shift (-1, 0, +1)
+ */
+void setOscillatorOctave(int oscNum, int octave);
+
+/**
+ * Set volume for specific oscillator
+ * @param oscNum Oscillator number (1-3)
+ * @param volume Volume level (0.0 = silent, 1.0 = full)
+ */
+void setOscillatorVolume(int oscNum, float volume);
+```
+
+#### Step A2: Implement Methods in AudioEngine.cpp
+
+Add these implementations at the end of the file:
+
+```cpp
+void AudioEngine::setOscillatorWaveform(int oscNum, Oscillator::Waveform wf) {
+  // Validate oscillator number
+  if (oscNum < 1 || oscNum > 3) {
+    DEBUG_PRINT("[AUDIO] Invalid oscillator number: ");
+    DEBUG_PRINTLN(oscNum);
+    return;
+  }
+
+  // Thread-safe parameter update
+  if (paramMutex != NULL && xSemaphoreTake(paramMutex, portMAX_DELAY) == pdTRUE) {
+    switch (oscNum) {
+      case 1:
+        oscillator1.setWaveform(wf);
+        break;
+      case 2:
+        oscillator2.setWaveform(wf);
+        break;
+      case 3:
+        oscillator3.setWaveform(wf);
+        break;
+    }
+
+    DEBUG_PRINT("[AUDIO] Oscillator ");
+    DEBUG_PRINT(oscNum);
+    DEBUG_PRINT(" waveform set to ");
+    DEBUG_PRINTLN((int)wf);
+
+    xSemaphoreGive(paramMutex);
+  }
+}
+
+void AudioEngine::setOscillatorOctave(int oscNum, int octave) {
+  // Validate oscillator number
+  if (oscNum < 1 || oscNum > 3) {
+    DEBUG_PRINT("[AUDIO] Invalid oscillator number: ");
+    DEBUG_PRINTLN(oscNum);
+    return;
+  }
+
+  // Validate octave range
+  if (octave < -1 || octave > 1) {
+    DEBUG_PRINT("[AUDIO] Invalid octave shift: ");
+    DEBUG_PRINTLN(octave);
+    return;
+  }
+
+  // Thread-safe parameter update
+  if (paramMutex != NULL && xSemaphoreTake(paramMutex, portMAX_DELAY) == pdTRUE) {
+    switch (oscNum) {
+      case 1:
+        oscillator1.setOctaveShift(octave);
+        break;
+      case 2:
+        oscillator2.setOctaveShift(octave);
+        break;
+      case 3:
+        oscillator3.setOctaveShift(octave);
+        break;
+    }
+
+    DEBUG_PRINT("[AUDIO] Oscillator ");
+    DEBUG_PRINT(oscNum);
+    DEBUG_PRINT(" octave shift set to ");
+    DEBUG_PRINTLN(octave);
+
+    xSemaphoreGive(paramMutex);
+  }
+}
+
+void AudioEngine::setOscillatorVolume(int oscNum, float volume) {
+  // Validate oscillator number
+  if (oscNum < 1 || oscNum > 3) {
+    DEBUG_PRINT("[AUDIO] Invalid oscillator number: ");
+    DEBUG_PRINTLN(oscNum);
+    return;
+  }
+
+  // Thread-safe parameter update
+  if (paramMutex != NULL && xSemaphoreTake(paramMutex, portMAX_DELAY) == pdTRUE) {
+    switch (oscNum) {
+      case 1:
+        oscillator1.setVolume(volume);
+        break;
+      case 2:
+        oscillator2.setVolume(volume);
+        break;
+      case 3:
+        oscillator3.setVolume(volume);
+        break;
+    }
+
+    DEBUG_PRINT("[AUDIO] Oscillator ");
+    DEBUG_PRINT(oscNum);
+    DEBUG_PRINT(" volume set to ");
+    DEBUG_PRINTLN(volume);
+
+    xSemaphoreGive(paramMutex);
+  }
+}
+```
+
+#### Step A3: Test from main.cpp
+
+Add test code to `setup()` after `theremin.begin()`:
+
+```cpp
+// Test Phase A: Direct API calls
+DEBUG_PRINTLN("\n[TEST] Testing oscillator control API...");
+delay(2000);  // Play default sound for 2 seconds
+
+// Change oscillator 1 to sawtooth
+DEBUG_PRINTLN("[TEST] Changing OSC1 to sawtooth...");
+theremin.getAudioEngine()->setOscillatorWaveform(1, Oscillator::SAW);
+delay(2000);
+
+// Change oscillator 1 octave down
+DEBUG_PRINTLN("[TEST] Shifting OSC1 down one octave...");
+theremin.getAudioEngine()->setOscillatorOctave(1, -1);
+delay(2000);
+
+// Change oscillator 1 volume to 50%
+DEBUG_PRINTLN("[TEST] Setting OSC1 volume to 50%...");
+theremin.getAudioEngine()->setOscillatorVolume(1, 0.5);
+delay(2000);
+
+DEBUG_PRINTLN("[TEST] Phase A test complete!\n");
+```
+
+**Note:** You'll need to add a getter to Theremin class:
+```cpp
+// In Theremin.h (public section)
+AudioEngine* getAudioEngine() { return &audio; }
+```
+
+### Success Criteria for Phase A
+
+- [ ] Code compiles without errors
+- [ ] Audio starts with default oscillator settings
+- [ ] After 2 seconds, oscillator 1 changes to sawtooth (sound changes)
+- [ ] After 4 seconds, oscillator 1 shifts down (pitch drops)
+- [ ] After 6 seconds, oscillator 1 gets quieter (volume reduces)
+- [ ] Serial output shows all debug messages
+- [ ] No crashes or audio glitches
+
+---
+
+## Phase B: Serial Command Parser (Testing Infrastructure)
+**Goal:** Create ControlHandler class with serial command parsing
+**Testing:** Control oscillators via Serial Monitor
+**Files Created:** `include/ControlHandler.h`, `src/ControlHandler.cpp`
+**Files Modified:** `src/main.cpp`
+
+### Implementation Steps
+
+#### Step B1: Create ControlHandler.h
+
+Create `include/ControlHandler.h`:
+
+```cpp
+/*
+ * ControlHandler.h
+ *
+ * Manages oscillator control inputs from serial commands and GPIO.
+ * Provides unified interface for changing oscillator parameters.
+ */
+
+#pragma once
+#include <Arduino.h>
+#include "AudioEngine.h"
+
+class ControlHandler {
+public:
+  /**
+   * Constructor
+   * @param audioEngine Pointer to AudioEngine instance
+   */
+  ControlHandler(AudioEngine* audioEngine);
+
+  /**
+   * Initialize control handler
+   */
+  void begin();
+
+  /**
+   * Update control handler (read serial, GPIO, etc.)
+   * Call from main loop
+   */
+  void update();
+
+private:
+  AudioEngine* audio;
+
+  /**
+   * Check for and process serial commands
+   */
+  void handleSerialCommands();
+
+  /**
+   * Parse and execute a single command string
+   * @param cmd Command string (e.g., "osc1:sine")
+   */
+  void executeCommand(String cmd);
+
+  /**
+   * Parse waveform name to enum
+   * @param name Waveform name ("off", "square", "sine", "triangle", "saw")
+   * @return Waveform enum or -1 if invalid
+   */
+  int parseWaveform(String name);
+};
+```
+
+#### Step B2: Create ControlHandler.cpp
+
+Create `src/ControlHandler.cpp`:
+
+```cpp
+/*
+ * ControlHandler.cpp
+ *
+ * Implementation of control input handling.
+ */
+
+#include "ControlHandler.h"
+#include "Debug.h"
+
+ControlHandler::ControlHandler(AudioEngine* audioEngine)
+    : audio(audioEngine) {
+}
+
+void ControlHandler::begin() {
+  DEBUG_PRINTLN("[CTRL] Control handler initialized");
+  DEBUG_PRINTLN("[CTRL] Serial commands enabled");
+  DEBUG_PRINTLN("[CTRL] Command format: oscN:parameter:value");
+  DEBUG_PRINTLN("[CTRL] Examples:");
+  DEBUG_PRINTLN("[CTRL]   osc1:sine      - Set oscillator 1 to sine wave");
+  DEBUG_PRINTLN("[CTRL]   osc2:octave:-1 - Shift oscillator 2 down one octave");
+  DEBUG_PRINTLN("[CTRL]   osc3:vol:0.5   - Set oscillator 3 volume to 50%");
+  DEBUG_PRINTLN("[CTRL]   osc1:off       - Turn off oscillator 1");
+}
+
+void ControlHandler::update() {
+  handleSerialCommands();
+  // GPIO reading will be added in Phase D
+}
+
+void ControlHandler::handleSerialCommands() {
+  // Check if serial data available
+  if (Serial.available() > 0) {
+    String command = Serial.readStringUntil('\n');
+    command.trim();  // Remove whitespace
+
+    if (command.length() > 0) {
+      DEBUG_PRINT("[CTRL] Received command: ");
+      DEBUG_PRINTLN(command);
+      executeCommand(command);
+    }
+  }
+}
+
+void ControlHandler::executeCommand(String cmd) {
+  // Parse command format: oscN:parameter:value
+  // Examples: "osc1:sine", "osc2:octave:-1", "osc3:vol:0.5"
+
+  cmd.toLowerCase();  // Case-insensitive
+
+  // Extract oscillator number
+  if (!cmd.startsWith("osc")) {
+    DEBUG_PRINTLN("[CTRL] ERROR: Command must start with 'osc'");
+    return;
+  }
+
+  int oscNum = cmd.charAt(3) - '0';  // Get number after 'osc'
+  if (oscNum < 1 || oscNum > 3) {
+    DEBUG_PRINTLN("[CTRL] ERROR: Oscillator number must be 1-3");
+    return;
+  }
+
+  // Find first colon
+  int colonPos = cmd.indexOf(':', 4);
+  if (colonPos == -1) {
+    DEBUG_PRINTLN("[CTRL] ERROR: Missing ':' separator");
+    return;
+  }
+
+  // Extract parameter (everything after first colon)
+  String param = cmd.substring(colonPos + 1);
+
+  // Check if waveform command (no second colon)
+  if (param.indexOf(':') == -1) {
+    // Waveform command (e.g., "osc1:sine" or "osc1:off")
+    int waveform = parseWaveform(param);
+    if (waveform >= 0) {
+      audio->setOscillatorWaveform(oscNum, (Oscillator::Waveform)waveform);
+    } else {
+      DEBUG_PRINT("[CTRL] ERROR: Unknown waveform: ");
+      DEBUG_PRINTLN(param);
+    }
+    return;
+  }
+
+  // Parameter with value (e.g., "osc1:octave:-1" or "osc1:vol:0.5")
+  int secondColon = param.indexOf(':');
+  String paramName = param.substring(0, secondColon);
+  String value = param.substring(secondColon + 1);
+
+  if (paramName == "octave" || paramName == "oct") {
+    int octave = value.toInt();
+    audio->setOscillatorOctave(oscNum, octave);
+  } else if (paramName == "volume" || paramName == "vol") {
+    float volume = value.toFloat();
+    audio->setOscillatorVolume(oscNum, volume);
+  } else {
+    DEBUG_PRINT("[CTRL] ERROR: Unknown parameter: ");
+    DEBUG_PRINTLN(paramName);
+  }
+}
+
+int ControlHandler::parseWaveform(String name) {
+  if (name == "off") return Oscillator::OFF;
+  if (name == "square") return Oscillator::SQUARE;
+  if (name == "sine") return Oscillator::SINE;
+  if (name == "triangle" || name == "tri") return Oscillator::TRIANGLE;
+  if (name == "sawtooth" || name == "saw") return Oscillator::SAW;
+  return -1;  // Invalid
+}
+```
+
+#### Step B3: Integrate into main.cpp
+
+Modify `src/main.cpp`:
+
+```cpp
+// Add include at top
+#include "ControlHandler.h"
+
+// Add after theremin instance (around line 20)
+ControlHandler controls(nullptr);  // Will be initialized in setup()
+
+void setup() {
+  // ... existing setup code ...
+
+  // After theremin.begin()
+
+  // Initialize control handler (pass audio engine pointer)
+  controls = ControlHandler(theremin.getAudioEngine());
+  controls.begin();
+
+  // Remove Phase A test code (direct API calls)
+}
+
+void loop() {
+  // Add before theremin.update()
+  controls.update();  // Handle serial commands
+
+  // ... rest of loop ...
+}
+```
+
+**Note:** Remember to add `getAudioEngine()` getter to Theremin class (see Phase A).
+
+### Success Criteria for Phase B
+
+- [ ] Code compiles without errors
+- [ ] Control handler initializes and prints help text
+- [ ] Can send `osc1:sine` → oscillator 1 changes to sine wave
+- [ ] Can send `osc2:square` → oscillator 2 changes to square wave
+- [ ] Can send `osc1:octave:1` → oscillator 1 shifts up one octave
+- [ ] Can send `osc3:vol:0.3` → oscillator 3 volume reduces
+- [ ] Can send `osc2:off` → oscillator 2 turns off
+- [ ] Invalid commands print error messages
+- [ ] Audio responds smoothly to commands without glitches
+
+---
+
+## Phase C: Extended Serial Commands
+**Goal:** Add more commands, better error handling, status queries
+**Testing:** Full command set via Serial Monitor
+**Files Modified:** `include/ControlHandler.h`, `src/ControlHandler.cpp`
+
+### Implementation Steps
+
+#### Step C1: Add Status Query Commands
+
+Add to `ControlHandler.cpp` in `executeCommand()` before parameter parsing:
+
+```cpp
+// Handle special commands
+if (cmd == "help" || cmd == "?") {
+  printHelp();
+  return;
+}
+
+if (cmd == "status") {
+  printStatus();
+  return;
+}
+
+if (cmd.startsWith("status:osc")) {
+  int oscNum = cmd.charAt(10) - '0';
+  if (oscNum >= 1 && oscNum <= 3) {
+    printOscillatorStatus(oscNum);
+  }
+  return;
+}
+```
+
+#### Step C2: Add Helper Methods
+
+Add method declarations to `ControlHandler.h` (private section):
+
+```cpp
+private:
+  /**
+   * Print help text
+   */
+  void printHelp();
+
+  /**
+   * Print status of all oscillators
+   */
+  void printStatus();
+
+  /**
+   * Print status of specific oscillator
+   */
+  void printOscillatorStatus(int oscNum);
+
+  /**
+   * Get waveform name from enum
+   */
+  const char* getWaveformName(Oscillator::Waveform wf);
+```
+
+Add implementations to `ControlHandler.cpp`:
+
+```cpp
+void ControlHandler::printHelp() {
+  DEBUG_PRINTLN("\n========== OSCILLATOR CONTROL COMMANDS ==========");
+  DEBUG_PRINTLN("Waveform:");
+  DEBUG_PRINTLN("  osc1:off         - Turn off oscillator 1");
+  DEBUG_PRINTLN("  osc1:square      - Set oscillator 1 to square wave");
+  DEBUG_PRINTLN("  osc1:sine        - Set oscillator 1 to sine wave");
+  DEBUG_PRINTLN("  osc1:triangle    - Set oscillator 1 to triangle wave");
+  DEBUG_PRINTLN("  osc1:sawtooth    - Set oscillator 1 to sawtooth wave");
+  DEBUG_PRINTLN("\nOctave Shift:");
+  DEBUG_PRINTLN("  osc1:octave:-1   - Shift oscillator 1 down one octave");
+  DEBUG_PRINTLN("  osc1:octave:0    - Reset oscillator 1 to base octave");
+  DEBUG_PRINTLN("  osc1:octave:1    - Shift oscillator 1 up one octave");
+  DEBUG_PRINTLN("\nVolume:");
+  DEBUG_PRINTLN("  osc1:vol:0.0     - Set oscillator 1 to 0% volume (silent)");
+  DEBUG_PRINTLN("  osc1:vol:0.5     - Set oscillator 1 to 50% volume");
+  DEBUG_PRINTLN("  osc1:vol:1.0     - Set oscillator 1 to 100% volume");
+  DEBUG_PRINTLN("\nStatus:");
+  DEBUG_PRINTLN("  status           - Show status of all oscillators");
+  DEBUG_PRINTLN("  status:osc1      - Show status of oscillator 1");
+  DEBUG_PRINTLN("\nNote: Replace 'osc1' with 'osc2' or 'osc3' for other oscillators");
+  DEBUG_PRINTLN("=================================================\n");
+}
+
+void ControlHandler::printStatus() {
+  DEBUG_PRINTLN("\n========== OSCILLATOR STATUS ==========");
+  printOscillatorStatus(1);
+  printOscillatorStatus(2);
+  printOscillatorStatus(3);
+  DEBUG_PRINTLN("=======================================\n");
+}
+
+void ControlHandler::printOscillatorStatus(int oscNum) {
+  DEBUG_PRINT("Oscillator ");
+  DEBUG_PRINT(oscNum);
+  DEBUG_PRINTLN(":");
+  DEBUG_PRINTLN("  [Status will be implemented when AudioEngine provides getters]");
+  DEBUG_PRINTLN("  Current implementation: Check debug output from set commands");
+}
+
+const char* ControlHandler::getWaveformName(Oscillator::Waveform wf) {
+  switch (wf) {
+    case Oscillator::OFF: return "OFF";
+    case Oscillator::SQUARE: return "SQUARE";
+    case Oscillator::SINE: return "SINE";
+    case Oscillator::TRIANGLE: return "TRIANGLE";
+    case Oscillator::SAW: return "SAWTOOTH";
+    default: return "UNKNOWN";
+  }
+}
+```
+
+**Note:** Full status reporting requires adding getter methods to AudioEngine. For now, we rely on debug output from setter methods.
+
+#### Step C3: Add Batch Commands (Optional Enhancement)
+
+Add support for setting multiple parameters at once:
+
+```cpp
+// In executeCommand(), add before waveform parsing:
+if (cmd.indexOf(';') != -1) {
+  // Batch command (e.g., "osc1:sine;osc1:octave:1;osc1:vol:0.8")
+  int start = 0;
+  int semicolon;
+  while ((semicolon = cmd.indexOf(';', start)) != -1) {
+    String subCmd = cmd.substring(start, semicolon);
+    subCmd.trim();
+    if (subCmd.length() > 0) {
+      executeCommand(subCmd);  // Recursive call
+    }
+    start = semicolon + 1;
+  }
+  // Execute last command
+  String lastCmd = cmd.substring(start);
+  lastCmd.trim();
+  if (lastCmd.length() > 0) {
+    executeCommand(lastCmd);
+  }
+  return;
+}
+```
+
+### Success Criteria for Phase C
+
+- [ ] `help` command prints complete command reference
+- [ ] `status` command shows all oscillator states
+- [ ] `status:osc1` shows single oscillator state
+- [ ] Batch commands work (e.g., `osc1:sine;osc1:vol:0.5`)
+- [ ] All commands from Phase B still work
+- [ ] Error messages are clear and helpful
+
+---
+
+## Phase D: GPIO Reading (Hardware Integration)
+**Goal:** Add support for physical switches and buttons
+**Testing:** Hardware switches trigger same commands as serial
+**Files Modified:** `include/ControlHandler.h`, `src/ControlHandler.cpp`, `include/PinConfig.h`
+
+### Implementation Steps
+
+#### Step D1: Define GPIO Pins in PinConfig.h
+
+Add to `include/PinConfig.h` in the appropriate section:
+
+```cpp
+//=============================================================================
+// CONTROL PINS - Temporary Direct GPIO (before MCP23017)
+//=============================================================================
+// Oscillator 1 Controls
+#define PIN_OSC1_WAVE_BIT0    4   // Waveform selection bit 0
+#define PIN_OSC1_WAVE_BIT1    5   // Waveform selection bit 1
+#define PIN_OSC1_OCT_BIT0     13  // Octave selection bit 0
+#define PIN_OSC1_OCT_BIT1     14  // Octave selection bit 1
+
+// Future: Add OSC2 and OSC3 pins as needed
+// For now, start with OSC1 only for testing
+
+// Control pin configuration
+#define CONTROL_DEBOUNCE_MS   50  // Debounce delay in milliseconds
+```
+
+#### Step D2: Add GPIO Reading to ControlHandler
+
+Add to `ControlHandler.h` (private section):
+
+```cpp
+private:
+  // GPIO state tracking
+  struct SwitchState {
+    int waveformBits;    // Current waveform switch state
+    int octaveBits;      // Current octave switch state
+    unsigned long lastChangeTime;  // For debouncing
+  };
+
+  SwitchState osc1State;
+  // SwitchState osc2State;  // Future
+  // SwitchState osc3State;  // Future
+
+  /**
+   * Initialize GPIO pins
+   */
+  void setupGPIO();
+
+  /**
+   * Read and process GPIO inputs
+   */
+  void handleGPIO();
+
+  /**
+   * Read 2-bit switch value from GPIO pins
+   */
+  int readSwitchBits(int pin0, int pin1);
+
+  /**
+   * Map 2-bit value to waveform
+   */
+  Oscillator::Waveform mapToWaveform(int bits);
+
+  /**
+   * Map 2-bit value to octave shift
+   */
+  int mapToOctave(int bits);
+```
+
+Add to `ControlHandler.cpp`:
+
+```cpp
+#include "PinConfig.h"
+
+void ControlHandler::begin() {
+  setupGPIO();
+
+  // ... existing serial command help text ...
+}
+
+void ControlHandler::setupGPIO() {
+  // Configure oscillator 1 control pins as inputs with pullup
+  pinMode(PIN_OSC1_WAVE_BIT0, INPUT_PULLUP);
+  pinMode(PIN_OSC1_WAVE_BIT1, INPUT_PULLUP);
+  pinMode(PIN_OSC1_OCT_BIT0, INPUT_PULLUP);
+  pinMode(PIN_OSC1_OCT_BIT1, INPUT_PULLUP);
+
+  // Initialize state
+  osc1State.waveformBits = -1;  // Force initial read
+  osc1State.octaveBits = -1;
+  osc1State.lastChangeTime = 0;
+
+  DEBUG_PRINTLN("[CTRL] GPIO pins configured");
+  DEBUG_PRINTLN("[CTRL] Oscillator 1 switches enabled:");
+  DEBUG_PRINT("[CTRL]   Waveform: GPIO ");
+  DEBUG_PRINT(PIN_OSC1_WAVE_BIT0);
+  DEBUG_PRINT(", ");
+  DEBUG_PRINTLN(PIN_OSC1_WAVE_BIT1);
+  DEBUG_PRINT("[CTRL]   Octave: GPIO ");
+  DEBUG_PRINT(PIN_OSC1_OCT_BIT0);
+  DEBUG_PRINT(", ");
+  DEBUG_PRINTLN(PIN_OSC1_OCT_BIT1);
+}
+
+void ControlHandler::update() {
+  handleSerialCommands();
+  handleGPIO();
+}
+
+void ControlHandler::handleGPIO() {
+  unsigned long now = millis();
+
+  // Read oscillator 1 switches
+  int waveBits = readSwitchBits(PIN_OSC1_WAVE_BIT0, PIN_OSC1_WAVE_BIT1);
+  int octBits = readSwitchBits(PIN_OSC1_OCT_BIT0, PIN_OSC1_OCT_BIT1);
+
+  // Check for waveform change
+  if (waveBits != osc1State.waveformBits) {
+    if (now - osc1State.lastChangeTime > CONTROL_DEBOUNCE_MS) {
+      osc1State.waveformBits = waveBits;
+      osc1State.lastChangeTime = now;
+
+      Oscillator::Waveform wf = mapToWaveform(waveBits);
+      DEBUG_PRINT("[CTRL] OSC1 waveform switch changed: bits=");
+      DEBUG_PRINT(waveBits);
+      DEBUG_PRINT(" -> ");
+      DEBUG_PRINTLN(getWaveformName(wf));
+
+      audio->setOscillatorWaveform(1, wf);
+    }
+  }
+
+  // Check for octave change
+  if (octBits != osc1State.octaveBits) {
+    if (now - osc1State.lastChangeTime > CONTROL_DEBOUNCE_MS) {
+      osc1State.octaveBits = octBits;
+      osc1State.lastChangeTime = now;
+
+      int octave = mapToOctave(octBits);
+      DEBUG_PRINT("[CTRL] OSC1 octave switch changed: bits=");
+      DEBUG_PRINT(octBits);
+      DEBUG_PRINT(" -> ");
+      DEBUG_PRINTLN(octave);
+
+      audio->setOscillatorOctave(1, octave);
+    }
+  }
+}
+
+int ControlHandler::readSwitchBits(int pin0, int pin1) {
+  // Read pins (active LOW with pullup)
+  int bit0 = digitalRead(pin0) == LOW ? 1 : 0;
+  int bit1 = digitalRead(pin1) == LOW ? 1 : 0;
+
+  // Combine into 2-bit value (0-3)
+  return (bit1 << 1) | bit0;
+}
+
+Oscillator::Waveform ControlHandler::mapToWaveform(int bits) {
+  // Map 2-bit switch position to waveform
+  // Adjust this mapping based on your physical switch arrangement
+  switch (bits) {
+    case 0: return Oscillator::OFF;
+    case 1: return Oscillator::SINE;
+    case 2: return Oscillator::TRIANGLE;
+    case 3: return Oscillator::SQUARE;
+    default: return Oscillator::SINE;
+  }
+}
+
+int ControlHandler::mapToOctave(int bits) {
+  // Map 2-bit switch position to octave shift
+  // Adjust this mapping based on your physical switch arrangement
+  switch (bits) {
+    case 0: return -1;  // Down one octave
+    case 1: return 0;   // Base octave
+    case 2: return 1;   // Up one octave
+    case 3: return 0;   // Reserved / same as base
+    default: return 0;
+  }
+}
+```
+
+#### Step D3: Hardware Testing Setup
+
+**Switch Wiring (for testing):**
+```
+2-Position Rotary Switch or Toggle Switches:
+- Connect each switch pin to GND when active
+- Pins have internal pullup, so:
+  - Switch OPEN = HIGH = 0
+  - Switch CLOSED (to GND) = LOW = 1
+
+Example for waveform switch (4 positions, 2 bits):
+  Position 1: Both open    = 00 = OFF
+  Position 2: Bit0 closed  = 01 = SINE
+  Position 3: Bit1 closed  = 10 = TRIANGLE
+  Position 4: Both closed  = 11 = SQUARE
+```
+
+**Testing Steps:**
+1. Wire switches to GPIO 4, 5, 13, 14
+2. Upload firmware
+3. Move switches and observe:
+   - Serial output shows bit values
+   - Audio changes in real-time
+   - Same as serial commands from Phase B/C
+
+### Success Criteria for Phase D
+
+- [ ] GPIO pins initialize correctly
+- [ ] Moving waveform switch changes oscillator waveform
+- [ ] Moving octave switch changes oscillator octave
+- [ ] Debouncing prevents switch bounce glitches
+- [ ] Serial commands still work alongside GPIO
+- [ ] Debug output shows switch state changes
+- [ ] Audio responds smoothly to switch changes
+
+---
+
+## Phase E: Polish & Integration
+**Goal:** Clean up code, add production features, finalize documentation
+**Testing:** Complete system test with serial and hardware
+**Files Modified:** All control-related files
+
+### Implementation Steps
+
+#### Step E1: Startup Control Reading
+
+Modify `ControlHandler::begin()` to read initial switch positions:
+
+```cpp
+void ControlHandler::begin() {
+  setupGPIO();
+
+  DEBUG_PRINTLN("[CTRL] Control handler initialized");
+
+  // Read initial switch positions and apply
+  DEBUG_PRINTLN("[CTRL] Reading initial control positions...");
+  handleGPIO();  // This will set oscillators based on current switch positions
+
+  // ... existing serial command help text ...
+}
+```
+
+This ensures oscillators match physical switch positions at startup, overriding constructor defaults.
+
+#### Step E2: Add Volume Control (Optional)
+
+If you want physical volume control, add potentiometer reading:
+
+```cpp
+// In PinConfig.h
+#define PIN_OSC1_VOL_POT      34  // Analog input (GPIO 34-39 are ADC-only)
+
+// In ControlHandler.cpp
+void ControlHandler::handleGPIO() {
+  // ... existing switch reading ...
+
+  // Read volume potentiometer (0-4095 ADC range)
+  int volReading = analogRead(PIN_OSC1_VOL_POT);
+  float volume = (float)volReading / 4095.0f;  // Convert to 0.0-1.0
+
+  // Apply with hysteresis to prevent jitter
+  static float lastVolume = -1.0;
+  if (abs(volume - lastVolume) > 0.02) {  // 2% threshold
+    audio->setOscillatorVolume(1, volume);
+    lastVolume = volume;
+  }
+}
+```
+
+#### Step E3: Performance Optimization
+
+Add throttling to GPIO reads (they don't need to run every loop):
+
+```cpp
+void ControlHandler::update() {
+  handleSerialCommands();
+
+  // Throttle GPIO reading to every 10ms (plenty fast for human input)
+  static unsigned long lastGPIOCheck = 0;
+  unsigned long now = millis();
+  if (now - lastGPIOCheck >= 10) {
+    handleGPIO();
+    lastGPIOCheck = now;
+  }
+}
+```
+
+#### Step E4: Error Recovery
+
+Add safeguards for invalid GPIO readings:
+
+```cpp
+Oscillator::Waveform ControlHandler::mapToWaveform(int bits) {
+  if (bits < 0 || bits > 3) {
+    DEBUG_PRINT("[CTRL] WARNING: Invalid waveform bits: ");
+    DEBUG_PRINTLN(bits);
+    return Oscillator::SINE;  // Safe default
+  }
+
+  // ... existing mapping ...
+}
+```
+
+#### Step E5: Documentation
+
+Update comments and add header documentation:
+
+```cpp
+/*
+ * ControlHandler.cpp
+ *
+ * Manages oscillator control from multiple input sources:
+ * - Serial commands for testing and debugging
+ * - GPIO switches for performance control
+ *
+ * All inputs are debounced and validated before being sent to AudioEngine
+ * via thread-safe API calls protected by mutex.
+ *
+ * Command Format:
+ *   oscN:waveform       - Set waveform (off, square, sine, triangle, saw)
+ *   oscN:octave:shift   - Set octave shift (-1, 0, 1)
+ *   oscN:vol:level      - Set volume (0.0-1.0)
+ *
+ * GPIO Format:
+ *   2-bit switches for waveform and octave selection
+ *   Analog potentiometer for volume (optional)
+ *   Active-LOW logic with internal pullups
+ */
+```
+
+### Success Criteria for Phase E
+
+- [ ] Oscillators match switch positions at startup
+- [ ] Volume control works smoothly (if implemented)
+- [ ] GPIO reading is throttled (efficient)
+- [ ] Invalid inputs handled gracefully
+- [ ] Code is well-documented
+- [ ] All previous phase features still work
+- [ ] System is ready for production use
+
+---
+
+## Testing Checklist
+
+### After Each Phase
+
+- [ ] Code compiles without warnings
+- [ ] No RAM/Flash overflow
+- [ ] Audio continues playing smoothly
+- [ ] No audio glitches during parameter changes
+- [ ] Serial debug output is clear
+- [ ] Previous features still work
+
+### Complete System Test
+
+1. **Power-On Test:**
+   - [ ] System boots successfully
+   - [ ] Audio starts with correct initial settings
+   - [ ] Controls match physical switch positions
+
+2. **Serial Command Test:**
+   - [ ] `help` shows all commands
+   - [ ] `status` shows current state
+   - [ ] Can change waveform via serial
+   - [ ] Can change octave via serial
+   - [ ] Can change volume via serial
+
+3. **GPIO Control Test:**
+   - [ ] Moving switches changes audio in real-time
+   - [ ] No switch bounce artifacts
+   - [ ] Debouncing works correctly
+   - [ ] Multiple rapid changes handled smoothly
+
+4. **Integration Test:**
+   - [ ] Serial and GPIO can both control oscillators
+   - [ ] Theremin sensors still work normally
+   - [ ] OTA still works
+   - [ ] Performance monitoring still works
+   - [ ] No crashes or hangs
+
+---
+
+## Future Enhancements
+
+After completing all phases, consider:
+
+1. **Preset System:** Save/load oscillator configurations to EEPROM
+2. **MIDI Control:** Accept MIDI CC messages for parameter changes
+3. **Display Integration:** Show current settings on OLED
+4. **MCP23017 Migration:** Move GPIO to I2C expander for more controls
+5. **Effects Controls:** Add switches for delay/chorus/reverb
+6. **LED Feedback:** Visual indication of current settings
+
+---
+
+## Troubleshooting
+
+### Audio Glitches When Changing Parameters
+- Check mutex is being used correctly
+- Verify paramMutex timeout isn't too short
+- Ensure changes happen between audio buffers, not during
+
+### Serial Commands Not Working
+- Check Serial baud rate (115200)
+- Verify command format (case-insensitive)
+- Look for error messages in Serial output
+
+### GPIO Not Responding
+- Verify pin numbers in PinConfig.h
+- Check physical wiring (GND connections)
+- Test pins with simple digitalWrite/digitalRead
+- Check debounce timing
+
+### Oscillators Not Changing
+- Add debug output in AudioEngine set methods
+- Verify mutex is not deadlocking
+- Check oscillator number (1-3 range)
+- Ensure AudioEngine pointer is valid
+
+---
+
+## Notes
+
+- Delete this file after implementation is complete
+- Document final implementation in `docs/improvements/`
+- Update memory bank with new architecture patterns
+- Add control system to `docs/architecture/ARCHITECTURE.md`
+
+**Implementation Date:** October 29, 2025
+**Target Completion:** Incrementally, one phase at a time
