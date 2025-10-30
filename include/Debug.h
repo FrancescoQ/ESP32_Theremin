@@ -23,14 +23,12 @@
 
 #if DEBUG_MODE
   // Debug mode ENABLED: Macros expand to actual Serial calls
-  #define DEBUG_INIT(baudrate) Serial.begin(baudrate)
   #define DEBUG_PRINT(x) Serial.print(x)
   #define DEBUG_PRINTLN(x) Serial.println(x)
   #define DEBUG_PRINTF(fmt, ...) Serial.printf(fmt, __VA_ARGS__)
   #define DEBUG_FLUSH() Serial.flush()
 #else
   // Debug mode DISABLED: Macros expand to nothing (removed by compiler)
-  #define DEBUG_INIT(baudrate) ((void)0)
   #define DEBUG_PRINT(x) ((void)0)
   #define DEBUG_PRINTLN(x) ((void)0)
   #define DEBUG_PRINTF(fmt, ...) ((void)0)
@@ -43,7 +41,6 @@
  * #include "Debug.h"
  *
  * void setup() {
- *     DEBUG_INIT(9600);              // Replaces Serial.begin(9600)
  *     DEBUG_PRINTLN("Starting...");  // Replaces Serial.println("Starting...")
  * }
  *

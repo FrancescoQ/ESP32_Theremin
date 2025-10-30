@@ -12,6 +12,7 @@
 #include "Theremin.h"
 #include "PinConfig.h"
 #include "PerformanceMonitor.h"
+#include "ControlHandler.h"
 
 #if ENABLE_OTA
 #include "OTAManager.h"
@@ -26,6 +27,10 @@ PerformanceMonitor performanceMonitor;
 // Create theremin instance (pass performance monitor for CPU tracking)
 Theremin theremin(&performanceMonitor);
 
+// Create control handler instance (will be initialized in setup, to pass the
+// initialized AudioEngine to the constructor)
+ControlHandler* controls = nullptr;
+
 #if ENABLE_OTA
 // Create OTA manager instance
 // AP Name: "Theremin-OTA", AP Password: "" (open network)
@@ -36,7 +41,7 @@ OTAManager ota("Theremin-OTA", "", PIN_OTA_ENABLE);
 
 void setup() {
   // Initialize debug output
-  DEBUG_INIT(115200);
+  Serial.begin(115200);
   delay(500);  // Increased delay to let Serial stabilize
 
   // Clear startup banner to separate from bootloader output
@@ -67,6 +72,10 @@ void setup() {
   theremin.getAudioEngine()->playStartupSound();
   delay(500);
 
+  // Initialize control handler (pass audio engine pointer)
+  controls = new ControlHandler(theremin.getAudioEngine());
+  controls->begin();
+
 #if ENABLE_OTA
   // Initialize OTA manager
   if (ota.begin("admin", "theremin")) {
@@ -78,6 +87,11 @@ void setup() {
 }
 
 void loop() {
+  // Handle control inputs (serial commands, GPIO in future phases)
+  if (controls != nullptr) {
+    controls->update();
+  }
+
   // Update theremin (read sensors, generate audio)
   theremin.update();
 
