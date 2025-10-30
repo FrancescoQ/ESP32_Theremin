@@ -13,13 +13,6 @@ ControlHandler::ControlHandler(Theremin* thereminPtr)
 
 void ControlHandler::begin() {
   DEBUG_PRINTLN("[CTRL] Control handler initialized");
-  DEBUG_PRINTLN("[CTRL] Serial commands enabled");
-  DEBUG_PRINTLN("[CTRL] Command format: oscN:parameter:value");
-  DEBUG_PRINTLN("[CTRL] Examples:");
-  DEBUG_PRINTLN("[CTRL]   osc1:sine      - Set oscillator 1 to sine wave");
-  DEBUG_PRINTLN("[CTRL]   osc2:octave:-1 - Shift oscillator 2 down one octave");
-  DEBUG_PRINTLN("[CTRL]   osc3:vol:0.5   - Set oscillator 3 volume to 50%");
-  DEBUG_PRINTLN("[CTRL]   osc1:off       - Turn off oscillator 1");
 }
 
 void ControlHandler::update() {
@@ -41,18 +34,147 @@ void ControlHandler::handleSerialCommands() {
   }
 }
 
-void ControlHandler::executeCommand(String cmd) {
-  // Parse command format: oscN:parameter:value
-  // Examples: "osc1:sine", "osc2:octave:-1", "osc3:vol:0.5"
+int ControlHandler::parseWaveform(String name) {
+  if (name == "off") {
+    return Oscillator::OFF;
+  }
+  if (name == "square") {
+    return Oscillator::SQUARE;
+  }
+  if (name == "sine") {
+    return Oscillator::SINE;
+  }
+  if (name == "triangle" || name == "tri") {
+    return Oscillator::TRIANGLE;
+  }
+  if (name == "sawtooth" || name == "saw") {
+    return Oscillator::SAW;
+  }
+  return -1;  // Invalid
+}
 
+void ControlHandler::printStatus() {
+  DEBUG_PRINTLN("\n========== OSCILLATOR STATUS ==========");
+  printOscillatorStatus(1);
+  printOscillatorStatus(2);
+  printOscillatorStatus(3);
+  DEBUG_PRINTLN("=======================================\n");
+}
+
+void ControlHandler::printOscillatorStatus(int oscNum) {
+  DEBUG_PRINT("Oscillator ");
+  DEBUG_PRINT(oscNum);
+  DEBUG_PRINTLN(":");
+
+  // Get current state from AudioEngine
+  Oscillator::Waveform waveform = theremin->getAudioEngine()->getOscillatorWaveform(oscNum);
+  int octave = theremin->getAudioEngine()->getOscillatorOctave(oscNum);
+  float volume = theremin->getAudioEngine()->getOscillatorVolume(oscNum);
+
+  // Display waveform
+  DEBUG_PRINT("  Waveform:     ");
+  DEBUG_PRINTLN(getWaveformName(waveform));
+
+  // Display octave shift
+  DEBUG_PRINT("  Octave Shift: ");
+  if (octave > 0) {
+    DEBUG_PRINT("+");
+  }
+  DEBUG_PRINTLN(octave);
+
+  // Display volume as percentage
+  DEBUG_PRINT("  Volume:       ");
+  DEBUG_PRINT((int)(volume * 100));
+  DEBUG_PRINTLN("%");
+}
+
+// Get waveform name.
+const char* ControlHandler::getWaveformName(Oscillator::Waveform wf) {
+  switch (wf) {
+    case Oscillator::OFF: return "OFF";
+    case Oscillator::SQUARE: return "SQUARE";
+    case Oscillator::SINE: return "SINE";
+    case Oscillator::TRIANGLE: return "TRIANGLE";
+    case Oscillator::SAW: return "SAWTOOTH";
+    default: return "UNKNOWN";
+  }
+}
+
+void ControlHandler::printHelp() {
+  DEBUG_PRINTLN("\n========== OSCILLATOR CONTROL COMMANDS ==========");
+  DEBUG_PRINTLN("Waveform:");
+  DEBUG_PRINTLN("  osc1:off         - Turn off oscillator 1");
+  DEBUG_PRINTLN("  osc1:square      - Set oscillator 1 to square wave");
+  DEBUG_PRINTLN("  osc1:sine        - Set oscillator 1 to sine wave");
+  DEBUG_PRINTLN("  osc1:triangle    - Set oscillator 1 to triangle wave");
+  DEBUG_PRINTLN("  osc1:sawtooth    - Set oscillator 1 to sawtooth wave");
+  DEBUG_PRINTLN("\nOctave Shift:");
+  DEBUG_PRINTLN("  osc1:octave:-1   - Shift oscillator 1 down one octave");
+  DEBUG_PRINTLN("  osc1:octave:0    - Reset oscillator 1 to base octave");
+  DEBUG_PRINTLN("  osc1:octave:1    - Shift oscillator 1 up one octave");
+  DEBUG_PRINTLN("\nVolume:");
+  DEBUG_PRINTLN("  osc1:vol:0.0     - Set oscillator 1 to 0% volume (silent)");
+  DEBUG_PRINTLN("  osc1:vol:0.5     - Set oscillator 1 to 50% volume");
+  DEBUG_PRINTLN("  osc1:vol:1.0     - Set oscillator 1 to 100% volume");
+  DEBUG_PRINTLN("\nStatus:");
+  DEBUG_PRINTLN("  status           - Show status of all oscillators");
+  DEBUG_PRINTLN("  status:osc1      - Show status of oscillator 1");
+  DEBUG_PRINTLN("\nBatch Commands:");
+  DEBUG_PRINTLN("  osc1:sine;osc1:octave:1;osc1:vol:0.8");
+  DEBUG_PRINTLN("  - Execute multiple commands separated by ';'");
+  DEBUG_PRINTLN("\nSensor Control:");
+  DEBUG_PRINTLN("  sensors:pitch:on     - Enable pitch sensor");
+  DEBUG_PRINTLN("  sensors:pitch:off    - Disable pitch sensor");
+  DEBUG_PRINTLN("  sensors:volume:on    - Enable volume sensor");
+  DEBUG_PRINTLN("  sensors:volume:off   - Disable volume sensor");
+  DEBUG_PRINTLN("  sensors:enable       - Enable both sensors (alias)");
+  DEBUG_PRINTLN("  sensors:disable      - Disable both sensors (alias)");
+  DEBUG_PRINTLN("  sensors:status       - Show sensor enable states");
+  DEBUG_PRINTLN("\nAudio Control:");
+  DEBUG_PRINTLN("  audio:freq:440       - Set frequency to 440 Hz");
+  DEBUG_PRINTLN("  audio:amp:75         - Set amplitude to 75%");
+  DEBUG_PRINTLN("  audio:status         - Show current audio values");
+  DEBUG_PRINTLN("\nNote: Replace 'osc1' with 'osc2' or 'osc3' for other oscillators");
+  DEBUG_PRINTLN("      Abbreviations: 'tri'=triangle, 'saw'=sawtooth, 'oct'=octave, 'vol'=volume");
+  DEBUG_PRINTLN("      When sensors disabled, manual audio: commands persist");
+  DEBUG_PRINTLN("      When sensors enabled, they override manual settings");
+  DEBUG_PRINTLN("=================================================\n");
+}
+
+// Parse and execute a single command string.
+// This contains the list of all supported commands, including the batch
+// processing of multiple commands in one line.
+void ControlHandler::executeCommand(String cmd) {
   cmd.toLowerCase();  // Case-insensitive
 
-  // Handle special commands
+  // Handle batch commands (separated by semicolons)
+  if (cmd.indexOf(';') != -1) {
+    int start = 0;
+    int semicolon;
+    while ((semicolon = cmd.indexOf(';', start)) != -1) {
+      String subCmd = cmd.substring(start, semicolon);
+      subCmd.trim();
+      if (subCmd.length() > 0) {
+        executeCommand(subCmd);  // Recursive call
+      }
+      start = semicolon + 1;
+    }
+    // Execute last command
+    String lastCmd = cmd.substring(start);
+    lastCmd.trim();
+    if (lastCmd.length() > 0) {
+      executeCommand(lastCmd);
+    }
+    return;
+  }
+
+  // Handle help.
   if (cmd == "help" || cmd == "?") {
     printHelp();
     return;
   }
 
+  // Handle global and oscillator status.
   if (cmd == "status") {
     printStatus();
     return;
@@ -93,7 +215,8 @@ void ControlHandler::executeCommand(String cmd) {
     return;
   }
 
-  // Sensor control aliases (use batch commands)
+  // Sensor control aliases to change both sensors at the same time
+  // (use batch commands)
   if (cmd == "sensors:enable") {
     executeCommand("sensors:pitch:on;sensors:volume:on");
     return;
@@ -144,27 +267,6 @@ void ControlHandler::executeCommand(String cmd) {
     DEBUG_PRINT(theremin->getAudioEngine()->getAmplitude());
     DEBUG_PRINTLN("%");
     DEBUG_PRINTLN("==================================\n");
-    return;
-  }
-
-  // Handle batch commands (separated by semicolons)
-  if (cmd.indexOf(';') != -1) {
-    int start = 0;
-    int semicolon;
-    while ((semicolon = cmd.indexOf(';', start)) != -1) {
-      String subCmd = cmd.substring(start, semicolon);
-      subCmd.trim();
-      if (subCmd.length() > 0) {
-        executeCommand(subCmd);  // Recursive call
-      }
-      start = semicolon + 1;
-    }
-    // Execute last command
-    String lastCmd = cmd.substring(start);
-    lastCmd.trim();
-    if (lastCmd.length() > 0) {
-      executeCommand(lastCmd);
-    }
     return;
   }
 
@@ -221,110 +323,4 @@ void ControlHandler::executeCommand(String cmd) {
   DEBUG_PRINT("[CTRL] ERROR: Unknown command: ");
   DEBUG_PRINTLN(cmd);
   DEBUG_PRINTLN("[CTRL] Type 'help' for list of commands");
-}
-
-int ControlHandler::parseWaveform(String name) {
-  if (name == "off") {
-    return Oscillator::OFF;
-  }
-  if (name == "square") {
-    return Oscillator::SQUARE;
-  }
-  if (name == "sine") {
-    return Oscillator::SINE;
-  }
-  if (name == "triangle" || name == "tri") {
-    return Oscillator::TRIANGLE;
-  }
-  if (name == "sawtooth" || name == "saw") {
-    return Oscillator::SAW;
-  }
-  return -1;  // Invalid
-}
-
-void ControlHandler::printHelp() {
-  DEBUG_PRINTLN("\n========== OSCILLATOR CONTROL COMMANDS ==========");
-  DEBUG_PRINTLN("Waveform:");
-  DEBUG_PRINTLN("  osc1:off         - Turn off oscillator 1");
-  DEBUG_PRINTLN("  osc1:square      - Set oscillator 1 to square wave");
-  DEBUG_PRINTLN("  osc1:sine        - Set oscillator 1 to sine wave");
-  DEBUG_PRINTLN("  osc1:triangle    - Set oscillator 1 to triangle wave");
-  DEBUG_PRINTLN("  osc1:sawtooth    - Set oscillator 1 to sawtooth wave");
-  DEBUG_PRINTLN("\nOctave Shift:");
-  DEBUG_PRINTLN("  osc1:octave:-1   - Shift oscillator 1 down one octave");
-  DEBUG_PRINTLN("  osc1:octave:0    - Reset oscillator 1 to base octave");
-  DEBUG_PRINTLN("  osc1:octave:1    - Shift oscillator 1 up one octave");
-  DEBUG_PRINTLN("\nVolume:");
-  DEBUG_PRINTLN("  osc1:vol:0.0     - Set oscillator 1 to 0% volume (silent)");
-  DEBUG_PRINTLN("  osc1:vol:0.5     - Set oscillator 1 to 50% volume");
-  DEBUG_PRINTLN("  osc1:vol:1.0     - Set oscillator 1 to 100% volume");
-  DEBUG_PRINTLN("\nStatus:");
-  DEBUG_PRINTLN("  status           - Show status of all oscillators");
-  DEBUG_PRINTLN("  status:osc1      - Show status of oscillator 1");
-  DEBUG_PRINTLN("\nBatch Commands:");
-  DEBUG_PRINTLN("  osc1:sine;osc1:octave:1;osc1:vol:0.8");
-  DEBUG_PRINTLN("  - Execute multiple commands separated by ';'");
-  DEBUG_PRINTLN("\nSensor Control:");
-  DEBUG_PRINTLN("  sensors:pitch:on     - Enable pitch sensor");
-  DEBUG_PRINTLN("  sensors:pitch:off    - Disable pitch sensor");
-  DEBUG_PRINTLN("  sensors:volume:on    - Enable volume sensor");
-  DEBUG_PRINTLN("  sensors:volume:off   - Disable volume sensor");
-  DEBUG_PRINTLN("  sensors:enable       - Enable both sensors (alias)");
-  DEBUG_PRINTLN("  sensors:disable      - Disable both sensors (alias)");
-  DEBUG_PRINTLN("  sensors:status       - Show sensor enable states");
-  DEBUG_PRINTLN("\nAudio Control:");
-  DEBUG_PRINTLN("  audio:freq:440       - Set frequency to 440 Hz");
-  DEBUG_PRINTLN("  audio:amp:75         - Set amplitude to 75%");
-  DEBUG_PRINTLN("  audio:status         - Show current audio values");
-  DEBUG_PRINTLN("\nNote: Replace 'osc1' with 'osc2' or 'osc3' for other oscillators");
-  DEBUG_PRINTLN("      Abbreviations: 'tri'=triangle, 'saw'=sawtooth, 'oct'=octave, 'vol'=volume");
-  DEBUG_PRINTLN("      When sensors disabled, manual audio: commands persist");
-  DEBUG_PRINTLN("      When sensors enabled, they override manual settings");
-  DEBUG_PRINTLN("=================================================\n");
-}
-
-void ControlHandler::printStatus() {
-  DEBUG_PRINTLN("\n========== OSCILLATOR STATUS ==========");
-  printOscillatorStatus(1);
-  printOscillatorStatus(2);
-  printOscillatorStatus(3);
-  DEBUG_PRINTLN("=======================================\n");
-}
-
-void ControlHandler::printOscillatorStatus(int oscNum) {
-  DEBUG_PRINT("Oscillator ");
-  DEBUG_PRINT(oscNum);
-  DEBUG_PRINTLN(":");
-
-  // Get current state from AudioEngine
-  Oscillator::Waveform waveform = theremin->getAudioEngine()->getOscillatorWaveform(oscNum);
-  int octave = theremin->getAudioEngine()->getOscillatorOctave(oscNum);
-  float volume = theremin->getAudioEngine()->getOscillatorVolume(oscNum);
-
-  // Display waveform
-  DEBUG_PRINT("  Waveform:     ");
-  DEBUG_PRINTLN(getWaveformName(waveform));
-
-  // Display octave shift
-  DEBUG_PRINT("  Octave Shift: ");
-  if (octave > 0) {
-    DEBUG_PRINT("+");
-  }
-  DEBUG_PRINTLN(octave);
-
-  // Display volume as percentage
-  DEBUG_PRINT("  Volume:       ");
-  DEBUG_PRINT((int)(volume * 100));
-  DEBUG_PRINTLN("%");
-}
-
-const char* ControlHandler::getWaveformName(Oscillator::Waveform wf) {
-  switch (wf) {
-    case Oscillator::OFF: return "OFF";
-    case Oscillator::SQUARE: return "SQUARE";
-    case Oscillator::SINE: return "SINE";
-    case Oscillator::TRIANGLE: return "TRIANGLE";
-    case Oscillator::SAW: return "SAWTOOTH";
-    default: return "UNKNOWN";
-  }
 }
