@@ -46,6 +46,30 @@ class SensorManager {
    */
   int getVolumeDistance();
 
+  /**
+   * Enable or disable pitch sensor
+   * @param enabled True to enable, false to disable
+   */
+  void setPitchEnabled(bool enabled);
+
+  /**
+   * Enable or disable volume sensor
+   * @param enabled True to enable, false to disable
+   */
+  void setVolumeEnabled(bool enabled);
+
+  /**
+   * Check if pitch sensor is enabled
+   * @return True if enabled
+   */
+  bool isPitchEnabled() const { return pitchEnabled; }
+
+  /**
+   * Check if volume sensor is enabled
+   * @return True if enabled
+   */
+  bool isVolumeEnabled() const { return volumeEnabled; }
+
   // Distance ranges (same for both modes)
   static const int PITCH_MIN_DIST = 50;
   static const int PITCH_MAX_DIST = 500;
@@ -66,6 +90,10 @@ class SensorManager {
   // Cached raw readings (updated by updateReadings())
   int cachedPitchRaw;
   int cachedVolumeRaw;
+
+  // Sensor enable state
+  bool pitchEnabled;   // Pitch sensor enable state
+  bool volumeEnabled;  // Volume sensor enable state
 
   /**
    * Apply exponential weighted moving average (EWMA) smoothing to sensor readings.

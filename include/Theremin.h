@@ -44,6 +44,12 @@ class Theremin {
    */
   AudioEngine* getAudioEngine() { return &audio; }
 
+  /**
+   * Get pointer to SensorManager instance (for control access)
+   * @return Pointer to SensorManager
+   */
+  SensorManager* getSensorManager() { return &sensors; }
+
  private:
   SensorManager sensors;
   AudioEngine audio;

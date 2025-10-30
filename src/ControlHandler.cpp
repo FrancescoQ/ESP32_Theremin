@@ -7,8 +7,8 @@
 #include "ControlHandler.h"
 #include "Debug.h"
 
-ControlHandler::ControlHandler(AudioEngine* audioEngine)
-    : audio(audioEngine) {
+ControlHandler::ControlHandler(Theremin* thereminPtr)
+    : theremin(thereminPtr) {
 }
 
 void ControlHandler::begin() {
@@ -68,6 +68,85 @@ void ControlHandler::executeCommand(String cmd) {
     return;
   }
 
+  // Sensor control commands
+  if (cmd == "sensors:pitch:on") {
+    theremin->getSensorManager()->setPitchEnabled(true);
+    DEBUG_PRINTLN("[CTRL] Pitch sensor enabled");
+    return;
+  }
+
+  if (cmd == "sensors:pitch:off") {
+    theremin->getSensorManager()->setPitchEnabled(false);
+    DEBUG_PRINTLN("[CTRL] Pitch sensor disabled");
+    return;
+  }
+
+  if (cmd == "sensors:volume:on") {
+    theremin->getSensorManager()->setVolumeEnabled(true);
+    DEBUG_PRINTLN("[CTRL] Volume sensor enabled");
+    return;
+  }
+
+  if (cmd == "sensors:volume:off") {
+    theremin->getSensorManager()->setVolumeEnabled(false);
+    DEBUG_PRINTLN("[CTRL] Volume sensor disabled");
+    return;
+  }
+
+  // Sensor control aliases (use batch commands)
+  if (cmd == "sensors:enable") {
+    executeCommand("sensors:pitch:on;sensors:volume:on");
+    return;
+  }
+
+  if (cmd == "sensors:disable") {
+    executeCommand("sensors:pitch:off;sensors:volume:off");
+    return;
+  }
+
+  // Sensor status
+  if (cmd == "sensors:status") {
+    DEBUG_PRINTLN("\n========== SENSOR STATUS ==========");
+    DEBUG_PRINT("Pitch sensor:  ");
+    DEBUG_PRINTLN(theremin->getSensorManager()->isPitchEnabled() ? "ENABLED" : "DISABLED");
+    DEBUG_PRINT("Volume sensor: ");
+    DEBUG_PRINTLN(theremin->getSensorManager()->isVolumeEnabled() ? "ENABLED" : "DISABLED");
+    DEBUG_PRINTLN("===================================\n");
+    return;
+  }
+
+  // Audio control commands
+  if (cmd.startsWith("audio:freq:")) {
+    int freq = cmd.substring(11).toInt();
+    theremin->getAudioEngine()->setFrequency(freq);
+    DEBUG_PRINT("[CTRL] Manual frequency set to ");
+    DEBUG_PRINT(freq);
+    DEBUG_PRINTLN(" Hz");
+    return;
+  }
+
+  if (cmd.startsWith("audio:amp:")) {
+    int amp = cmd.substring(10).toInt();
+    theremin->getAudioEngine()->setAmplitude(amp);
+    DEBUG_PRINT("[CTRL] Manual amplitude set to ");
+    DEBUG_PRINT(amp);
+    DEBUG_PRINTLN("%");
+    return;
+  }
+
+  // Audio status
+  if (cmd == "audio:status") {
+    DEBUG_PRINTLN("\n========== AUDIO STATUS ==========");
+    DEBUG_PRINT("Frequency: ");
+    DEBUG_PRINT(theremin->getAudioEngine()->getFrequency());
+    DEBUG_PRINTLN(" Hz");
+    DEBUG_PRINT("Amplitude: ");
+    DEBUG_PRINT(theremin->getAudioEngine()->getAmplitude());
+    DEBUG_PRINTLN("%");
+    DEBUG_PRINTLN("==================================\n");
+    return;
+  }
+
   // Handle batch commands (separated by semicolons)
   if (cmd.indexOf(';') != -1) {
     int start = 0;
@@ -89,56 +168,59 @@ void ControlHandler::executeCommand(String cmd) {
     return;
   }
 
-  // Extract oscillator number
-  if (!cmd.startsWith("osc")) {
-    DEBUG_PRINTLN("[CTRL] ERROR: Command must start with 'osc'");
-    return;
-  }
+  // Oscillator commands (only if command starts with 'osc')
+  if (cmd.startsWith("osc")) {
+    int oscNum = cmd.charAt(3) - '0';  // Get number after 'osc'
+    if (oscNum < 1 || oscNum > 3) {
+      DEBUG_PRINTLN("[CTRL] ERROR: Oscillator number must be 1-3");
+      return;
+    }
 
-  int oscNum = cmd.charAt(3) - '0';  // Get number after 'osc'
-  if (oscNum < 1 || oscNum > 3) {
-    DEBUG_PRINTLN("[CTRL] ERROR: Oscillator number must be 1-3");
-    return;
-  }
+    // Find first colon
+    int colonPos = cmd.indexOf(':', 4);
+    if (colonPos == -1) {
+      DEBUG_PRINTLN("[CTRL] ERROR: Missing ':' separator");
+      return;
+    }
 
-  // Find first colon
-  int colonPos = cmd.indexOf(':', 4);
-  if (colonPos == -1) {
-    DEBUG_PRINTLN("[CTRL] ERROR: Missing ':' separator");
-    return;
-  }
+    // Extract parameter (everything after first colon)
+    String param = cmd.substring(colonPos + 1);
 
-  // Extract parameter (everything after first colon)
-  String param = cmd.substring(colonPos + 1);
+    // Check if waveform command (no second colon)
+    if (param.indexOf(':') == -1) {
+      // Waveform command (e.g., "osc1:sine" or "osc1:off")
+      int waveform = parseWaveform(param);
+      if (waveform >= 0) {
+        theremin->getAudioEngine()->setOscillatorWaveform(oscNum, (Oscillator::Waveform)waveform);
+      } else {
+        DEBUG_PRINT("[CTRL] ERROR: Unknown waveform: ");
+        DEBUG_PRINTLN(param);
+      }
+      return;
+    }
 
-  // Check if waveform command (no second colon)
-  if (param.indexOf(':') == -1) {
-    // Waveform command (e.g., "osc1:sine" or "osc1:off")
-    int waveform = parseWaveform(param);
-    if (waveform >= 0) {
-      audio->setOscillatorWaveform(oscNum, (Oscillator::Waveform)waveform);
+    // Parameter with value (e.g., "osc1:octave:-1" or "osc1:vol:0.5")
+    int secondColon = param.indexOf(':');
+    String paramName = param.substring(0, secondColon);
+    String value = param.substring(secondColon + 1);
+
+    if (paramName == "octave" || paramName == "oct") {
+      int octave = value.toInt();
+      theremin->getAudioEngine()->setOscillatorOctave(oscNum, octave);
+    } else if (paramName == "volume" || paramName == "vol") {
+      float volume = value.toFloat();
+      theremin->getAudioEngine()->setOscillatorVolume(oscNum, volume);
     } else {
-      DEBUG_PRINT("[CTRL] ERROR: Unknown waveform: ");
-      DEBUG_PRINTLN(param);
+      DEBUG_PRINT("[CTRL] ERROR: Unknown parameter: ");
+      DEBUG_PRINTLN(paramName);
     }
     return;
   }
 
-  // Parameter with value (e.g., "osc1:octave:-1" or "osc1:vol:0.5")
-  int secondColon = param.indexOf(':');
-  String paramName = param.substring(0, secondColon);
-  String value = param.substring(secondColon + 1);
-
-  if (paramName == "octave" || paramName == "oct") {
-    int octave = value.toInt();
-    audio->setOscillatorOctave(oscNum, octave);
-  } else if (paramName == "volume" || paramName == "vol") {
-    float volume = value.toFloat();
-    audio->setOscillatorVolume(oscNum, volume);
-  } else {
-    DEBUG_PRINT("[CTRL] ERROR: Unknown parameter: ");
-    DEBUG_PRINTLN(paramName);
-  }
+  // If we reach here, command is unknown
+  DEBUG_PRINT("[CTRL] ERROR: Unknown command: ");
+  DEBUG_PRINTLN(cmd);
+  DEBUG_PRINTLN("[CTRL] Type 'help' for list of commands");
 }
 
 int ControlHandler::parseWaveform(String name) {
@@ -182,8 +264,22 @@ void ControlHandler::printHelp() {
   DEBUG_PRINTLN("\nBatch Commands:");
   DEBUG_PRINTLN("  osc1:sine;osc1:octave:1;osc1:vol:0.8");
   DEBUG_PRINTLN("  - Execute multiple commands separated by ';'");
+  DEBUG_PRINTLN("\nSensor Control:");
+  DEBUG_PRINTLN("  sensors:pitch:on     - Enable pitch sensor");
+  DEBUG_PRINTLN("  sensors:pitch:off    - Disable pitch sensor");
+  DEBUG_PRINTLN("  sensors:volume:on    - Enable volume sensor");
+  DEBUG_PRINTLN("  sensors:volume:off   - Disable volume sensor");
+  DEBUG_PRINTLN("  sensors:enable       - Enable both sensors (alias)");
+  DEBUG_PRINTLN("  sensors:disable      - Disable both sensors (alias)");
+  DEBUG_PRINTLN("  sensors:status       - Show sensor enable states");
+  DEBUG_PRINTLN("\nAudio Control:");
+  DEBUG_PRINTLN("  audio:freq:440       - Set frequency to 440 Hz");
+  DEBUG_PRINTLN("  audio:amp:75         - Set amplitude to 75%");
+  DEBUG_PRINTLN("  audio:status         - Show current audio values");
   DEBUG_PRINTLN("\nNote: Replace 'osc1' with 'osc2' or 'osc3' for other oscillators");
   DEBUG_PRINTLN("      Abbreviations: 'tri'=triangle, 'saw'=sawtooth, 'oct'=octave, 'vol'=volume");
+  DEBUG_PRINTLN("      When sensors disabled, manual audio: commands persist");
+  DEBUG_PRINTLN("      When sensors enabled, they override manual settings");
   DEBUG_PRINTLN("=================================================\n");
 }
 
@@ -201,9 +297,9 @@ void ControlHandler::printOscillatorStatus(int oscNum) {
   DEBUG_PRINTLN(":");
 
   // Get current state from AudioEngine
-  Oscillator::Waveform waveform = audio->getOscillatorWaveform(oscNum);
-  int octave = audio->getOscillatorOctave(oscNum);
-  float volume = audio->getOscillatorVolume(oscNum);
+  Oscillator::Waveform waveform = theremin->getAudioEngine()->getOscillatorWaveform(oscNum);
+  int octave = theremin->getAudioEngine()->getOscillatorOctave(oscNum);
+  float volume = theremin->getAudioEngine()->getOscillatorVolume(oscNum);
 
   // Display waveform
   DEBUG_PRINT("  Waveform:     ");

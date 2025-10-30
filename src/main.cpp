@@ -72,8 +72,8 @@ void setup() {
   theremin.getAudioEngine()->playStartupSound();
   delay(500);
 
-  // Initialize control handler (pass audio engine pointer)
-  controls = new ControlHandler(theremin.getAudioEngine());
+  // Initialize control handler (pass theremin pointer for full control access)
+  controls = new ControlHandler(&theremin);
   controls->begin();
 
 #if ENABLE_OTA

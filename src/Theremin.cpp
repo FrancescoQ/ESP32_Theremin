@@ -38,39 +38,61 @@ float Theremin::mapFloat(float x, float in_min, float in_max, float out_min, flo
 // Main update loop
 void Theremin::update() {
   // Update sensor readings (reads both sensors once and caches results)
+  // Always read hardware, even if sensors are disabled
   sensors.updateReadings();
 
-  // Get smoothed distances from cached readings
-  int pitchDistance = sensors.getPitchDistance();
-  int volumeDistance = sensors.getVolumeDistance();
+  // Only apply pitch sensor if enabled
+  if (sensors.isPitchEnabled()) {
+    int pitchDistance = sensors.getPitchDistance();
 
-  // Map pitch to frequency using floating-point math for smooth transitions
-  float frequencyFloat = mapFloat((float)pitchDistance,
-                                   (float)SensorManager::PITCH_MIN_DIST,
-                                   (float)SensorManager::PITCH_MAX_DIST,
-                                   (float)AudioEngine::MAX_FREQUENCY,
-                                   (float)AudioEngine::MIN_FREQUENCY);
+    // Map pitch to frequency using floating-point math for smooth transitions
+    float frequencyFloat = mapFloat((float)pitchDistance,
+                                     (float)SensorManager::PITCH_MIN_DIST,
+                                     (float)SensorManager::PITCH_MAX_DIST,
+                                     (float)AudioEngine::MAX_FREQUENCY,
+                                     (float)AudioEngine::MIN_FREQUENCY);
 
-  // Constrain and convert to integer
-  int frequency = constrain((int)frequencyFloat, AudioEngine::MIN_FREQUENCY, AudioEngine::MAX_FREQUENCY);
+    // Constrain and convert to integer
+    int frequency = constrain((int)frequencyFloat, AudioEngine::MIN_FREQUENCY, AudioEngine::MAX_FREQUENCY);
 
-  // Map volume using integer math (volume doesn't need sub-Hz precision)
-  // Traditional theremin behavior: hand NEAR volume antenna = QUIET, hand FAR = LOUD
-  int amplitude =
-      map(volumeDistance, SensorManager::VOLUME_MIN_DIST, SensorManager::VOLUME_MAX_DIST,
-          MIN_AMPLITUDE_PERCENT,     // Min amplitude (closest) - near sensor = quiet
-          MAX_AMPLITUDE_PERCENT);    // Max amplitude (farthest) - far from sensor = loud
-  amplitude = constrain(amplitude, MIN_AMPLITUDE_PERCENT, MAX_AMPLITUDE_PERCENT);
+    // Update audio engine frequency
+    audio.setFrequency(frequency);
+  }
 
-  // Update audio engine
-  audio.setFrequency(frequency);
-  audio.setAmplitude(amplitude);
+  // Only apply volume sensor if enabled
+  if (sensors.isVolumeEnabled()) {
+    int volumeDistance = sensors.getVolumeDistance();
+
+    // Map volume using integer math (volume doesn't need sub-Hz precision)
+    // Traditional theremin behavior: hand NEAR volume antenna = QUIET, hand FAR = LOUD
+    int amplitude =
+        map(volumeDistance, SensorManager::VOLUME_MIN_DIST, SensorManager::VOLUME_MAX_DIST,
+            MIN_AMPLITUDE_PERCENT,     // Min amplitude (closest) - near sensor = quiet
+            MAX_AMPLITUDE_PERCENT);    // Max amplitude (farthest) - far from sensor = loud
+    amplitude = constrain(amplitude, MIN_AMPLITUDE_PERCENT, MAX_AMPLITUDE_PERCENT);
+
+    // Update audio engine amplitude
+    audio.setAmplitude(amplitude);
+  }
 
   // This now do nothing, FreeRTOS task handles audio updates
   audio.update();
 
   // Debug output (throttled to every 10th loop)
   if (debugEnabled) {
+    int pitchDistance = sensors.getPitchDistance();
+    int volumeDistance = sensors.getVolumeDistance();
+    // Note: frequency and amplitude shown in debug may not match current audio
+    // if sensors are disabled, but shows sensor readings for diagnostics
+    float frequencyFloat = mapFloat((float)pitchDistance,
+                                     (float)SensorManager::PITCH_MIN_DIST,
+                                     (float)SensorManager::PITCH_MAX_DIST,
+                                     (float)AudioEngine::MAX_FREQUENCY,
+                                     (float)AudioEngine::MIN_FREQUENCY);
+    int frequency = constrain((int)frequencyFloat, AudioEngine::MIN_FREQUENCY, AudioEngine::MAX_FREQUENCY);
+    int amplitude = map(volumeDistance, SensorManager::VOLUME_MIN_DIST, SensorManager::VOLUME_MAX_DIST,
+                        MIN_AMPLITUDE_PERCENT, MAX_AMPLITUDE_PERCENT);
+    amplitude = constrain(amplitude, MIN_AMPLITUDE_PERCENT, MAX_AMPLITUDE_PERCENT);
     printDebugInfo(pitchDistance, volumeDistance, frequency, amplitude);
   }
 }

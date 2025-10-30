@@ -7,15 +7,15 @@
 
 #pragma once
 #include <Arduino.h>
-#include "AudioEngine.h"
+#include "Theremin.h"
 
 class ControlHandler {
 public:
   /**
    * Constructor
-   * @param audioEngine Pointer to AudioEngine instance
+   * @param theremin Pointer to Theremin instance (for full control access)
    */
-  ControlHandler(AudioEngine* audioEngine);
+  ControlHandler(Theremin* theremin);
 
   /**
    * Initialize control handler
@@ -29,7 +29,7 @@ public:
   void update();
 
 private:
-  AudioEngine* audio;
+  Theremin* theremin;
 
   /**
    * Check for and process serial commands

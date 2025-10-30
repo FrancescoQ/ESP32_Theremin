@@ -14,9 +14,12 @@ SensorManager::SensorManager()
       smoothedVolumeDistance(0.0f),
       firstReading(true),
       cachedPitchRaw(0),
-      cachedVolumeRaw(0) {
+      cachedVolumeRaw(0),
+      pitchEnabled(true),
+      volumeEnabled(true) {
   // Exponential smoothing values initialized to 0, will be set on first reading
   // Cached raw values initialized to 0, will be updated by updateReadings()
+  // Sensors enabled by default
 }
 
 // Initialize sensors
@@ -119,4 +122,16 @@ int SensorManager::readVolumeRaw() {
   volumeSensor.rangingTest(&volumeMeasure, false);
   // Return measured distance, or min distance (silent) if out of range
   return (volumeMeasure.RangeStatus != 4) ? volumeMeasure.RangeMilliMeter : VOLUME_MIN_DIST;
+}
+
+void SensorManager::setPitchEnabled(bool enabled) {
+  pitchEnabled = enabled;
+  DEBUG_PRINT("[SENSOR] Pitch sensor ");
+  DEBUG_PRINTLN(enabled ? "enabled" : "disabled");
+}
+
+void SensorManager::setVolumeEnabled(bool enabled) {
+  volumeEnabled = enabled;
+  DEBUG_PRINT("[SENSOR] Volume sensor ");
+  DEBUG_PRINTLN(enabled ? "enabled" : "disabled");
 }
