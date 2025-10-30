@@ -17,7 +17,8 @@ This plan implements a control system that allows runtime modification of oscill
 **✅ Bonus Features: Complete** - Melody player, system test, and startup sound
 **✅ Phase B: Complete** - Serial command parser (ControlHandler class)
 **✅ Refinements: Complete** - Serial initialization fix, code style improvements
-**✅ Phase C: Complete** - Extended serial commands (help, status, batch)
+**✅ Phase C: Complete** - Extended serial commands (help, status, batch) + Status introspection with getters
+**⏳ Phase C2: Pending** - Audio & Sensor Control Commands
 **⏳ Phase D: Pending** - GPIO reading
 **⏳ Phase E: Pending** - Polish & integration
 
@@ -881,6 +882,430 @@ osc2:square;osc2:octave:-1;osc3:triangle     # Multiple oscillators at once
 - Status commands work but show placeholder (getters needed for full introspection)
 - Help text is clear and comprehensive
 - All Phase B commands remain functional
+
+**Status Introspection Enhancement (October 30, 2025):**
+- Added AudioEngine getter methods: `getOscillatorWaveform()`, `getOscillatorOctave()`, `getOscillatorVolume()`
+- Added Oscillator getter methods: `getOctaveShift()`, `getVolume()` (inline)
+- Updated `printOscillatorStatus()` to display real-time oscillator configuration
+- Thread-safe getters using mutex protection (consistent with setters)
+- Build impact: +432 bytes Flash (minimal), no RAM increase
+- Now shows actual oscillator state instead of placeholder text
+
+**Status Output Example:**
+```
+========== OSCILLATOR STATUS ==========
+Oscillator 1:
+  Waveform:     TRIANGLE
+  Octave Shift: 0
+  Volume:       100%
+
+Oscillator 2:
+  Waveform:     SINE
+  Octave Shift: +1
+  Volume:       100%
+
+Oscillator 3:
+  Waveform:     TRIANGLE
+  Octave Shift: -1
+  Volume:       100%
+```
+
+---
+
+## Phase C2: Audio & Sensor Control Commands
+**Goal:** Add commands to control audio parameters and sensor enable/disable
+**Testing:** Manual control via serial, sensor override testing
+**Files Modified:** `include/SensorManager.h`, `src/SensorManager.cpp`, `include/ControlHandler.h`, `src/ControlHandler.cpp`, `include/Theremin.h`, `src/Theremin.cpp`, `src/main.cpp`
+
+### Overview
+
+Phase C2 adds advanced control capabilities for directly setting audio parameters and enabling/disabling sensor input. This allows:
+- **Direct audio control:** Set fixed frequency/amplitude, bypassing sensors
+- **Sensor control:** Enable/disable pitch and volume sensors independently
+- **Testing flexibility:** Test fixed audio parameters or individual sensors
+- **Performance mode:** Combine sensor control with manual parameter setting
+
+### Architecture
+
+**State Management - Stored in SensorManager:**
+```cpp
+class SensorManager {
+private:
+    bool pitchEnabled;   // Default: true
+    bool volumeEnabled;  // Default: true
+};
+```
+
+**Control Flow:**
+```
+User: "sensors:pitch:off"
+    ↓
+ControlHandler::executeCommand()
+    ↓
+theremin->getSensorManager()->setPitchEnabled(false)
+    ↓
+Later in Theremin::update():
+    ↓
+if (sensors.isPitchEnabled()) {
+    // Apply pitch sensor value
+}
+// If disabled, frequency unchanged (manual commands persist)
+```
+
+**Key Principle:** When a sensor is disabled, Theremin simply doesn't update that audio parameter. Manual `audio:` commands persist until sensor is re-enabled.
+
+### Implementation Steps
+
+#### Step C2.1: Add Enable Flags to SensorManager
+
+**Modify `include/SensorManager.h`** (add to public section):
+
+```cpp
+public:
+  /**
+   * Enable or disable pitch sensor
+   * @param enabled True to enable, false to disable
+   */
+  void setPitchEnabled(bool enabled);
+
+  /**
+   * Enable or disable volume sensor
+   * @param enabled True to enable, false to disable
+   */
+  void setVolumeEnabled(bool enabled);
+
+  /**
+   * Check if pitch sensor is enabled
+   * @return True if enabled
+   */
+  bool isPitchEnabled() const { return pitchEnabled; }
+
+  /**
+   * Check if volume sensor is enabled
+   * @return True if enabled
+   */
+  bool isVolumeEnabled() const { return volumeEnabled; }
+
+private:
+  bool pitchEnabled;   // Pitch sensor enable state
+  bool volumeEnabled;  // Volume sensor enable state
+```
+
+**Modify `src/SensorManager.cpp`** (add to constructor and implement methods):
+
+```cpp
+// In constructor, initialize to true (sensors enabled by default)
+SensorManager::SensorManager(PerformanceMonitor* perfMon)
+    : performanceMonitor(perfMon),
+      pitchEnabled(true),
+      volumeEnabled(true) {
+  // ... existing initialization ...
+}
+
+void SensorManager::setPitchEnabled(bool enabled) {
+  pitchEnabled = enabled;
+  DEBUG_PRINT("[SENSOR] Pitch sensor ");
+  DEBUG_PRINTLN(enabled ? "enabled" : "disabled");
+}
+
+void SensorManager::setVolumeEnabled(bool enabled) {
+  volumeEnabled = enabled;
+  DEBUG_PRINT("[SENSOR] Volume sensor ");
+  DEBUG_PRINTLN(enabled ? "enabled" : "disabled");
+}
+```
+
+#### Step C2.2: Add Theremin Getter
+
+**Modify `include/Theremin.h`** (add to public section):
+
+```cpp
+public:
+  /**
+   * Get pointer to SensorManager instance (for control access)
+   * @return Pointer to SensorManager
+   */
+  SensorManager* getSensorManager() { return &sensors; }
+```
+
+#### Step C2.3: Update Theremin Logic
+
+**Modify `src/Theremin.cpp`** in `update()` method:
+
+```cpp
+void Theremin::update() {
+  // Read sensors (always read hardware)
+  sensors.updateReadings();
+
+  // Only apply pitch sensor if enabled
+  if (sensors.isPitchEnabled()) {
+    int pitchDist = sensors.getPitchDistance();
+    float freq = mapFloat((float)pitchDist,
+                          (float)PITCH_MIN_DISTANCE, (float)PITCH_MAX_DISTANCE,
+                          (float)AudioEngine::MIN_FREQUENCY, (float)AudioEngine::MAX_FREQUENCY);
+    audio.setFrequency((int)freq);
+  }
+
+  // Only apply volume sensor if enabled
+  if (sensors.isVolumeEnabled()) {
+    int volumeDist = sensors.getVolumeDistance();
+    int amplitude = map(volumeDist,
+                        VOLUME_FAR_DISTANCE, VOLUME_NEAR_DISTANCE,
+                        MAX_AMPLITUDE_PERCENT, MIN_AMPLITUDE_PERCENT);
+    amplitude = constrain(amplitude, MIN_AMPLITUDE_PERCENT, MAX_AMPLITUDE_PERCENT);
+    audio.setAmplitude(amplitude);
+  }
+
+  // ... rest of update() ...
+}
+```
+
+#### Step C2.4: Refactor ControlHandler Constructor
+
+**Modify `include/ControlHandler.h`**:
+
+```cpp
+class ControlHandler {
+public:
+  /**
+   * Constructor
+   * @param theremin Pointer to Theremin instance (for full control access)
+   */
+  ControlHandler(Theremin* theremin);
+
+private:
+  Theremin* theremin;  // Full access to sensors and audio
+```
+
+**Modify `src/ControlHandler.cpp`** constructor:
+
+```cpp
+ControlHandler::ControlHandler(Theremin* thereminPtr)
+    : theremin(thereminPtr) {
+}
+```
+
+**Update all `audio->` calls to `theremin->getAudioEngine()->`** in ControlHandler.cpp.
+
+#### Step C2.5: Add Sensor Commands
+
+**Add to `ControlHandler::executeCommand()`** (after help/status handling):
+
+```cpp
+// Sensor control commands
+if (cmd == "sensors:pitch:on") {
+  theremin->getSensorManager()->setPitchEnabled(true);
+  DEBUG_PRINTLN("[CTRL] Pitch sensor enabled");
+  return;
+}
+
+if (cmd == "sensors:pitch:off") {
+  theremin->getSensorManager()->setPitchEnabled(false);
+  DEBUG_PRINTLN("[CTRL] Pitch sensor disabled");
+  return;
+}
+
+if (cmd == "sensors:volume:on") {
+  theremin->getSensorManager()->setVolumeEnabled(true);
+  DEBUG_PRINTLN("[CTRL] Volume sensor enabled");
+  return;
+}
+
+if (cmd == "sensors:volume:off") {
+  theremin->getSensorManager()->setVolumeEnabled(false);
+  DEBUG_PRINTLN("[CTRL] Volume sensor disabled");
+  return;
+}
+
+// Sensor control aliases (use batch commands)
+if (cmd == "sensors:enable") {
+  executeCommand("sensors:pitch:on;sensors:volume:on");
+  return;
+}
+
+if (cmd == "sensors:disable") {
+  executeCommand("sensors:pitch:off;sensors:volume:off");
+  return;
+}
+
+// Sensor status
+if (cmd == "sensors:status") {
+  DEBUG_PRINTLN("\\n========== SENSOR STATUS ==========");
+  DEBUG_PRINT("Pitch sensor:  ");
+  DEBUG_PRINTLN(theremin->getSensorManager()->isPitchEnabled() ? "ENABLED" : "DISABLED");
+  DEBUG_PRINT("Volume sensor: ");
+  DEBUG_PRINTLN(theremin->getSensorManager()->isVolumeEnabled() ? "ENABLED" : "DISABLED");
+  DEBUG_PRINTLN("===================================\\n");
+  return;
+}
+```
+
+#### Step C2.6: Add Audio Commands
+
+**Add to `ControlHandler::executeCommand()`** (after sensor commands):
+
+```cpp
+// Audio control commands
+if (cmd.startsWith("audio:freq:")) {
+  int freq = cmd.substring(11).toInt();
+  theremin->getAudioEngine()->setFrequency(freq);
+  DEBUG_PRINT("[CTRL] Manual frequency set to ");
+  DEBUG_PRINT(freq);
+  DEBUG_PRINTLN(" Hz");
+  return;
+}
+
+if (cmd.startsWith("audio:amp:")) {
+  int amp = cmd.substring(10).toInt();
+  theremin->getAudioEngine()->setAmplitude(amp);
+  DEBUG_PRINT("[CTRL] Manual amplitude set to ");
+  DEBUG_PRINT(amp);
+  DEBUG_PRINTLN("%");
+  return;
+}
+
+// Audio status
+if (cmd == "audio:status") {
+  DEBUG_PRINTLN("\\n========== AUDIO STATUS ==========");
+  DEBUG_PRINT("Frequency: ");
+  DEBUG_PRINT(theremin->getAudioEngine()->getFrequency());
+  DEBUG_PRINTLN(" Hz");
+  DEBUG_PRINT("Amplitude: ");
+  DEBUG_PRINT(theremin->getAudioEngine()->getAmplitude());
+  DEBUG_PRINTLN("%");
+  DEBUG_PRINTLN("==================================\\n");
+  return;
+}
+```
+
+#### Step C2.7: Update Help Text
+
+**Modify `printHelp()`** in ControlHandler.cpp:
+
+```cpp
+void ControlHandler::printHelp() {
+  DEBUG_PRINTLN("\\n========== OSCILLATOR CONTROL COMMANDS ==========");
+  // ... existing oscillator commands ...
+
+  DEBUG_PRINTLN("\\nSensor Control:");
+  DEBUG_PRINTLN("  sensors:pitch:on     - Enable pitch sensor");
+  DEBUG_PRINTLN("  sensors:pitch:off    - Disable pitch sensor");
+  DEBUG_PRINTLN("  sensors:volume:on    - Enable volume sensor");
+  DEBUG_PRINTLN("  sensors:volume:off   - Disable volume sensor");
+  DEBUG_PRINTLN("  sensors:enable       - Enable both sensors (alias)");
+  DEBUG_PRINTLN("  sensors:disable      - Disable both sensors (alias)");
+  DEBUG_PRINTLN("  sensors:status       - Show sensor enable states");
+
+  DEBUG_PRINTLN("\\nAudio Control:");
+  DEBUG_PRINTLN("  audio:freq:440       - Set frequency to 440 Hz");
+  DEBUG_PRINTLN("  audio:amp:75         - Set amplitude to 75%");
+  DEBUG_PRINTLN("  audio:status         - Show current audio values");
+
+  DEBUG_PRINTLN("\\nNote: When sensors disabled, manual audio: commands persist");
+  DEBUG_PRINTLN("      When sensors enabled, they override manual settings");
+  DEBUG_PRINTLN("=================================================\\n");
+}
+```
+
+#### Step C2.8: Update main.cpp
+
+**Modify `src/main.cpp`** constructor call:
+
+```cpp
+// Change from:
+// ControlHandler controls(theremin.getAudioEngine());
+
+// To:
+ControlHandler controls(&theremin);
+```
+
+### Use Cases
+
+**1. Test fixed frequency with sensor-controlled volume:**
+```
+sensors:pitch:off
+audio:freq:440
+# Now playing A4 (440Hz) at sensor-controlled volume
+```
+
+**2. Test different amplitudes at sensor-controlled pitch:**
+```
+sensors:volume:off
+audio:amp:50
+# Fixed 50% volume, pitch follows hand position
+```
+
+**3. Complete manual control (no sensors):**
+```
+sensors:disable
+audio:freq:523
+audio:amp:75
+# C5 at 75% volume, fully manual
+```
+
+**4. Return to normal theremin operation:**
+```
+sensors:enable
+# Back to full sensor control
+```
+
+**5. Combine with oscillator commands:**
+```
+sensors:pitch:off;audio:freq:440;osc1:sine;osc1:vol:0.8
+# Fixed 440Hz sine at 80% volume with sensor-controlled amplitude
+```
+
+### Success Criteria for Phase C2
+
+- [ ] Sensor enable flags stored in SensorManager
+- [ ] `sensors:pitch:on/off` commands work
+- [ ] `sensors:volume:on/off` commands work
+- [ ] `sensors:enable/disable` aliases work
+- [ ] `audio:freq:X` sets frequency manually
+- [ ] `audio:amp:X` sets amplitude manually
+- [ ] `sensors:status` shows enable states
+- [ ] `audio:status` shows current values
+- [ ] Manual audio commands persist when sensors disabled
+- [ ] Sensors override manual settings when re-enabled
+- [ ] Theremin::update() respects sensor flags
+- [ ] Help text includes new commands
+- [ ] All Phase C commands still work
+- [ ] No audio glitches during transitions
+
+### Command Reference
+
+```bash
+# Individual sensor control
+sensors:pitch:on         # Enable pitch sensor
+sensors:pitch:off        # Disable pitch sensor
+sensors:volume:on        # Enable volume sensor
+sensors:volume:off       # Disable volume sensor
+
+# Convenience aliases (batch commands)
+sensors:enable           # Enable both sensors
+sensors:disable          # Disable both sensors
+
+# Manual audio control
+audio:freq:440           # Set frequency to 440 Hz
+audio:amp:75             # Set amplitude to 75%
+
+# Status
+sensors:status           # Show sensor enable states
+audio:status             # Show current audio values
+
+# All oscillator commands still work
+osc1:sine                # Oscillator commands
+osc1:octave:1
+help
+status
+```
+
+### Build Impact Estimate
+
+- **Code:** ~120-150 lines added total
+- **Flash:** +1.5-2 KB estimated
+- **RAM:** 2 bytes (bool flags in SensorManager)
+- Minimal impact, leverages existing infrastructure
 
 ---
 
