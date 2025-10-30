@@ -15,7 +15,8 @@ This plan implements a control system that allows runtime modification of oscill
 
 **✅ Phase A: Complete** - AudioEngine control methods implemented and tested
 **✅ Bonus Features: Complete** - Melody player, system test, and startup sound
-**⏳ Phase B: Pending** - Serial command parser
+**✅ Phase B: Complete** - Serial command parser (ControlHandler class)
+**✅ Refinements: Complete** - Serial initialization fix, code style improvements
 **⏳ Phase C: Pending** - Extended serial commands
 **⏳ Phase D: Pending** - GPIO reading
 **⏳ Phase E: Pending** - Polish & integration
@@ -616,15 +617,62 @@ void loop() {
 
 ### Success Criteria for Phase B
 
-- [ ] Code compiles without errors
-- [ ] Control handler initializes and prints help text
-- [ ] Can send `osc1:sine` → oscillator 1 changes to sine wave
-- [ ] Can send `osc2:square` → oscillator 2 changes to square wave
-- [ ] Can send `osc1:octave:1` → oscillator 1 shifts up one octave
-- [ ] Can send `osc3:vol:0.3` → oscillator 3 volume reduces
-- [ ] Can send `osc2:off` → oscillator 2 turns off
-- [ ] Invalid commands print error messages
-- [ ] Audio responds smoothly to commands without glitches
+- [x] Code compiles without errors
+- [x] Control handler initializes and prints help text
+- [x] Can send `osc1:sine` → oscillator 1 changes to sine wave
+- [x] Can send `osc2:square` → oscillator 2 changes to square wave
+- [x] Can send `osc1:octave:1` → oscillator 1 shifts up one octave
+- [x] Can send `osc3:vol:0.3` → oscillator 3 volume reduces
+- [x] Can send `osc2:off` → oscillator 2 turns off
+- [x] Invalid commands print error messages
+- [x] Audio responds smoothly to commands without glitches
+
+### Phase B: COMPLETED ✅
+
+**Date Completed:** October 30, 2025
+
+**Files Created:**
+- `include/ControlHandler.h` - Class interface (~50 lines)
+- `src/ControlHandler.cpp` - Command parser implementation (~115 lines)
+
+**Files Modified:**
+- `src/main.cpp` - Added ControlHandler integration (4 changes)
+
+**Features Implemented:**
+1. Serial command parser with format: `oscN:parameter:value`
+2. Waveform commands: `osc1:sine`, `osc1:square`, `osc1:triangle`, `osc1:sawtooth`, `osc1:off`
+3. Octave commands: `osc1:octave:-1`, `osc1:octave:0`, `osc1:octave:1`
+4. Volume commands: `osc1:vol:0.0` to `osc1:vol:1.0`
+5. Support for abbreviated commands: `tri` for triangle, `saw` for sawtooth, `oct` for octave, `vol` for volume
+6. Case-insensitive command parsing
+7. Error handling with helpful error messages
+8. Non-blocking serial reading in main loop
+
+**Build Impact:**
+- RAM: 7.3% (23,960 bytes) - No increase from Phase A
+- Flash: 26.6% (348,389 bytes) - +9,440 bytes for control system
+- Compilation time: ~3.4 seconds
+
+**Additional Refinements:**
+- **Serial Initialization Fix:** Changed from DEBUG_INIT() to direct Serial.begin() to ensure Serial is always available for commands, regardless of DEBUG_MODE setting
+- **Code Style:** Added braces to all single-line if statements in parseWaveform() for consistency and maintainability
+
+**Command Examples:**
+```
+osc1:sine          # Set oscillator 1 to sine wave
+osc2:square        # Set oscillator 2 to square wave
+osc1:tri           # Set oscillator 1 to triangle (abbreviated)
+osc1:octave:-1     # Shift oscillator 1 down one octave
+osc2:oct:1         # Shift oscillator 2 up one octave (abbreviated)
+osc3:vol:0.5       # Set oscillator 3 to 50% volume
+osc1:off           # Turn off oscillator 1
+```
+
+**Testing Notes:**
+- All commands execute without audio glitches
+- Thread-safe parameter updates via AudioEngine API
+- Serial commands work alongside theremin sensor control
+- Invalid commands provide clear error messages
 
 ---
 
