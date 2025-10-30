@@ -110,6 +110,27 @@ class AudioEngine {
   void setOscillatorVolume(int oscNum, float volume);
 
   /**
+   * Get waveform for specific oscillator
+   * @param oscNum Oscillator number (1-3)
+   * @return Current waveform type, or OFF if invalid oscNum
+   */
+  Oscillator::Waveform getOscillatorWaveform(int oscNum);
+
+  /**
+   * Get octave shift for specific oscillator
+   * @param oscNum Oscillator number (1-3)
+   * @return Current octave shift, or 0 if invalid oscNum
+   */
+  int getOscillatorOctave(int oscNum);
+
+  /**
+   * Get volume for specific oscillator
+   * @param oscNum Oscillator number (1-3)
+   * @return Current volume level (0.0-1.0), or 0.0 if invalid oscNum
+   */
+  float getOscillatorVolume(int oscNum);
+
+  /**
    * Play a startup sound.
    */
   void playStartupSound();

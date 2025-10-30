@@ -493,3 +493,96 @@ void AudioEngine::setOscillatorVolume(int oscNum, float volume) {
     xSemaphoreGive(paramMutex);
   }
 }
+
+// Get waveform for specific oscillator
+Oscillator::Waveform AudioEngine::getOscillatorWaveform(int oscNum) {
+  // Validate oscillator number
+  if (oscNum < 1 || oscNum > 3) {
+    DEBUG_PRINT("[AUDIO] Invalid oscillator number: ");
+    DEBUG_PRINTLN(oscNum);
+    return Oscillator::OFF;
+  }
+
+  Oscillator::Waveform waveform = Oscillator::OFF;
+
+  // Thread-safe parameter read
+  if (paramMutex != NULL && xSemaphoreTake(paramMutex, portMAX_DELAY) == pdTRUE) {
+    switch (oscNum) {
+      case 1:
+        waveform = oscillator1.getWaveform();
+        break;
+      case 2:
+        waveform = oscillator2.getWaveform();
+        break;
+      case 3:
+        waveform = oscillator3.getWaveform();
+        break;
+    }
+
+    xSemaphoreGive(paramMutex);
+  }
+
+  return waveform;
+}
+
+// Get octave shift for specific oscillator
+int AudioEngine::getOscillatorOctave(int oscNum) {
+  // Validate oscillator number
+  if (oscNum < 1 || oscNum > 3) {
+    DEBUG_PRINT("[AUDIO] Invalid oscillator number: ");
+    DEBUG_PRINTLN(oscNum);
+    return 0;
+  }
+
+  int octave = 0;
+
+  // Thread-safe parameter read
+  if (paramMutex != NULL && xSemaphoreTake(paramMutex, portMAX_DELAY) == pdTRUE) {
+    switch (oscNum) {
+      case 1:
+        octave = oscillator1.getOctaveShift();
+        break;
+      case 2:
+        octave = oscillator2.getOctaveShift();
+        break;
+      case 3:
+        octave = oscillator3.getOctaveShift();
+        break;
+    }
+
+    xSemaphoreGive(paramMutex);
+  }
+
+  return octave;
+}
+
+// Get volume for specific oscillator
+float AudioEngine::getOscillatorVolume(int oscNum) {
+  // Validate oscillator number
+  if (oscNum < 1 || oscNum > 3) {
+    DEBUG_PRINT("[AUDIO] Invalid oscillator number: ");
+    DEBUG_PRINTLN(oscNum);
+    return 0.0;
+  }
+
+  float volume = 0.0;
+
+  // Thread-safe parameter read
+  if (paramMutex != NULL && xSemaphoreTake(paramMutex, portMAX_DELAY) == pdTRUE) {
+    switch (oscNum) {
+      case 1:
+        volume = oscillator1.getVolume();
+        break;
+      case 2:
+        volume = oscillator2.getVolume();
+        break;
+      case 3:
+        volume = oscillator3.getVolume();
+        break;
+    }
+
+    xSemaphoreGive(paramMutex);
+  }
+
+  return volume;
+}

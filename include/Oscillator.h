@@ -81,6 +81,22 @@ class Oscillator {
   }
 
   /**
+   * Get current octave shift
+   * @return Octave shift (-1, 0, +1)
+   */
+  int getOctaveShift() const {
+    return octaveShift;
+  }
+
+  /**
+   * Get current volume
+   * @return Volume level (0.0-1.0)
+   */
+  float getVolume() const {
+    return volume;
+  }
+
+  /**
    * Get current frequency (with octave shift applied)
    * @return Effective frequency in Hz
    */

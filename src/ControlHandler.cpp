@@ -47,6 +47,48 @@ void ControlHandler::executeCommand(String cmd) {
 
   cmd.toLowerCase();  // Case-insensitive
 
+  // Handle special commands
+  if (cmd == "help" || cmd == "?") {
+    printHelp();
+    return;
+  }
+
+  if (cmd == "status") {
+    printStatus();
+    return;
+  }
+
+  if (cmd.startsWith("status:osc")) {
+    int oscNum = cmd.charAt(10) - '0';
+    if (oscNum >= 1 && oscNum <= 3) {
+      printOscillatorStatus(oscNum);
+    } else {
+      DEBUG_PRINTLN("[CTRL] ERROR: Oscillator number must be 1-3");
+    }
+    return;
+  }
+
+  // Handle batch commands (separated by semicolons)
+  if (cmd.indexOf(';') != -1) {
+    int start = 0;
+    int semicolon;
+    while ((semicolon = cmd.indexOf(';', start)) != -1) {
+      String subCmd = cmd.substring(start, semicolon);
+      subCmd.trim();
+      if (subCmd.length() > 0) {
+        executeCommand(subCmd);  // Recursive call
+      }
+      start = semicolon + 1;
+    }
+    // Execute last command
+    String lastCmd = cmd.substring(start);
+    lastCmd.trim();
+    if (lastCmd.length() > 0) {
+      executeCommand(lastCmd);
+    }
+    return;
+  }
+
   // Extract oscillator number
   if (!cmd.startsWith("osc")) {
     DEBUG_PRINTLN("[CTRL] ERROR: Command must start with 'osc'");
@@ -116,4 +158,77 @@ int ControlHandler::parseWaveform(String name) {
     return Oscillator::SAW;
   }
   return -1;  // Invalid
+}
+
+void ControlHandler::printHelp() {
+  DEBUG_PRINTLN("\n========== OSCILLATOR CONTROL COMMANDS ==========");
+  DEBUG_PRINTLN("Waveform:");
+  DEBUG_PRINTLN("  osc1:off         - Turn off oscillator 1");
+  DEBUG_PRINTLN("  osc1:square      - Set oscillator 1 to square wave");
+  DEBUG_PRINTLN("  osc1:sine        - Set oscillator 1 to sine wave");
+  DEBUG_PRINTLN("  osc1:triangle    - Set oscillator 1 to triangle wave");
+  DEBUG_PRINTLN("  osc1:sawtooth    - Set oscillator 1 to sawtooth wave");
+  DEBUG_PRINTLN("\nOctave Shift:");
+  DEBUG_PRINTLN("  osc1:octave:-1   - Shift oscillator 1 down one octave");
+  DEBUG_PRINTLN("  osc1:octave:0    - Reset oscillator 1 to base octave");
+  DEBUG_PRINTLN("  osc1:octave:1    - Shift oscillator 1 up one octave");
+  DEBUG_PRINTLN("\nVolume:");
+  DEBUG_PRINTLN("  osc1:vol:0.0     - Set oscillator 1 to 0% volume (silent)");
+  DEBUG_PRINTLN("  osc1:vol:0.5     - Set oscillator 1 to 50% volume");
+  DEBUG_PRINTLN("  osc1:vol:1.0     - Set oscillator 1 to 100% volume");
+  DEBUG_PRINTLN("\nStatus:");
+  DEBUG_PRINTLN("  status           - Show status of all oscillators");
+  DEBUG_PRINTLN("  status:osc1      - Show status of oscillator 1");
+  DEBUG_PRINTLN("\nBatch Commands:");
+  DEBUG_PRINTLN("  osc1:sine;osc1:octave:1;osc1:vol:0.8");
+  DEBUG_PRINTLN("  - Execute multiple commands separated by ';'");
+  DEBUG_PRINTLN("\nNote: Replace 'osc1' with 'osc2' or 'osc3' for other oscillators");
+  DEBUG_PRINTLN("      Abbreviations: 'tri'=triangle, 'saw'=sawtooth, 'oct'=octave, 'vol'=volume");
+  DEBUG_PRINTLN("=================================================\n");
+}
+
+void ControlHandler::printStatus() {
+  DEBUG_PRINTLN("\n========== OSCILLATOR STATUS ==========");
+  printOscillatorStatus(1);
+  printOscillatorStatus(2);
+  printOscillatorStatus(3);
+  DEBUG_PRINTLN("=======================================\n");
+}
+
+void ControlHandler::printOscillatorStatus(int oscNum) {
+  DEBUG_PRINT("Oscillator ");
+  DEBUG_PRINT(oscNum);
+  DEBUG_PRINTLN(":");
+
+  // Get current state from AudioEngine
+  Oscillator::Waveform waveform = audio->getOscillatorWaveform(oscNum);
+  int octave = audio->getOscillatorOctave(oscNum);
+  float volume = audio->getOscillatorVolume(oscNum);
+
+  // Display waveform
+  DEBUG_PRINT("  Waveform:     ");
+  DEBUG_PRINTLN(getWaveformName(waveform));
+
+  // Display octave shift
+  DEBUG_PRINT("  Octave Shift: ");
+  if (octave > 0) {
+    DEBUG_PRINT("+");
+  }
+  DEBUG_PRINTLN(octave);
+
+  // Display volume as percentage
+  DEBUG_PRINT("  Volume:       ");
+  DEBUG_PRINT((int)(volume * 100));
+  DEBUG_PRINTLN("%");
+}
+
+const char* ControlHandler::getWaveformName(Oscillator::Waveform wf) {
+  switch (wf) {
+    case Oscillator::OFF: return "OFF";
+    case Oscillator::SQUARE: return "SQUARE";
+    case Oscillator::SINE: return "SINE";
+    case Oscillator::TRIANGLE: return "TRIANGLE";
+    case Oscillator::SAW: return "SAWTOOTH";
+    default: return "UNKNOWN";
+  }
 }

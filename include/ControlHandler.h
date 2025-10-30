@@ -48,4 +48,24 @@ private:
    * @return Waveform enum or -1 if invalid
    */
   int parseWaveform(String name);
+
+  /**
+   * Print help text
+   */
+  void printHelp();
+
+  /**
+   * Print status of all oscillators
+   */
+  void printStatus();
+
+  /**
+   * Print status of specific oscillator
+   */
+  void printOscillatorStatus(int oscNum);
+
+  /**
+   * Get waveform name from enum
+   */
+  const char* getWaveformName(Oscillator::Waveform wf);
 };
