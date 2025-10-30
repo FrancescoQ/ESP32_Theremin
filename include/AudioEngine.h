@@ -77,6 +77,11 @@ class AudioEngine {
   void begin();
 
   /**
+   * Initialize default settings for the audio engine / oscillators.
+   */
+  void setDefaultSettings();
+
+  /**
    * Set the audio frequency in Hz
    * @param freq Frequency in Hz (will be constrained to MIN_FREQUENCY-MAX_FREQUENCY)
    */

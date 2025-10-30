@@ -18,21 +18,25 @@ AudioEngine::AudioEngine(PerformanceMonitor* perfMon)
       paramMutex(NULL),
       taskRunning(false),
       performanceMonitor(perfMon) {
-  // Initialize oscillators
-  oscillator1.setWaveform(Oscillator::TRIANGLE);
-  oscillator1.setOctaveShift(Oscillator::OCTAVE_BASE);
-  oscillator1.setVolume(1.0);
-
-  oscillator2.setWaveform(Oscillator::SINE);
-  oscillator2.setOctaveShift(Oscillator::OCTAVE_UP);
-  oscillator2.setVolume(1.0);
-
-  oscillator3.setWaveform(Oscillator::TRIANGLE);
-  oscillator3.setOctaveShift(Oscillator::OCTAVE_DOWN);
-  oscillator3.setVolume(1.0);
 
   // Create mutex for thread-safe parameter updates
   paramMutex = xSemaphoreCreateMutex();
+}
+
+// Default settings.
+void AudioEngine::setDefaultSettings() {
+  setAmplitude(0);
+  setOscillatorWaveform(1, Oscillator::TRIANGLE);
+  setOscillatorOctave(1, Oscillator::OCTAVE_BASE);
+  setOscillatorVolume(1, 1.0);
+
+  setOscillatorWaveform(2, Oscillator::OFF);
+  setOscillatorOctave(2, Oscillator::OCTAVE_BASE);
+  setOscillatorVolume(2, 1.0);
+
+  setOscillatorWaveform(3, Oscillator::OFF);
+  setOscillatorOctave(3, Oscillator::OCTAVE_BASE);
+  setOscillatorVolume(3, 1.0);
 }
 
 // Initialize audio hardware
@@ -50,6 +54,9 @@ void AudioEngine::begin() {
 
   DEBUG_PRINTLN("[AUDIO] I2S DAC initialized on GPIO25 @ 22050 Hz");
   delay(50);  // Let Serial transmit before continuing
+
+  // Initialize oscillators with default settings.
+  setDefaultSettings();
 
   // Start continuous audio generation task only if I2S succeeded
   startAudioTask();
@@ -100,7 +107,7 @@ void AudioEngine::playMelody(const int notes[], const int durations[], int lengt
   Oscillator::Waveform savedWaveform3 = oscillator3.getWaveform();
 
   // Configure specified oscillator for melody, silence others
-  setAmplitude(50);
+  setAmplitude(40);
 
   for (int i = 1; i <= 3; i++) {
     if (i == oscNum) {
@@ -152,7 +159,7 @@ void AudioEngine::systemTest() {
 
   // Test configuration: single oscillator with clear tones
   setFrequency(440);  // A4 - concert pitch
-  setAmplitude(50);   // 50% volume
+  setAmplitude(40);   // 50% volume
 
   // Turn off oscillators 2 and 3 for clarity
   setOscillatorWaveform(2, Oscillator::OFF);
@@ -166,27 +173,40 @@ void AudioEngine::systemTest() {
   delay(1500);
 
   // Test 2: Waveform change
-  DEBUG_PRINTLN("[TEST] Test 2: Changing to triangle wave");
+  DEBUG_PRINTLN("[TEST] Test 2: Changing waveforms");
   setOscillatorWaveform(1, Oscillator::TRIANGLE);
-  delay(1500);
+  delay(1000);
+  setOscillatorWaveform(1, Oscillator::SAW);
+  delay(1000);
+  setOscillatorWaveform(1, Oscillator::SQUARE);
+  delay(1000);
+  setOscillatorWaveform(1, Oscillator::SINE);
+  delay(1000);
 
   // Test 3: Octave shift up
   DEBUG_PRINTLN("[TEST] Test 3: Shifting up one octave");
   setOscillatorOctave(1, Oscillator::OCTAVE_UP);
   delay(1500);
 
+  setOscillatorOctave(1, Oscillator::OCTAVE_DOWN);
+  delay(1500);
+
   // Test 4: Volume reduction
   DEBUG_PRINTLN("[TEST] Test 4: Reducing volume to 50%");
+  setOscillatorVolume(1, 0.8);
+  delay(1000);
+
   setOscillatorVolume(1, 0.5);
-  delay(1500);
+  delay(1000);
+
+  setOscillatorVolume(1, 0.3);
+  delay(1000);
 
   // Test 5: Restore defaults
   DEBUG_PRINTLN("[TEST] Test 5: Restoring defaults");
   setAmplitude(0);
   delay(1000);
-  setOscillatorWaveform(1, Oscillator::SINE);
-  setOscillatorOctave(1, Oscillator::OCTAVE_BASE);
-  setOscillatorVolume(1, 1.0);
+  setDefaultSettings();
 
 
   DEBUG_PRINTLN("[TEST] System test complete!\n");
