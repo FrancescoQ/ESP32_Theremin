@@ -100,10 +100,20 @@ void ControlHandler::executeCommand(String cmd) {
 }
 
 int ControlHandler::parseWaveform(String name) {
-  if (name == "off") return Oscillator::OFF;
-  if (name == "square") return Oscillator::SQUARE;
-  if (name == "sine") return Oscillator::SINE;
-  if (name == "triangle" || name == "tri") return Oscillator::TRIANGLE;
-  if (name == "sawtooth" || name == "saw") return Oscillator::SAW;
+  if (name == "off") {
+    return Oscillator::OFF;
+  }
+  if (name == "square") {
+    return Oscillator::SQUARE;
+  }
+  if (name == "sine") {
+    return Oscillator::SINE;
+  }
+  if (name == "triangle" || name == "tri") {
+    return Oscillator::TRIANGLE;
+  }
+  if (name == "sawtooth" || name == "saw") {
+    return Oscillator::SAW;
+  }
   return -1;  // Invalid
 }
