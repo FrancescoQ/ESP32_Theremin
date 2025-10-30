@@ -5,6 +5,7 @@
  */
 
 #include "ControlHandler.h"
+#include "Theremin.h"
 #include "Debug.h"
 
 ControlHandler::ControlHandler(Theremin* thereminPtr)

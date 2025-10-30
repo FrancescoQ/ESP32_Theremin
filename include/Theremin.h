@@ -8,6 +8,7 @@
 #pragma once
 #include "SensorManager.h"
 #include "AudioEngine.h"
+#include "ControlHandler.h"
 
 // Forward declaration
 class PerformanceMonitor;
@@ -53,6 +54,7 @@ class Theremin {
  private:
   SensorManager sensors;
   AudioEngine audio;
+  ControlHandler controls;
   bool debugEnabled;
 
   // Amplitude range constants (internal use only)

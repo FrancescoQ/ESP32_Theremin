@@ -7,7 +7,13 @@
 
 #pragma once
 #include <Arduino.h>
-#include "Theremin.h"
+#include "Oscillator.h"
+
+// Forward declaration to avoid circular dependency:
+// Theremin.h includes ControlHandler.h (to contain ControlHandler as a member)
+// ControlHandler only needs a pointer to Theremin, so we declare it here
+// instead of including Theremin.h. Full definition included in ControlHandler.cpp
+class Theremin;
 
 class ControlHandler {
 public:
