@@ -8,9 +8,12 @@
 #include "Debug.h"
 #include <string.h>
 
+// Fixed base delay for chorus effect (center of modulation)
+static const float BASE_DELAY_MS = 10.0f;
+
 ChorusEffect::ChorusEffect(uint32_t sampleRate)
     : sampleRate(sampleRate),
-      lfoDepthMs(15.0f),     // Default 15ms
+      lfoDepthMs(7.0f),      // Default 7ms modulation depth (±7ms around base)
       wetDryMix(0.4f),       // Default 40% wet
       enabled(false),
       writeIndex(0),
@@ -32,6 +35,15 @@ ChorusEffect::ChorusEffect(uint32_t sampleRate)
     DEBUG_PRINT(" samples (");
     DEBUG_PRINT((bufferSize * sizeof(int16_t)) / 1024);
     DEBUG_PRINTLN(" KB)");
+
+    DEBUG_PRINT("[CHORUS] LFO configured: Freq=");
+    DEBUG_PRINT(lfo.getEffectiveFrequency());
+    DEBUG_PRINT(" Hz, Depth=");
+    DEBUG_PRINT(lfoDepthMs);
+    DEBUG_PRINT(" ms, Mix=");
+    DEBUG_PRINT(wetDryMix);
+    DEBUG_PRINT(", SampleRate=");
+    DEBUG_PRINTLN(sampleRate);
 }
 
 ChorusEffect::~ChorusEffect() {
@@ -78,8 +90,9 @@ int16_t ChorusEffect::process(int16_t input) {
     float lfoValue = lfo.getNextSampleNormalized(sampleRate);
 
     // Calculate modulated delay time
-    // Center delay = depth, modulation = ±depth
-    float delayTimeMs = lfoDepthMs + (lfoValue * lfoDepthMs);
+    // Base delay + LFO modulation (industry standard formula)
+    // With base=10ms, depth=7ms: delay varies from 3ms to 17ms
+    float delayTimeMs = BASE_DELAY_MS + (lfoValue * lfoDepthMs);
     float delayInSamples = (delayTimeMs / 1000.0f) * sampleRate;
 
     // Read delayed sample with interpolation
@@ -104,6 +117,22 @@ void ChorusEffect::setEnabled(bool en) {
     enabled = en;
     DEBUG_PRINT("[CHORUS] ");
     DEBUG_PRINTLN(enabled ? "ENABLED" : "DISABLED");
+
+    if (enabled) {
+        DEBUG_PRINT("[CHORUS] Active settings - Rate: ");
+        DEBUG_PRINT(lfo.getEffectiveFrequency());
+        DEBUG_PRINT(" Hz, Depth: ");
+        DEBUG_PRINT(lfoDepthMs);
+        DEBUG_PRINT(" ms, Mix: ");
+        DEBUG_PRINTLN(wetDryMix);
+
+        DEBUG_PRINT("[CHORUS] LFO internal state - Waveform: ");
+        DEBUG_PRINT(lfo.getWaveform());
+        DEBUG_PRINT(", OctaveShift: ");
+        DEBUG_PRINT(lfo.getOctaveShift());
+        DEBUG_PRINT(", Volume: ");
+        DEBUG_PRINTLN(lfo.getVolume());
+    }
 }
 
 void ChorusEffect::setRate(float hz) {

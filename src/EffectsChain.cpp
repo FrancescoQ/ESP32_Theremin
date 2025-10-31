@@ -18,9 +18,9 @@ EffectsChain::EffectsChain(uint32_t sampleRate)
     delay.setEnabled(false);  // Start disabled
 
     // Configure chorus (object already constructed)
-    chorus.setRate(2.0f);
-    chorus.setDepth(15.0f);
-    chorus.setMix(0.4f);
+    chorus.setRate(1.0f);
+    chorus.setDepth(5.0f);
+    chorus.setMix(0.2f);
     chorus.setEnabled(false);
 
     DEBUG_PRINTLN("[CHAIN] EffectsChain initialized with Delay + Chorus");

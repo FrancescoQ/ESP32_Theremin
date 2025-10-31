@@ -35,7 +35,9 @@ Oscillator::Oscillator() : phase(0.0f), frequency(440.0f), waveform(SQUARE), oct
 // Set frequency
 void Oscillator::setFrequency(float freq) {
   // Constrain to reasonable range to prevent issues
-  frequency = constrain(freq, 20.0f, 20000.0f);
+  // Minimum 0.1 Hz allows LFO use (10 second cycle)
+  // Maximum 20 kHz covers audio range
+  frequency = constrain(freq, 0.1f, 20000.0f);
 }
 
 // Set waveform
