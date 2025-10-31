@@ -9,6 +9,10 @@
 #include "PerformanceMonitor.h"
 #include "Debug.h"
 
+// ============================================================================
+// SECTION 1: LIFECYCLE & INITIALIZATION
+// ============================================================================
+
 // Constructor
 AudioEngine::AudioEngine(PerformanceMonitor* perfMon)
     : currentFrequency(MIN_FREQUENCY),
@@ -60,22 +64,6 @@ AudioEngine::~AudioEngine() {
   DEBUG_PRINTLN("[AUDIO] AudioEngine destroyed");
 }
 
-// Default settings.
-void AudioEngine::setDefaultSettings() {
-  setAmplitude(0);
-  setOscillatorWaveform(1, Oscillator::TRIANGLE);
-  setOscillatorOctave(1, Oscillator::OCTAVE_BASE);
-  setOscillatorVolume(1, 1.0);
-
-  setOscillatorWaveform(2, Oscillator::OFF);
-  setOscillatorOctave(2, Oscillator::OCTAVE_BASE);
-  setOscillatorVolume(2, 1.0);
-
-  setOscillatorWaveform(3, Oscillator::OFF);
-  setOscillatorOctave(3, Oscillator::OCTAVE_BASE);
-  setOscillatorVolume(3, 1.0);
-}
-
 // Initialize audio hardware
 void AudioEngine::begin() {
   // Delay to ensure Serial is fully initialized
@@ -99,6 +87,34 @@ void AudioEngine::begin() {
   startAudioTask();
 }
 
+// Update audio output
+// DEPRECATED: No longer needed with continuous audio task
+void AudioEngine::update() {
+  // This function is now a no-op
+  // Audio generation happens continuously in background task
+  // Kept for backward compatibility
+}
+
+// ============================================================================
+// SECTION 2: CONFIGURATION & SETTINGS
+// ============================================================================
+
+// Default settings.
+void AudioEngine::setDefaultSettings() {
+  setAmplitude(0);
+  setOscillatorWaveform(1, Oscillator::TRIANGLE);
+  setOscillatorOctave(1, Oscillator::OCTAVE_BASE);
+  setOscillatorVolume(1, 1.0);
+
+  setOscillatorWaveform(2, Oscillator::OFF);
+  setOscillatorOctave(2, Oscillator::OCTAVE_BASE);
+  setOscillatorVolume(2, 1.0);
+
+  setOscillatorWaveform(3, Oscillator::OFF);
+  setOscillatorOctave(3, Oscillator::OCTAVE_BASE);
+  setOscillatorVolume(3, 1.0);
+}
+
 // Set frequency (thread-safe)
 void AudioEngine::setFrequency(int freq) {
   if (paramMutex != NULL && xSemaphoreTake(paramMutex, portMAX_DELAY) == pdTRUE) {
@@ -113,6 +129,224 @@ void AudioEngine::setFrequency(int freq) {
     xSemaphoreGive(paramMutex);
   }
 }
+
+// Set amplitude (thread-safe)
+void AudioEngine::setAmplitude(int amplitude) {
+  if (paramMutex != NULL && xSemaphoreTake(paramMutex, portMAX_DELAY) == pdTRUE) {
+    // Constrain to 0-100%
+    currentAmplitude = constrain(amplitude, 0, 100);
+
+    xSemaphoreGive(paramMutex);
+  }
+}
+
+// ============================================================================
+// SECTION 3: OSCILLATOR CONTROL - SETTERS
+// ============================================================================
+
+// Set waveform for specific oscillator
+void AudioEngine::setOscillatorWaveform(int oscNum, Oscillator::Waveform wf) {
+  // Validate oscillator number
+  if (oscNum < 1 || oscNum > 3) {
+    DEBUG_PRINT("[AUDIO] Invalid oscillator number: ");
+    DEBUG_PRINTLN(oscNum);
+    return;
+  }
+
+  // Thread-safe parameter update
+  if (paramMutex != NULL && xSemaphoreTake(paramMutex, portMAX_DELAY) == pdTRUE) {
+    switch (oscNum) {
+      case 1:
+        oscillator1.setWaveform(wf);
+        break;
+      case 2:
+        oscillator2.setWaveform(wf);
+        break;
+      case 3:
+        oscillator3.setWaveform(wf);
+        break;
+    }
+
+    DEBUG_PRINT("[AUDIO] Oscillator ");
+    DEBUG_PRINT(oscNum);
+    DEBUG_PRINT(" waveform set to ");
+    DEBUG_PRINTLN((int)wf);
+
+    xSemaphoreGive(paramMutex);
+  }
+}
+
+// Set octave shift for specific oscillator
+void AudioEngine::setOscillatorOctave(int oscNum, int octave) {
+  // Validate oscillator number
+  if (oscNum < 1 || oscNum > 3) {
+    DEBUG_PRINT("[AUDIO] Invalid oscillator number: ");
+    DEBUG_PRINTLN(oscNum);
+    return;
+  }
+
+  // Validate octave range
+  if (octave < -1 || octave > 1) {
+    DEBUG_PRINT("[AUDIO] Invalid octave shift: ");
+    DEBUG_PRINTLN(octave);
+    return;
+  }
+
+  // Thread-safe parameter update
+  if (paramMutex != NULL && xSemaphoreTake(paramMutex, portMAX_DELAY) == pdTRUE) {
+    switch (oscNum) {
+      case 1:
+        oscillator1.setOctaveShift(octave);
+        break;
+      case 2:
+        oscillator2.setOctaveShift(octave);
+        break;
+      case 3:
+        oscillator3.setOctaveShift(octave);
+        break;
+    }
+
+    DEBUG_PRINT("[AUDIO] Oscillator ");
+    DEBUG_PRINT(oscNum);
+    DEBUG_PRINT(" octave shift set to ");
+    DEBUG_PRINTLN(octave);
+
+    xSemaphoreGive(paramMutex);
+  }
+}
+
+// Set volume for specific oscillator
+void AudioEngine::setOscillatorVolume(int oscNum, float volume) {
+  // Validate oscillator number
+  if (oscNum < 1 || oscNum > 3) {
+    DEBUG_PRINT("[AUDIO] Invalid oscillator number: ");
+    DEBUG_PRINTLN(oscNum);
+    return;
+  }
+
+  // Thread-safe parameter update
+  if (paramMutex != NULL && xSemaphoreTake(paramMutex, portMAX_DELAY) == pdTRUE) {
+    switch (oscNum) {
+      case 1:
+        oscillator1.setVolume(volume);
+        break;
+      case 2:
+        oscillator2.setVolume(volume);
+        break;
+      case 3:
+        oscillator3.setVolume(volume);
+        break;
+    }
+
+    DEBUG_PRINT("[AUDIO] Oscillator ");
+    DEBUG_PRINT(oscNum);
+    DEBUG_PRINT(" volume set to ");
+    DEBUG_PRINTLN(volume);
+
+    xSemaphoreGive(paramMutex);
+  }
+}
+
+// ============================================================================
+// SECTION 4: OSCILLATOR CONTROL - GETTERS
+// ============================================================================
+
+// Get waveform for specific oscillator
+Oscillator::Waveform AudioEngine::getOscillatorWaveform(int oscNum) {
+  // Validate oscillator number
+  if (oscNum < 1 || oscNum > 3) {
+    DEBUG_PRINT("[AUDIO] Invalid oscillator number: ");
+    DEBUG_PRINTLN(oscNum);
+    return Oscillator::OFF;
+  }
+
+  Oscillator::Waveform waveform = Oscillator::OFF;
+
+  // Thread-safe parameter read
+  if (paramMutex != NULL && xSemaphoreTake(paramMutex, portMAX_DELAY) == pdTRUE) {
+    switch (oscNum) {
+      case 1:
+        waveform = oscillator1.getWaveform();
+        break;
+      case 2:
+        waveform = oscillator2.getWaveform();
+        break;
+      case 3:
+        waveform = oscillator3.getWaveform();
+        break;
+    }
+
+    xSemaphoreGive(paramMutex);
+  }
+
+  return waveform;
+}
+
+// Get octave shift for specific oscillator
+int AudioEngine::getOscillatorOctave(int oscNum) {
+  // Validate oscillator number
+  if (oscNum < 1 || oscNum > 3) {
+    DEBUG_PRINT("[AUDIO] Invalid oscillator number: ");
+    DEBUG_PRINTLN(oscNum);
+    return 0;
+  }
+
+  int octave = 0;
+
+  // Thread-safe parameter read
+  if (paramMutex != NULL && xSemaphoreTake(paramMutex, portMAX_DELAY) == pdTRUE) {
+    switch (oscNum) {
+      case 1:
+        octave = oscillator1.getOctaveShift();
+        break;
+      case 2:
+        octave = oscillator2.getOctaveShift();
+        break;
+      case 3:
+        octave = oscillator3.getOctaveShift();
+        break;
+    }
+
+    xSemaphoreGive(paramMutex);
+  }
+
+  return octave;
+}
+
+// Get volume for specific oscillator
+float AudioEngine::getOscillatorVolume(int oscNum) {
+  // Validate oscillator number
+  if (oscNum < 1 || oscNum > 3) {
+    DEBUG_PRINT("[AUDIO] Invalid oscillator number: ");
+    DEBUG_PRINTLN(oscNum);
+    return 0.0;
+  }
+
+  float volume = 0.0;
+
+  // Thread-safe parameter read
+  if (paramMutex != NULL && xSemaphoreTake(paramMutex, portMAX_DELAY) == pdTRUE) {
+    switch (oscNum) {
+      case 1:
+        volume = oscillator1.getVolume();
+        break;
+      case 2:
+        volume = oscillator2.getVolume();
+        break;
+      case 3:
+        volume = oscillator3.getVolume();
+        break;
+    }
+
+    xSemaphoreGive(paramMutex);
+  }
+
+  return volume;
+}
+
+// ============================================================================
+// SECTION 5: SOUND EFFECTS & TESTING
+// ============================================================================
 
 // Play the startup sound: FF7 Victory Fanfare
 void AudioEngine::playStartupSound() {
@@ -279,23 +513,83 @@ void AudioEngine::systemTest() {
   DEBUG_PRINTLN("[TEST] System test complete!\n");
 }
 
-// Set amplitude (thread-safe)
-void AudioEngine::setAmplitude(int amplitude) {
-  if (paramMutex != NULL && xSemaphoreTake(paramMutex, portMAX_DELAY) == pdTRUE) {
-    // Constrain to 0-100%
-    currentAmplitude = constrain(amplitude, 0, 100);
+// ============================================================================
+// SECTION 6: AUDIO TASK MANAGEMENT
+// ============================================================================
 
-    xSemaphoreGive(paramMutex);
+// Start continuous audio generation task
+void AudioEngine::startAudioTask() {
+  if (taskRunning) {
+    DEBUG_PRINTLN("[AUDIO] Task already running");
+    return;
   }
+
+  taskRunning = true;
+
+  // Create high-priority task on Core 1 (app core)
+  // Stack: 4096 bytes, Priority: 2 (higher than default 1), Core: 1
+  xTaskCreatePinnedToCore(
+      audioTaskFunction,      // Task function
+      "AudioTask",            // Task name
+      4096,                   // Stack size (bytes)
+      this,                   // Parameter (this pointer)
+      2,                      // Priority (higher = more important)
+      &audioTaskHandle,       // Task handle
+      1                       // Core ID (1 = app core)
+  );
+
+  DEBUG_PRINTLN("[AUDIO] Continuous audio task started on Core 1");
+  delay(50);  // Let Serial transmit before continuing
 }
 
-// Update audio output
-// DEPRECATED: No longer needed with continuous audio task
-void AudioEngine::update() {
-  // This function is now a no-op
-  // Audio generation happens continuously in background task
-  // Kept for backward compatibility
+// Stop continuous audio generation task
+void AudioEngine::stopAudioTask() {
+  if (!taskRunning) {
+    return;
+  }
+
+  taskRunning = false;
+
+  // Delete task
+  if (audioTaskHandle != NULL) {
+    vTaskDelete(audioTaskHandle);
+    audioTaskHandle = NULL;
+  }
+
+  DEBUG_PRINTLN("[AUDIO] Continuous audio task stopped");
 }
+
+// Static wrapper for FreeRTOS task
+void AudioEngine::audioTaskFunction(void* parameter) {
+  // Cast parameter back to AudioEngine instance
+  AudioEngine* engine = static_cast<AudioEngine*>(parameter);
+
+  // Call instance method
+  engine->audioTaskLoop();
+}
+
+// Audio task loop - runs continuously
+void AudioEngine::audioTaskLoop() {
+  DEBUG_PRINTLN("[AUDIO] Audio task loop started");
+
+  // Initialize CPU measurement
+  if (performanceMonitor != nullptr) {
+    performanceMonitor->beginAudioMeasurement();
+  }
+
+  while (taskRunning) {
+    // Generate and write one buffer to I2S
+    // CPU measurement happens inside generateAudioBuffer() (excludes blocking I/O)
+    generateAudioBuffer();
+  }
+
+  DEBUG_PRINTLN("[AUDIO] Audio task loop exited");
+  vTaskDelete(NULL);  // Delete self
+}
+
+// ============================================================================
+// SECTION 7: PRIVATE/INTERNAL IMPLEMENTATION
+// ============================================================================
 
 // Initialize I2S in built-in DAC mode
 bool AudioEngine::setupI2S() {
@@ -411,270 +705,4 @@ void AudioEngine::generateAudioBuffer() {
   if (performanceMonitor != nullptr) {
     performanceMonitor->recordAudioWork(computeTime);
   }
-}
-
-// Start continuous audio generation task
-void AudioEngine::startAudioTask() {
-  if (taskRunning) {
-    DEBUG_PRINTLN("[AUDIO] Task already running");
-    return;
-  }
-
-  taskRunning = true;
-
-  // Create high-priority task on Core 1 (app core)
-  // Stack: 4096 bytes, Priority: 2 (higher than default 1), Core: 1
-  xTaskCreatePinnedToCore(
-      audioTaskFunction,      // Task function
-      "AudioTask",            // Task name
-      4096,                   // Stack size (bytes)
-      this,                   // Parameter (this pointer)
-      2,                      // Priority (higher = more important)
-      &audioTaskHandle,       // Task handle
-      1                       // Core ID (1 = app core)
-  );
-
-  DEBUG_PRINTLN("[AUDIO] Continuous audio task started on Core 1");
-  delay(50);  // Let Serial transmit before continuing
-}
-
-// Stop continuous audio generation task
-void AudioEngine::stopAudioTask() {
-  if (!taskRunning) {
-    return;
-  }
-
-  taskRunning = false;
-
-  // Delete task
-  if (audioTaskHandle != NULL) {
-    vTaskDelete(audioTaskHandle);
-    audioTaskHandle = NULL;
-  }
-
-  DEBUG_PRINTLN("[AUDIO] Continuous audio task stopped");
-}
-
-// Static wrapper for FreeRTOS task
-void AudioEngine::audioTaskFunction(void* parameter) {
-  // Cast parameter back to AudioEngine instance
-  AudioEngine* engine = static_cast<AudioEngine*>(parameter);
-
-  // Call instance method
-  engine->audioTaskLoop();
-}
-
-// Audio task loop - runs continuously
-void AudioEngine::audioTaskLoop() {
-  DEBUG_PRINTLN("[AUDIO] Audio task loop started");
-
-  // Initialize CPU measurement
-  if (performanceMonitor != nullptr) {
-    performanceMonitor->beginAudioMeasurement();
-  }
-
-  while (taskRunning) {
-    // Generate and write one buffer to I2S
-    // CPU measurement happens inside generateAudioBuffer() (excludes blocking I/O)
-    generateAudioBuffer();
-  }
-
-  DEBUG_PRINTLN("[AUDIO] Audio task loop exited");
-  vTaskDelete(NULL);  // Delete self
-}
-
-// Set waveform for specific oscillator
-void AudioEngine::setOscillatorWaveform(int oscNum, Oscillator::Waveform wf) {
-  // Validate oscillator number
-  if (oscNum < 1 || oscNum > 3) {
-    DEBUG_PRINT("[AUDIO] Invalid oscillator number: ");
-    DEBUG_PRINTLN(oscNum);
-    return;
-  }
-
-  // Thread-safe parameter update
-  if (paramMutex != NULL && xSemaphoreTake(paramMutex, portMAX_DELAY) == pdTRUE) {
-    switch (oscNum) {
-      case 1:
-        oscillator1.setWaveform(wf);
-        break;
-      case 2:
-        oscillator2.setWaveform(wf);
-        break;
-      case 3:
-        oscillator3.setWaveform(wf);
-        break;
-    }
-
-    DEBUG_PRINT("[AUDIO] Oscillator ");
-    DEBUG_PRINT(oscNum);
-    DEBUG_PRINT(" waveform set to ");
-    DEBUG_PRINTLN((int)wf);
-
-    xSemaphoreGive(paramMutex);
-  }
-}
-
-// Set octave shift for specific oscillator
-void AudioEngine::setOscillatorOctave(int oscNum, int octave) {
-  // Validate oscillator number
-  if (oscNum < 1 || oscNum > 3) {
-    DEBUG_PRINT("[AUDIO] Invalid oscillator number: ");
-    DEBUG_PRINTLN(oscNum);
-    return;
-  }
-
-  // Validate octave range
-  if (octave < -1 || octave > 1) {
-    DEBUG_PRINT("[AUDIO] Invalid octave shift: ");
-    DEBUG_PRINTLN(octave);
-    return;
-  }
-
-  // Thread-safe parameter update
-  if (paramMutex != NULL && xSemaphoreTake(paramMutex, portMAX_DELAY) == pdTRUE) {
-    switch (oscNum) {
-      case 1:
-        oscillator1.setOctaveShift(octave);
-        break;
-      case 2:
-        oscillator2.setOctaveShift(octave);
-        break;
-      case 3:
-        oscillator3.setOctaveShift(octave);
-        break;
-    }
-
-    DEBUG_PRINT("[AUDIO] Oscillator ");
-    DEBUG_PRINT(oscNum);
-    DEBUG_PRINT(" octave shift set to ");
-    DEBUG_PRINTLN(octave);
-
-    xSemaphoreGive(paramMutex);
-  }
-}
-
-// Set volume for specific oscillator
-void AudioEngine::setOscillatorVolume(int oscNum, float volume) {
-  // Validate oscillator number
-  if (oscNum < 1 || oscNum > 3) {
-    DEBUG_PRINT("[AUDIO] Invalid oscillator number: ");
-    DEBUG_PRINTLN(oscNum);
-    return;
-  }
-
-  // Thread-safe parameter update
-  if (paramMutex != NULL && xSemaphoreTake(paramMutex, portMAX_DELAY) == pdTRUE) {
-    switch (oscNum) {
-      case 1:
-        oscillator1.setVolume(volume);
-        break;
-      case 2:
-        oscillator2.setVolume(volume);
-        break;
-      case 3:
-        oscillator3.setVolume(volume);
-        break;
-    }
-
-    DEBUG_PRINT("[AUDIO] Oscillator ");
-    DEBUG_PRINT(oscNum);
-    DEBUG_PRINT(" volume set to ");
-    DEBUG_PRINTLN(volume);
-
-    xSemaphoreGive(paramMutex);
-  }
-}
-
-// Get waveform for specific oscillator
-Oscillator::Waveform AudioEngine::getOscillatorWaveform(int oscNum) {
-  // Validate oscillator number
-  if (oscNum < 1 || oscNum > 3) {
-    DEBUG_PRINT("[AUDIO] Invalid oscillator number: ");
-    DEBUG_PRINTLN(oscNum);
-    return Oscillator::OFF;
-  }
-
-  Oscillator::Waveform waveform = Oscillator::OFF;
-
-  // Thread-safe parameter read
-  if (paramMutex != NULL && xSemaphoreTake(paramMutex, portMAX_DELAY) == pdTRUE) {
-    switch (oscNum) {
-      case 1:
-        waveform = oscillator1.getWaveform();
-        break;
-      case 2:
-        waveform = oscillator2.getWaveform();
-        break;
-      case 3:
-        waveform = oscillator3.getWaveform();
-        break;
-    }
-
-    xSemaphoreGive(paramMutex);
-  }
-
-  return waveform;
-}
-
-// Get octave shift for specific oscillator
-int AudioEngine::getOscillatorOctave(int oscNum) {
-  // Validate oscillator number
-  if (oscNum < 1 || oscNum > 3) {
-    DEBUG_PRINT("[AUDIO] Invalid oscillator number: ");
-    DEBUG_PRINTLN(oscNum);
-    return 0;
-  }
-
-  int octave = 0;
-
-  // Thread-safe parameter read
-  if (paramMutex != NULL && xSemaphoreTake(paramMutex, portMAX_DELAY) == pdTRUE) {
-    switch (oscNum) {
-      case 1:
-        octave = oscillator1.getOctaveShift();
-        break;
-      case 2:
-        octave = oscillator2.getOctaveShift();
-        break;
-      case 3:
-        octave = oscillator3.getOctaveShift();
-        break;
-    }
-
-    xSemaphoreGive(paramMutex);
-  }
-
-  return octave;
-}
-
-// Get volume for specific oscillator
-float AudioEngine::getOscillatorVolume(int oscNum) {
-  // Validate oscillator number
-  if (oscNum < 1 || oscNum > 3) {
-    DEBUG_PRINT("[AUDIO] Invalid oscillator number: ");
-    DEBUG_PRINTLN(oscNum);
-    return 0.0;
-  }
-
-  float volume = 0.0;
-
-  // Thread-safe parameter read
-  if (paramMutex != NULL && xSemaphoreTake(paramMutex, portMAX_DELAY) == pdTRUE) {
-    switch (oscNum) {
-      case 1:
-        volume = oscillator1.getVolume();
-        break;
-      case 2:
-        volume = oscillator2.getVolume();
-        break;
-      case 3:
-        volume = oscillator3.getVolume();
-        break;
-    }
-
-    xSemaphoreGive(paramMutex);
-  }
-
-  return volume;
 }

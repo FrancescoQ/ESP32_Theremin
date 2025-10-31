@@ -24,6 +24,8 @@ static const int UPDATE_INTERVAL_MS = 5; // ms update interval in the main loop
 PerformanceMonitor performanceMonitor;
 
 // Create theremin instance (pass performance monitor for CPU tracking)
+// Used as "dependency injection" to allow monitoring also things that don't
+// belong to the Theremin.
 Theremin theremin(&performanceMonitor);
 
 #if ENABLE_OTA
