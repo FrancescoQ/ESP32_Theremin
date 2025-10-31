@@ -102,6 +102,14 @@ class Oscillator {
    */
   float getEffectiveFrequency() const;
 
+  /**
+   * Get normalized sample for modulation (LFO use)
+   * Returns value between -1.0 and 1.0 for use in effects
+   * @param sampleRate Sample rate in Hz
+   * @return Normalized sample value
+   */
+  float getNextSampleNormalized(float sampleRate);
+
  private:
   // Oscillator state
   float phase;        // Phase accumulator (0.0 - 1.0)

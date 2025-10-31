@@ -114,6 +114,11 @@ float Oscillator::getEffectiveFrequency() const {
   return calculateShiftedFrequency();
 }
 
+float Oscillator::getNextSampleNormalized(float sampleRate) {
+  int16_t sample = getNextSample(sampleRate);
+  return sample / 32768.0f;  // Convert int16_t to float -1.0 to 1.0
+}
+
 // Calculate frequency with octave shift applied
 float Oscillator::calculateShiftedFrequency() const {
   switch (octaveShift) {

@@ -575,9 +575,52 @@ void AudioEngine::generateAudioBuffer(uint8_t* buffer, size_t length) {
 
 ---
 
-## Phase C: ChorusEffect Implementation
+## Phase C: ChorusEffect Implementation (with Oscillator-Based LFO)
 
-### C.1 Create ChorusEffect Header
+**Design Decision:** The chorus effect uses the existing `Oscillator` class as its LFO instead of implementing a separate phase accumulator. This provides:
+- **Performance benefit**: Uses optimized sine LUT instead of sin() calls (~100x faster)
+- **Code reuse**: Leverages proven phase accumulator logic
+- **Architectural elegance**: LFO is conceptually an oscillator
+- **Future flexibility**: Easy to experiment with different LFO waveforms
+
+### C.1 Extend Oscillator Class for LFO Use
+
+**File:** `include/Oscillator.h`
+
+Add new method for normalized output (modulation use):
+
+```cpp
+public:
+    // ... existing methods ...
+
+    /**
+     * Get normalized sample for modulation (LFO use)
+     * Returns value between -1.0 and 1.0 for use in effects
+     * @param sampleRate Sample rate in Hz
+     * @return Normalized sample value
+     */
+    float getNextSampleNormalized(float sampleRate);
+```
+
+**File:** `src/Oscillator.cpp`
+
+Implementation (simple conversion):
+
+```cpp
+float Oscillator::getNextSampleNormalized(float sampleRate) {
+    int16_t sample = getNextSample(sampleRate);
+    return sample / 32768.0f;  // Convert int16_t to float -1.0 to 1.0
+}
+```
+
+**Tasks:**
+- [ ] Add `getNextSampleNormalized()` declaration to Oscillator.h
+- [ ] Implement `getNextSampleNormalized()` in Oscillator.cpp
+- [ ] Build and verify compilation
+
+---
+
+### C.2 Create ChorusEffect Header
 
 **File:** `include/ChorusEffect.h`
 
@@ -585,12 +628,15 @@ void AudioEngine::generateAudioBuffer(uint8_t* buffer, size_t length) {
 /*
  * ChorusEffect.h
  *
- * Chorus effect using modulated delay with LFO (Low Frequency Oscillator).
+ * Chorus effect using modulated delay with Oscillator-based LFO.
  * Creates thick, shimmering sound by pitch-shifting with sinusoidal modulation.
+ *
+ * Design: Uses Oscillator class as LFO for performance (sine LUT vs sin() calls).
  */
 
 #pragma once
 #include <Arduino.h>
+#include "Oscillator.h"  // Reuse Oscillator as LFO!
 
 class ChorusEffect {
 public:
@@ -642,7 +688,7 @@ public:
     /**
      * Get current settings
      */
-    float getRate() const { return lfoRateHz; }
+    float getRate() const;
     float getDepth() const { return lfoDepthMs; }
     float getMix() const { return wetDryMix; }
 
@@ -653,17 +699,10 @@ private:
 
     uint32_t sampleRate;
 
-    float lfoPhase;        // Current LFO phase (0.0 - 1.0)
-    float lfoRateHz;       // LFO frequency in Hz
+    Oscillator lfo;        // LFO using Oscillator class!
     float lfoDepthMs;      // Modulation depth in milliseconds
     float wetDryMix;       // Wet/dry mix
     bool enabled;
-
-    /**
-     * Get current LFO value (sinusoidal)
-     * @return Value between -1.0 and 1.0
-     */
-    float getLFOValue();
 
     /**
      * Read from delay buffer with fractional index (linear interpolation)
@@ -674,11 +713,11 @@ private:
 ```
 
 **Tasks:**
-- [ ] Create `include/ChorusEffect.h`
+- [ ] Create `include/ChorusEffect.h` with Oscillator-based LFO
 
 ---
 
-### C.2 Implement ChorusEffect
+### C.3 Implement ChorusEffect
 
 **File:** `src/ChorusEffect.cpp`
 
@@ -686,23 +725,25 @@ private:
 /*
  * ChorusEffect.cpp
  *
- * Implementation of chorus effect.
+ * Implementation of chorus effect with Oscillator-based LFO.
  */
 
 #include "ChorusEffect.h"
 #include "Debug.h"
-#include <math.h>
 #include <string.h>
 
 ChorusEffect::ChorusEffect(uint32_t sampleRate)
     : sampleRate(sampleRate),
-      lfoPhase(0.0f),
-      lfoRateHz(2.0f),       // Default 2 Hz
       lfoDepthMs(15.0f),     // Default 15ms
       wetDryMix(0.4f),       // Default 40% wet
       enabled(false),
       writeIndex(0),
       delayBuffer(nullptr) {
+
+    // Configure LFO (using Oscillator class!)
+    lfo.setWaveform(Oscillator::SINE);
+    lfo.setFrequency(2.0f);         // 2 Hz default
+    lfo.setVolume(1.0f);             // Full amplitude
 
     // Allocate buffer for max depth (50ms + safety margin)
     bufferSize = (size_t)((50.0f / 1000.0f) * sampleRate) + 100;
@@ -710,7 +751,7 @@ ChorusEffect::ChorusEffect(uint32_t sampleRate)
 
     reset();
 
-    DEBUG_PRINT("[CHORUS] Initialized: buffer size ");
+    DEBUG_PRINT("[CHORUS] Initialized with Oscillator-based LFO: buffer size ");
     DEBUG_PRINT(bufferSize);
     DEBUG_PRINT(" samples (");
     DEBUG_PRINT((bufferSize * sizeof(int16_t)) / 1024);
@@ -723,11 +764,6 @@ ChorusEffect::~ChorusEffect() {
         delayBuffer = nullptr;
     }
     DEBUG_PRINTLN("[CHORUS] Destroyed");
-}
-
-float ChorusEffect::getLFOValue() {
-    // Generate sine wave: sin(2π * phase)
-    return sin(2.0f * PI * lfoPhase);
 }
 
 int16_t ChorusEffect::readDelayBuffer(float delayInSamples) {
@@ -762,9 +798,11 @@ int16_t ChorusEffect::process(int16_t input) {
     // Write input to delay buffer
     delayBuffer[writeIndex] = input;
 
+    // Get LFO value (uses sine LUT, no sin() call!)
+    float lfoValue = lfo.getNextSampleNormalized(sampleRate);
+
     // Calculate modulated delay time
     // Center delay = depth, modulation = ±depth
-    float lfoValue = getLFOValue();  // -1.0 to 1.0
     float delayTimeMs = lfoDepthMs + (lfoValue * lfoDepthMs);
     float delayInSamples = (delayTimeMs / 1000.0f) * sampleRate;
 
@@ -783,12 +821,6 @@ int16_t ChorusEffect::process(int16_t input) {
     // Advance write pointer
     writeIndex = (writeIndex + 1) % bufferSize;
 
-    // Advance LFO phase
-    lfoPhase += lfoRateHz / sampleRate;
-    if (lfoPhase >= 1.0f) {
-        lfoPhase -= 1.0f;
-    }
-
     return (int16_t)output;
 }
 
@@ -803,11 +835,15 @@ void ChorusEffect::setRate(float hz) {
     if (hz < 0.1f) hz = 0.1f;
     if (hz > 10.0f) hz = 10.0f;
 
-    lfoRateHz = hz;
+    lfo.setFrequency(hz);  // Just delegate to Oscillator!
 
     DEBUG_PRINT("[CHORUS] Rate set to ");
-    DEBUG_PRINT(lfoRateHz);
+    DEBUG_PRINT(hz);
     DEBUG_PRINTLN(" Hz");
+}
+
+float ChorusEffect::getRate() const {
+    return lfo.getEffectiveFrequency();  // Use Oscillator's method
 }
 
 void ChorusEffect::setDepth(float ms) {
@@ -836,20 +872,20 @@ void ChorusEffect::reset() {
     if (delayBuffer != nullptr) {
         memset(delayBuffer, 0, bufferSize * sizeof(int16_t));
         writeIndex = 0;
-        lfoPhase = 0.0f;
+        // Note: No need to reset LFO phase - continuous modulation is fine
         DEBUG_PRINTLN("[CHORUS] Buffer cleared");
     }
 }
 ```
 
 **Tasks:**
-- [ ] Create `src/ChorusEffect.cpp`
-- [ ] Verify LFO math is correct
-- [ ] Check interpolation logic
+- [ ] Create `src/ChorusEffect.cpp` with Oscillator-based LFO
+- [ ] Verify interpolation logic
+- [ ] Build and test
 
 ---
 
-### C.3 Add Chorus to EffectsChain
+### C.4 Add Chorus to EffectsChain
 
 **Modifications to `include/EffectsChain.h`:**
 

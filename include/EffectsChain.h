@@ -7,7 +7,7 @@
 #pragma once
 #include <Arduino.h>
 #include "DelayEffect.h"
-// Future: #include "ChorusEffect.h"
+#include "ChorusEffect.h"
 // Future: #include "ReverbEffect.h"
 
 class EffectsChain {
@@ -17,11 +17,6 @@ public:
      * @param sampleRate Audio sample rate
      */
     EffectsChain(uint32_t sampleRate);
-
-    /**
-     * Destructor - cleans up effect instances
-     */
-    ~EffectsChain();
 
     /**
      * Process audio sample through effect chain
@@ -34,15 +29,15 @@ public:
      * Enable/disable individual effects
      */
     void setDelayEnabled(bool enabled);
-    // Future: void setChorusEnabled(bool enabled);
+    void setChorusEnabled(bool enabled);
     // Future: void setReverbEnabled(bool enabled);
 
     /**
      * Get effect instances (for parameter control)
      */
-    DelayEffect* getDelay() { return delay; }
-    // Future: ChorusEffect* getChorus() { return chorus; }
-    // Future: ReverbEffect* getReverb() { return reverb; }
+    DelayEffect* getDelay() { return &delay; }
+    ChorusEffect* getChorus() { return &chorus; }
+    // Future: ReverbEffect* getReverb() { return &reverb; }
 
     /**
      * Reset all effect buffers
@@ -53,13 +48,13 @@ public:
      * Get effect enable states
      */
     bool isDelayEnabled() const;
-    // Future: bool isChorusEnabled() const;
+    bool isChorusEnabled() const;
     // Future: bool isReverbEnabled() const;
 
 private:
     uint32_t sampleRate;
 
-    DelayEffect* delay;
-    // Future: ChorusEffect* chorus;
-    // Future: ReverbEffect* reverb;
+    DelayEffect delay;
+    ChorusEffect chorus;
+    // Future: ReverbEffect reverb;
 };

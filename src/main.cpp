@@ -82,6 +82,9 @@ void setup() {
       DEBUG_PRINTLN("[OTA] Failed to start OTA manager");
     }
   #endif
+
+  theremin.getAudioEngine()->getEffectsChain()->setDelayEnabled(true);
+  theremin.getAudioEngine()->getEffectsChain()->setChorusEnabled(true);
 }
 
 void loop() {
