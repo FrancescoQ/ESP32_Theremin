@@ -17,10 +17,47 @@ AudioEngine::AudioEngine(PerformanceMonitor* perfMon)
       audioTaskHandle(NULL),
       paramMutex(NULL),
       taskRunning(false),
+      effectsChain(nullptr),
       performanceMonitor(perfMon) {
 
   // Create mutex for thread-safe parameter updates
   paramMutex = xSemaphoreCreateMutex();
+
+  // Create effects chain
+  // NOTE: Allocated on heap (using 'new') rather than as direct member for:
+  // 1. Didactic purpose - demonstrates heap allocation pattern with pointers
+  // 2. Future flexibility - easy to make effects optional (conditional creation)
+  // 3. Explicit about size - clear that EffectsChain is large (~13 KB)
+  //
+  // Alternative approach: Could be direct member (EffectsChain effectsChain;)
+  // since AudioEngine is global (lives in static data, not function stack).
+  // Both approaches use same total RAM, just different memory locations.
+  // The heap approach is more common for large/optional components in practice.
+  effectsChain = new EffectsChain(SAMPLE_RATE);
+  DEBUG_PRINTLN("[AUDIO] Effects chain created");
+}
+
+// Destructor
+// Note: Never called in practice (AudioEngine lives until power-off),
+// but included as C++ best practice (RAII) for proper resource cleanup.
+// See AudioEngine.h for detailed explanation.
+AudioEngine::~AudioEngine() {
+  // Stop audio task first (safety)
+  stopAudioTask();
+
+  // Clean up effects chain (frees ~13 KB delay buffer)
+  if (effectsChain != nullptr) {
+    delete effectsChain;
+    effectsChain = nullptr;
+  }
+
+  // Delete mutex (FreeRTOS resource)
+  if (paramMutex != NULL) {
+    vSemaphoreDelete(paramMutex);
+    paramMutex = NULL;
+  }
+
+  DEBUG_PRINTLN("[AUDIO] AudioEngine destroyed");
 }
 
 // Default settings.
@@ -342,6 +379,11 @@ void AudioEngine::generateAudioBuffer() {
 
     // Apply amplitude scaling
     int16_t scaledSample = (int16_t)(sample * gain);
+
+    // Process through effects chain
+    if (effectsChain != nullptr) {
+      scaledSample = effectsChain->process(scaledSample);
+    }
 
     // Convert signed 16-bit to unsigned 8-bit for DAC:
     // 1. Take upper 8 bits (>> DAC_BIT_SHIFT): -32768..32767 → -128..127

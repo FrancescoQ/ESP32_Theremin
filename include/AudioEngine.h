@@ -13,6 +13,7 @@
 #include <freertos/task.h>
 #include "PinConfig.h"
 #include "Oscillator.h"
+#include "EffectsChain.h"
 
 // Forward declaration to avoid circular dependency
 class PerformanceMonitor;
@@ -70,6 +71,32 @@ class AudioEngine {
    * @param perfMon Pointer to PerformanceMonitor instance (optional)
    */
   AudioEngine(PerformanceMonitor* perfMon = nullptr);
+
+  /**
+   * Destructor - cleans up effects chain and FreeRTOS resources
+   *
+   * NOTE: In practice, this destructor is never called in the current design.
+   * AudioEngine is created once at startup in main() and lives until the ESP32
+   * loses power. However, this destructor exists as a C++ best practice for:
+   *
+   * 1. RAII (Resource Acquisition Is Initialization) pattern compliance:
+   *    RAII is a C++ idiom where resource lifetime is tied to object lifetime.
+   *    Constructor acquires resources (allocates memory, creates mutex, starts task),
+   *    Destructor releases resources (frees memory, deletes mutex, stops task).
+   *    This makes resource management automatic and prevents leaks by design.
+   *    Even if never called, having a destructor documents what resources are owned
+   *    and ensures cleanup happens correctly if the object lifetime ever changes.
+   *
+   * 2. Future-proofing (in case AudioEngine is later used dynamically)
+   * 3. Self-documenting cleanup requirements (shows what resources are owned)
+   * 4. Testing/debugging (allows clean create/destroy cycles in unit tests)
+   *
+   * Without this destructor, EffectsChain (and its ~13KB delay buffer) would
+   * leak if AudioEngine were ever destroyed, and FreeRTOS resources would remain
+   * allocated. While this doesn't matter in the embedded single-instance context,
+   * it's good practice to make resource ownership and cleanup explicit.
+   */
+  ~AudioEngine();
 
   /**
    * Initialize audio hardware (must be called in setup())
@@ -192,6 +219,11 @@ class AudioEngine {
     return currentAmplitude;
   }
 
+  /**
+   * Get effects chain for parameter control
+   */
+  EffectsChain* getEffectsChain() { return effectsChain; }
+
   // Audio range constants (A3 to A5, 2 octaves)
   static const int MIN_FREQUENCY = 220;  // A3
   static const int MAX_FREQUENCY = 880;  // A5
@@ -234,6 +266,9 @@ class AudioEngine {
   Oscillator oscillator1;
   Oscillator oscillator2;
   Oscillator oscillator3;
+
+  // Effects chain
+  EffectsChain* effectsChain;
 
   // FreeRTOS task management
   TaskHandle_t audioTaskHandle;
