@@ -62,19 +62,25 @@ void setup() {
   // Initialize performance monitoring
   performanceMonitor.begin();
 
-  // Run system test
-  theremin.getAudioEngine()->systemTest();
-  theremin.getAudioEngine()->playStartupSound();
-  delay(500);
+    // Run system test (if enabled)
+  #if ENABLE_STARTUP_TEST
+    theremin.getAudioEngine()->systemTest();
+  #endif
 
-#if ENABLE_OTA
-  // Initialize OTA manager
-  if (ota.begin("admin", "theremin")) {
-    DEBUG_PRINTLN("[OTA] OTA updates enabled");
-  } else {
-    DEBUG_PRINTLN("[OTA] Failed to start OTA manager");
-  }
-#endif
+    // Play startup sound (if enabled)
+  #if ENABLE_STARTUP_SOUND
+    theremin.getAudioEngine()->playStartupSound();
+    delay(500);
+  #endif
+
+  #if ENABLE_OTA
+    // Initialize OTA manager
+    if (ota.begin("admin", "theremin")) {
+      DEBUG_PRINTLN("[OTA] OTA updates enabled");
+    } else {
+      DEBUG_PRINTLN("[OTA] Failed to start OTA manager");
+    }
+  #endif
 }
 
 void loop() {
