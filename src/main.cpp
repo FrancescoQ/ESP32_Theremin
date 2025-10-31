@@ -12,7 +12,6 @@
 #include "Theremin.h"
 #include "PinConfig.h"
 #include "PerformanceMonitor.h"
-#include "DelayEffect.h"
 
 #if ENABLE_OTA
 #include "OTAManager.h"
