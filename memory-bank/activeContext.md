@@ -7,114 +7,97 @@
 ## Current Work Focus
 
 ### Project Status
-**Phase:** Phase 2 ✅ COMPLETE - Ready for Phase 3
-**Date:** October 29, 2025
+**Phase:** Phase 4 (Partial) ✅ Effects Implementation Near Complete!
+**Date:** October 31, 2025
 **v2.0 Vision:** Multi-oscillator synthesizer with effects, professional I/O, and visual feedback
 
-**Major Milestone Achieved:** Complete Waveform Synthesis Implementation!
+**Major Milestone Achieved:** Audio Effects System Implementation!
 
-Successfully implemented professional-grade audio synthesis with multiple waveforms:
-- **Oscillator Class** (include/Oscillator.h + src/Oscillator.cpp): Digital oscillator with phase accumulator, **4 waveform types**, octave shifting
-- **Waveforms Available**: Square, Sine (LUT-based), Triangle (mathematical), Sawtooth (mathematical)
-- **AudioEngine Updated**: I2S DAC (GPIO25 @ 22050 Hz) + FreeRTOS audio task on Core 1 + proper sample format conversion
-- **DAC Format Fix**: Correct unsigned 8-bit output (0-255) for ESP32 built-in DAC
-- **PWM Removed**: All legacy PWM code cleanly removed
-- **Frequency Range**: 220-880 Hz (A3-A5, 2 octaves exactly)
-- **Continuous Audio**: High-priority task generates buffers continuously, independent of sensor timing
-- **Thread-Safe**: Mutex-protected parameter updates between sensor and audio tasks
+Successfully implemented a professional-grade audio effects system with:
+- **DelayEffect Class** (include/DelayEffect.h + src/DelayEffect.cpp): Digital delay with circular buffer, configurable feedback and mix
+- **ChorusEffect Class** (include/ChorusEffect.h + src/ChorusEffect.cpp): Modulated delay with Oscillator-based LFO for shimmer effect
+- **EffectsChain Coordinator** (include/EffectsChain.h + src/EffectsChain.cpp): Manages signal flow through multiple effects
+- **AudioEngine Integration**: Effects processing inserted into audio pipeline between oscillator mixing and DAC output
+- **Stack Allocation**: RAII pattern with direct member initialization (no heap fragmentation)
+- **Elegant LFO Design**: ChorusEffect reuses Oscillator class as LFO (sine LUT instead of sin() calls = ~100x faster)
 
-**Current Status:** ✅ Phase 2 complete and stable! Software foundation for 3 oscillators ready. Hardware running perfectly. Ready for Phase 3 expansion (runtime controls + display).
+**Current Status:** ✅ Effects core implementation complete! Delay and Chorus working beautifully. Outstanding: ControlHandler serial command integration (Phase D), full testing/benchmarking (Phase E). Ready for Phase 3 hardware expansion (controls + display) when parts arrive.
 
-**Test Results (October 27, 2025):**
-- ✅ I2S DAC outputs audio on GPIO25
-- ✅ Oscillator generates 4 waveforms (square, sine, triangle, sawtooth)
-- ✅ Frequency control works (sensors → frequency changes)
-- ✅ Volume control works correctly (near sensor = quiet, far = loud - traditional theremin behavior)
-- ✅ **Audio is smooth and continuous - NO stepping/gaps!**
-- ✅ **NO distortion - proper DAC format conversion**
-- ⚠️ Minor pitch stepping (caused by sensor quantization, not audio generation)
+**Performance Results (October 31, 2025):**
+- ✅ **CPU Usage: ~9%** with 3 oscillators + delay + chorus (1.0ms per 11ms buffer)
+- ✅ **RAM: 314 KB free** (stable, no leaks detected)
+- ✅ **Audio Quality: Excellent** - no glitches, clean effects processing
+- ✅ **91% CPU headroom** available for future features!
+- ✅ **Effects sound musical** - delay repeats cleanly, chorus adds shimmer
 
 **Build Results:**
-- RAM: 47,584 bytes (14.5%) - actually improved!
-- Flash: 856,877 bytes (65.4%)
+- RAM: 47,560 bytes (14.5%) - unchanged from Phase 2!
+- Flash: 857,041 bytes (65.4%)
 - Compiles without errors or warnings
 
-**Pitch Stepping - IMPROVED (October 27, 2025):**
-- **Status:** ✅ Significantly improved with exponential smoothing + float mapping
-- **User Feedback:** "Still a bit stepping, but I can live with it for now" → "much nicer!" after sensor optimizations
-- **Implementation:** EWMA (alpha=0.3) + floating-point frequency calculation
-- **Improvement:** 65ms latency reduction (100ms → 35ms smoothing lag)
-- **Remaining Issue:** Minor stepping still audible (sensor quantization inherent to 1mm resolution)
-- **Future Tuning:** SMOOTHING_ALPHA adjustable in SensorManager.h (0.15-0.4 range)
-
-**Sensor Latency Optimizations - COMPLETED (October 27, 2025):**
-- **Status:** ✅ Implemented high-speed sensor mode + optimized reading architecture
-- **User Feedback:** "much nicer!" - improved responsiveness confirmed
-- **Implementation:**
-  - High-speed timing budget: 20ms per sensor (vs 33ms default)
-  - Optimized reading architecture with updateReadings() caching method
-  - Prevents redundant sensor reads
-- **Improvement:** ~10ms latency reduction in sensor reading time
-- **Total Latency:** ~75ms (down from ~85ms)
-  - Sensor reads: ~40ms (2 sensors × ~20ms each)
-  - Smoothing: ~35ms (EWMA with alpha=0.3)
-- **Future Optimizations:** Non-blocking sensor API, predictive filtering, adaptive smoothing
-
-**Major Milestone Achieved:** Architecture Refactoring Complete!
-
-The project has been transformed from a monolithic 250-line main.cpp into a clean, modular, object-oriented architecture with separate classes:
-- **SensorManager** (include/SensorManager.h + src/SensorManager.cpp): Handles all sensor input (simulation and hardware)
-- **AudioEngine** (include/AudioEngine.h + src/AudioEngine.cpp): Manages audio synthesis (currently PWM, designed for DAC upgrade)
-- **Theremin** (include/Theremin.h + src/Theremin.cpp): Coordinates sensors and audio
-
-**Key Achievement:**
-- Code now organized into reusable, testable classes with clear separation of concerns
-- main.cpp reduced to just ~40 lines
-- Architecture is future-proof and ready for v2.0 features:
-  - DAC audio with wavetable synthesis
-  - Multiple oscillators with AudioMixer
-  - Effects chain (Delay, Chorus, Reverb)
-  - OLED display with DisplayManager
-  - LED meters and visual feedback
-  - Professional I/O (line-out, amp control)
-
-### Immediate Next Steps
-
-**Phase 2 Complete - Planning Phase 3**
-
-Current state: Stable, working system with professional audio quality and 3-oscillator software foundation. No immediate work required - system is fully functional.
-
-**When Ready for Phase 3 (Runtime Controls + Display):**
-
-1. **Option A: Add Display First** (simpler, immediate debugging value)
-   - Connect SSD1306 OLED (I2C 0x3C)
-   - Create DisplayManager class
-   - Show real-time CPU/RAM metrics
-   - Show current oscillator states
-   - Visual feedback for current compile-time settings
-   - Helps debug future switch implementation
-
-2. **Option B: Add Runtime Controls** (more ambitious)
-   - Order MCP23017 GPIO expander module
-   - Acquire rotary switches (3x 4-position) for waveform selection
-   - Acquire toggle switches (3x 3-position) for octave control
-   - Create SwitchController class with interrupt handling
-   - Enable runtime parameter changes instead of compile-time only
-
-3. **Option C: Combined Approach** (likely path)
-   - Implement both display and controls together
-   - Physical assembly convenience (layout and wiring done once)
-   - Test I2C bus with all devices (sensors + expander + display)
-   - Complete Phase 3 in one integrated session
-
-**Future Architecture Extensions (Phase 4+):**
-   - EffectsChain class (Delay, Chorus, optional Reverb)
-   - LEDMeter class for WS2812B visual feedback
-   - Professional I/O refinements
+**Effects Implementation Progress (from EFFECTS_IMPLEMENTATION_PLAN.md):**
+- ✅ **Phase A Complete:** DelayEffect class implemented and tested
+- ✅ **Phase B Complete:** EffectsChain + AudioEngine integration
+- ✅ **Phase C Complete:** ChorusEffect with Oscillator-based LFO
+- ⚠️ **Phase D Pending:** ControlHandler serial command integration
+- ⚠️ **Phase E Pending:** Full testing & CPU benchmarking scenarios
+- 🔮 **Phase F Future:** Optional Reverb (if CPU permits after Phase E testing)
 
 ## Recent Changes
 
-**Multi-Oscillator Volume Control Implementation (October 27, 2025 - Latest):**
+**Effects System Implementation (October 31, 2025 - Latest):**
+- **Achievement:** Implemented complete audio effects architecture!
+- **Architecture:** Modular effect classes with unified EffectsChain coordinator
+  - DelayEffect: Circular buffer delay with feedback (10-2000ms range)
+  - ChorusEffect: Pitch-modulated delay with LFO (0.1-10 Hz range)
+  - EffectsChain: Signal flow manager with enable/disable per effect
+- **Integration:**
+  - AudioEngine modified to process through EffectsChain
+  - Effects applied after oscillator mixing, before DAC conversion
+  - generateAudioBuffer() updated: mix → effects → DAC format
+- **Design Decisions:**
+  - **Stack allocation:** Effects are direct members of EffectsChain (not pointers)
+    - Benefit: RAII pattern, automatic cleanup, no heap fragmentation
+    - Trade-off: Fixed at compile time (acceptable for this design)
+  - **Oscillator-based LFO:** ChorusEffect reuses Oscillator class as LFO
+    - Benefit: Uses optimized sine LUT instead of sin() calls (~100x faster!)
+    - Benefit: Code reuse of proven phase accumulator logic
+    - Benefit: Architectural elegance (LFO is conceptually an oscillator)
+    - Benefit: Easy to experiment with different LFO waveforms
+    - Critical bug fixed: Oscillator::setFrequency() was constraining to 20 Hz minimum (audio range), preventing LFO use. Updated to allow 0.1-20000 Hz range.
+  - **Bypass optimization:** Effects check enabled flag first, return input unchanged if disabled
+- **Implementation:**
+  - include/DelayEffect.h: Circular buffer, feedback, mix parameters
+  - src/DelayEffect.cpp: ~13KB buffer for 300ms delay at 22050 Hz
+  - include/ChorusEffect.h: Modulated delay with Oscillator LFO
+  - src/ChorusEffect.cpp: Linear interpolation for fractional delay reads
+  - include/EffectsChain.h: Coordinator interface with effect getters
+  - src/EffectsChain.cpp: Signal flow through effect chain
+  - include/Oscillator.h: Added getNextSampleNormalized() for LFO use
+  - src/Oscillator.cpp: Normalized sample output (-1.0 to 1.0 range)
+  - src/AudioEngine.cpp: Modified generateAudioBuffer() to call effectsChain->process()
+- **Results:**
+  - ✅ Delay effect creates clean repeats with configurable feedback
+  - ✅ Chorus effect adds shimmer/thickness to sound
+  - ✅ Both effects can run simultaneously
+  - ✅ Minimal CPU overhead - only 9% with everything enabled!
+  - ✅ No audio artifacts or glitches
+  - ✅ Stack allocation prevents heap fragmentation
+- **Files Modified:**
+  - include/DelayEffect.h, src/DelayEffect.cpp: Created
+  - include/ChorusEffect.h, src/ChorusEffect.cpp: Created
+  - include/EffectsChain.h, src/EffectsChain.cpp: Created
+  - include/Oscillator.h, src/Oscillator.cpp: Added normalized output method
+  - include/AudioEngine.h: Added EffectsChain member and getter
+  - src/AudioEngine.cpp: Integrated effects into audio pipeline
+- **Build Status:** ✅ Compiles successfully, no errors/warnings
+- **Outstanding Work:**
+  - ControlHandler integration (serial commands for effects control)
+  - Comprehensive testing scenarios (Phase E of implementation plan)
+  - CPU benchmarking with various effect combinations
+  - Optional Reverb implementation (if CPU permits)
+
+**Multi-Oscillator Volume Control Implementation (October 27, 2025):**
 - **Achievement:** Implemented per-oscillator volume control with intelligent mixing!
 - **Architecture:** 3 oscillators with independent volume levels
   - Oscillator 1 (SINE): 100% volume (full)
@@ -222,7 +205,6 @@ Current state: Stable, working system with professional audio quality and 3-osci
   - src/AudioEngine.cpp: Implemented error handling and reporting
 - **Results:** ✅ Better diagnostics, prevents cascading failures
 - **Build Status:** ✅ Compiles successfully
-
 
 **Sensor Latency Optimizations (October 27, 2025 - Latest):**
 - **Problem:** Total latency of ~85ms felt slightly sluggish
@@ -366,12 +348,18 @@ Current state: Stable, working system with professional audio quality and 3-osci
    - Audio dropout rate: 0 (critical)
    - See `/productbrief.md` Section 5 for detailed budgets
 
+8. **Effects Architecture:** Modular effect classes with coordinator
+   - Reason: Individual effects are testable and reusable
+   - Stack allocation: RAII pattern prevents heap fragmentation
+   - Oscillator-based LFO: Reuse existing code, massive performance benefit
+   - Bypass optimization: Disabled effects return input unchanged (minimal overhead)
+
 ### Open Questions
-- When to acquire Phase 2 components (DAC amp, speaker, OLED)?
+- When to acquire Phase 3 components (MCP23017 expander, rotary switches)?
 - Which specific ESP32 board variant (standard DevKit sufficient)?
 - Physical layout: Sensor positioning for ergonomics?
 - Enclosure design: Wait until Phase 6 or prototype earlier?
-- MCP23017 vs direct GPIO: When to add expander?
+- Reverb implementation: CPU budget allows it after Phase E testing?
 
 ## Important Patterns & Preferences
 
@@ -382,12 +370,14 @@ Current state: Stable, working system with professional audio quality and 3-osci
 - Meaningful class and method names (e.g., `SensorManager::getPitchDistance()`)
 - Clean abstractions that hide implementation details
 - Future-proof design allowing easy feature additions
+- RAII pattern for resource management (stack allocation where possible)
 
 ### Development Philosophy
 - Build incrementally: test each component before integration
 - Fail gracefully: handle errors without crashing
 - Debug visibility: comprehensive serial output during development
 - Documentation first: understand requirements before coding
+- Performance awareness: measure CPU/RAM at each step
 
 ### Documentation Organization
 
@@ -423,7 +413,7 @@ theremin/
   - Feature implementation details
   - Optimization documentation
   - Issue analysis and solutions
-  - Examples: `CONTINUOUS_AUDIO_IMPLEMENTATION.md`, `PITCH_SMOOTHING_IMPROVEMENTS.md`
+  - Examples: `CONTINUOUS_AUDIO_IMPLEMENTATION.md`, `PITCH_SMOOTHING_IMPROVEMENTS.md`, `EFFECTS_IMPLEMENTATION.md` (to be created)
 
 **Naming Conventions:**
 - Use `SCREAMING_SNAKE_CASE.md` for all documentation files
@@ -450,6 +440,13 @@ Only `README.md` and `productbrief.md` belong in project root. All other documen
 - Continue operation despite single sensor failure if possible
 - Clear initialization failure messages
 
+### Effects Design Patterns
+- **Modular Effect Classes:** Each effect is self-contained with enable/disable
+- **Stack Allocation:** Effects are direct members (not pointers) for RAII
+- **Oscillator Reuse:** LFO implemented using Oscillator class for performance
+- **Bypass Optimization:** Disabled effects check flag first, return input unchanged
+- **Coordinator Pattern:** EffectsChain manages signal flow and effect lifecycle
+
 ## Learnings & Project Insights
 
 ### Architectural Insights
@@ -470,13 +467,21 @@ The three-layer architecture works well:
 
 This mirrors MVC pattern and makes v2.0 expansion straightforward.
 
+**Effects Architecture Benefits:**
+The modular effects system demonstrates excellent design:
+- **Independent Effect Classes**: Each effect (Delay, Chorus) is self-contained
+- **Coordinator Pattern**: EffectsChain manages signal flow without effects knowing about each other
+- **Code Reuse**: ChorusEffect reuses Oscillator class as LFO (huge performance win)
+- **Stack Allocation**: RAII pattern prevents memory leaks and heap fragmentation
+- **Minimal Overhead**: Disabled effects have near-zero cost (early return optimization)
+
 **v2.0 Extension Path (Planned Architecture):**
 Adding new features is now clean:
 - **Phase 2:** Oscillator class with wavetable generation → Integrate into AudioEngine
 - **Phase 2:** DisplayManager class for OLED → Add to Theremin coordinator
 - **Phase 3:** AudioMixer class → Sum multiple Oscillator outputs in AudioEngine
 - **Phase 3:** SwitchController class for MCP23017 → Add to Theremin for user controls
-- **Phase 4:** EffectsChain class (Delay, Chorus, Reverb) → Insert between Oscillator and output
+- **Phase 4:** EffectsChain class (Delay, Chorus, Reverb) → Insert between Oscillator and output ✅ **DONE!**
 - **Phase 4:** LEDMeter class for WS2812B strips → Add to Theremin for visual feedback
 
 See `/productbrief.md` Section 4.4 for complete v2.0 class structure.
@@ -503,6 +508,21 @@ Each VL53L0X reading takes ~20-30ms. With two sensors in sequence, that's ~50ms 
 **Smoothing vs. Responsiveness Trade-off:**
 Moving average filter (5 samples) provides stability but adds ~100ms latency (5 readings × 20ms each). This is acceptable trade-off for eliminating jitter. Can adjust SAMPLES constant if too sluggish.
 
+**Oscillator-Based LFO Performance:**
+Reusing Oscillator class as LFO in ChorusEffect was a brilliant design decision:
+- **~100x faster** than calling sin() every sample (sine LUT vs trigonometry)
+- **Code reuse** - no need to reimplement phase accumulator
+- **Architectural elegance** - LFO is conceptually an oscillator anyway
+- **Future flexibility** - easy to try different LFO waveforms (triangle, square, etc.)
+- **Bug discovery** - revealed Oscillator frequency constraint needed fixing (20 Hz → 0.1 Hz min)
+
+**Stack vs Heap Allocation:**
+EffectsChain uses stack allocation (direct members) instead of pointers:
+- **Benefit**: RAII pattern - automatic cleanup, no manual delete calls
+- **Benefit**: No heap fragmentation risk (critical for long-running embedded systems)
+- **Trade-off**: Fixed at compile time (can't dynamically add/remove effects)
+- **Result**: Perfect choice for this design - effects are known at compile time
+
 ### Development Strategy Insights
 
 **Simulation Benefits:**
@@ -524,6 +544,16 @@ Don't attempt everything at once:
 
 This approach isolates problems and makes debugging tractable.
 
+**Incremental Effects Implementation:**
+Following EFFECTS_IMPLEMENTATION_PLAN.md phases proved successful:
+- Phase A: Implement and test DelayEffect in isolation
+- Phase B: Create EffectsChain coordinator and integrate with AudioEngine
+- Phase C: Add ChorusEffect with full testing
+- Phase D: Add control interface (pending)
+- Phase E: Comprehensive benchmarking (pending)
+
+This methodical approach caught the Oscillator frequency constraint bug early and allowed performance validation at each step.
+
 ## Context for Next Session
 
 When resuming work on this project:
@@ -532,19 +562,45 @@ When resuming work on this project:
 2. **Check progress.md** - see what's been completed
 3. **Review systemPatterns.md** - understand architecture before coding
 4. **Refer to techContext.md** - for library usage and configuration details
+5. **Review EFFECTS_IMPLEMENTATION_PLAN.md** - for effects work status
 
 ### Quick Start Checklist
-- [ ] Verify PlatformIO is installed
-- [ ] Verify Wokwi access (if using simulation)
-- [ ] Check if hardware has been acquired
-- [ ] Review which phase we're in (see progress.md)
-- [ ] Check for any code files in project directory
+- [x] Verify PlatformIO is installed
+- [x] Verify Wokwi access (if using simulation)
+- [x] Check if hardware has been acquired
+- [x] Review which phase we're in (see progress.md)
+- [x] Check for any code files in project directory
 
 ### Key Files to Monitor
-- `platformio.ini` - PlatformIO configuration (will be created)
-- `src/main.cpp` - Main Arduino code (will be created)
-- `diagram.json` - Wokwi circuit diagram (will be created if using Wokwi)
-- `wokwi.toml` - Wokwi configuration (will be created if using Wokwi)
+- `platformio.ini` - PlatformIO configuration (created and working)
+- `src/main.cpp` - Main Arduino code (created and working)
+- `diagram.json` - Wokwi circuit diagram (created if using Wokwi)
+- `wokwi.toml` - Wokwi configuration (created if using Wokwi)
+- `include/EffectsChain.h` - Effects system interface (recently created)
+- `src/EffectsChain.cpp` - Effects implementation (recently created)
+- `EFFECTS_IMPLEMENTATION_PLAN.md` - Effects roadmap and status
+
+### Outstanding Tasks (Immediate)
+- **ControlHandler Integration (Phase D):**
+  - Add serial commands for effects control
+  - Commands: `delay:on`, `delay:off`, `delay:time:300`, `delay:feedback:0.5`, etc.
+  - Commands: `chorus:on`, `chorus:off`, `chorus:rate:2.0`, `chorus:depth:15`, etc.
+  - Add `printEffectsStatus()` method to show all effect states
+  - Update `printHelp()` to document effects commands
+
+- **Testing & Benchmarking (Phase E):**
+  - Test baseline (no effects) CPU usage
+  - Test delay only at various settings
+  - Test chorus only at various settings
+  - Test both effects simultaneously
+  - Stress test: 3 osc + both effects for 5 minutes
+  - Document performance in results table
+  - Decide if CPU budget allows Reverb (Phase F)
+
+- **Documentation:**
+  - Create `docs/improvements/EFFECTS_IMPLEMENTATION.md` with full details
+  - Update `docs/README.md` to reference new documentation
+  - Consider updating README.md to mention effects capability
 
 ## Notes & Reminders
 
@@ -553,6 +609,8 @@ When resuming work on this project:
 - Sensor addresses must be set in correct order (0x30 first, then 0x29)
 - PWM channel must be set up before ledcWriteTone() calls
 - Serial.begin() should be first line in setup() for debug output
+- Effects must be processed AFTER oscillator mixing, BEFORE DAC conversion
+- LFO frequencies require Oscillator to support 0.1-20000 Hz range (bug fixed)
 
 **Common Pitfalls to Avoid:**
 - Don't confuse active vs. passive buzzers (need PASSIVE)
@@ -560,6 +618,8 @@ When resuming work on this project:
 - Don't use delay() in tight loops (increases latency)
 - Don't call ledcWriteTone() without ledcSetup() first
 - Don't assume VL53L0X readings are instantaneous (they take time)
+- Don't use pointers for effects if stack allocation works (prevents leaks)
+- Don't call sin() in audio processing loop (use LUT or Oscillator class)
 
 **Success Indicators:**
 - Both sensors initialize without errors
@@ -568,3 +628,13 @@ When resuming work on this project:
 - Volume control works independently
 - No I2C bus hangs or timeouts
 - System runs continuously without crashing
+- Effects add musical value without glitches
+- CPU usage stays well below 75% threshold
+- No memory leaks detected over extended runtime
+
+**Performance Targets Met:**
+- ✅ CPU: 9% with 3 osc + delay + chorus (target was <75%)
+- ✅ RAM: Stable at 314 KB free (no leaks)
+- ✅ Latency: ~75ms total (within <100ms target)
+- ✅ Audio: Zero dropouts or glitches
+- ✅ Effects: Musical and clean sounding

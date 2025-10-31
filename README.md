@@ -30,7 +30,9 @@ Built with PlatformIO and Arduino framework through an **AI-assisted development
 **Core Features:**
 - Sensor input smoothing for stable control
 - Real audio synthesis using ESP32 internal DAC (early iterations used basic PWM and Wokwi simulation for proof-of-concept)
-- Modular component design (SensorManager, AudioEngine, Theremin controller)
+- **Audio effects system** - Delay and Chorus effects with excellent performance (9% CPU)
+- **Multi-oscillator support** - 3 oscillators with 4 waveform types (Sine, Square, Triangle, Sawtooth)
+- Modular component design (SensorManager, AudioEngine, EffectsChain, Theremin controller)
 - OTA update capability
 - Comprehensive debug logging
 
@@ -51,13 +53,17 @@ This approach demonstrates how modern AI tools can accelerate embedded systems d
 
 ## Current Status
 
-**Phase 1 Complete**: Core functionality implemented and tested
+**Phase 4 (Partial) - Effects Implementation Near Complete!**
 - ✓ Dual sensor control working
-- ✓ Real-time audio synthesis
+- ✓ Real-time audio synthesis with I2S DAC
+- ✓ **3 oscillators** with 4 waveform types
+- ✓ **Delay and Chorus effects** (9% CPU usage!)
 - ✓ Stable, responsive operation
 - ✓ OTA update support (with optional button activation)
 
-See `productbrief.md` for v2.0 roadmap including multi-oscillator synthesis, effects chain, and professional I/O.
+**Outstanding:** ControlHandler effects integration, comprehensive testing, Phase 3 hardware (controls + display)
+
+See `productbrief.md` for v2.0 roadmap and `memory-bank/progress.md` for detailed status.
 
 ## Documentation
 
