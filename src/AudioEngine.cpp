@@ -158,49 +158,79 @@ void AudioEngine::systemTest() {
   DEBUG_PRINTLN("\n[TEST] Starting system test...");
 
   // Test configuration: single oscillator with clear tones
-  setFrequency(440);  // A4 - concert pitch
-  setAmplitude(40);   // 50% volume
+  setFrequency(NOTE_A4);
+  const int testAmplitude = 40;
+  setAmplitude(testAmplitude);
 
   // Turn off oscillators 2 and 3 for clarity
   setOscillatorWaveform(2, Oscillator::OFF);
   setOscillatorWaveform(3, Oscillator::OFF);
 
   // Test 1: Default configuration (oscillator 1, sine wave)
-  DEBUG_PRINTLN("[TEST] Test 1: Default oscillator 1 (sine, base octave, 100% volume)");
-  setOscillatorWaveform(1, Oscillator::SINE);
-  setOscillatorOctave(1, Oscillator::OCTAVE_BASE);
-  setOscillatorVolume(1, 1.0);
-  delay(1500);
+  DEBUG_PRINTLN("[TEST] Test 1: Default settings");
+  setDefaultSettings();
+  delay(1000);
+
+  setAmplitude(0);
+  delay(500);
+  setAmplitude(testAmplitude);
 
   // Test 2: Waveform change
   DEBUG_PRINTLN("[TEST] Test 2: Changing waveforms");
   setOscillatorWaveform(1, Oscillator::TRIANGLE);
   delay(1000);
+  setAmplitude(0);
+  delay(500);
+  setAmplitude(testAmplitude);
   setOscillatorWaveform(1, Oscillator::SAW);
   delay(1000);
+  setAmplitude(0);
+  delay(500);
+  setAmplitude(testAmplitude);
   setOscillatorWaveform(1, Oscillator::SQUARE);
   delay(1000);
+  setAmplitude(0);
+  delay(500);
+  setAmplitude(testAmplitude);
   setOscillatorWaveform(1, Oscillator::SINE);
   delay(1000);
+  setAmplitude(0);
+  delay(500);
+  setAmplitude(testAmplitude);
 
   // Test 3: Octave shift up
-  DEBUG_PRINTLN("[TEST] Test 3: Shifting up one octave");
+  DEBUG_PRINTLN("[TEST] Test 3: Shifting up/down one octave");
   setOscillatorOctave(1, Oscillator::OCTAVE_UP);
-  delay(1500);
+  delay(1000);
 
   setOscillatorOctave(1, Oscillator::OCTAVE_DOWN);
-  delay(1500);
+  delay(1000);
 
   // Test 4: Volume reduction
-  DEBUG_PRINTLN("[TEST] Test 4: Reducing volume to 50%");
-  setOscillatorVolume(1, 0.8);
-  delay(1000);
-
-  setOscillatorVolume(1, 0.5);
-  delay(1000);
-
+  DEBUG_PRINTLN("[TEST] Test 4: Oscillator volume");
+  setOscillatorOctave(1, Oscillator::OCTAVE_BASE);
+  setOscillatorVolume(1, 0);
+  delay(200);
+  setOscillatorVolume(1, 0.1);
+  delay(200);
+  setOscillatorVolume(1, 0.2);
+  delay(200);
   setOscillatorVolume(1, 0.3);
-  delay(1000);
+  delay(200);
+  setOscillatorVolume(1, 0.4);
+  delay(200);
+  setOscillatorVolume(1, 0.5);
+  delay(200);
+  setOscillatorVolume(1, 0.6);
+  delay(200);
+  setOscillatorVolume(1, 0.7);
+  delay(200);
+  setOscillatorVolume(1, 0.8);
+  delay(200);
+  setOscillatorVolume(1, 0.9);
+  delay(200);
+  setOscillatorVolume(1, 1);
+  delay(200);
 
   // Test 5: Restore defaults
   DEBUG_PRINTLN("[TEST] Test 5: Restoring defaults");
