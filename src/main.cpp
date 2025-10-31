@@ -12,6 +12,7 @@
 #include "Theremin.h"
 #include "PinConfig.h"
 #include "PerformanceMonitor.h"
+#include "DelayEffect.h"
 
 #if ENABLE_OTA
 #include "OTAManager.h"
@@ -61,6 +62,51 @@ void setup() {
 
   // Initialize performance monitoring
   performanceMonitor.begin();
+
+  // ========== DELAY EFFECT UNIT TEST ==========
+  // Temporary test to verify DelayEffect class works correctly
+  // Remove this section after Phase A is verified
+  #if 1  // Set to 1 to enable test, 0 to disable
+    DEBUG_PRINTLN("\n========== DELAY EFFECT UNIT TEST ==========");
+
+    // Create delay effect (100ms @ 22050 Hz)
+    DelayEffect testDelay(100, 22050);
+    testDelay.setEnabled(true);
+    testDelay.setFeedback(0.5);
+    testDelay.setMix(0.5);
+
+    DEBUG_PRINTLN("[TEST] Testing delay with pulse pattern...");
+
+    // Test with pulse pattern: pulse every 10 samples
+    for (int i = 0; i < 50; i++) {
+      int16_t input = (i % 10 == 0) ? 10000 : 0;  // Pulse: 10000, then 9 zeros
+      int16_t output = testDelay.process(input);
+
+      // Print sample number, input, and output
+      Serial.printf("Sample %2d: in=%5d, out=%5d\n", i, input, output);
+
+      if (i == 49) {
+        DEBUG_PRINTLN("\n[TEST] Pattern analysis:");
+        DEBUG_PRINTLN("  - Samples 0-9: Building delay buffer (should see input pulses)");
+        DEBUG_PRINTLN("  - Samples 10+: Should see echoes from feedback");
+        DEBUG_PRINTLN("  - Output should be mix of dry (input) and wet (delayed)");
+      }
+    }
+
+    // Test reset functionality
+    DEBUG_PRINTLN("\n[TEST] Testing reset...");
+    testDelay.reset();
+    DEBUG_PRINTLN("[TEST] Processing after reset (should be clean):");
+    for (int i = 0; i < 5; i++) {
+      int16_t input = (i == 0) ? 10000 : 0;
+      int16_t output = testDelay.process(input);
+      Serial.printf("Sample %2d: in=%5d, out=%5d\n", i, input, output);
+    }
+
+    DEBUG_PRINTLN("\n[TEST] ✓ DelayEffect unit test complete!");
+    DEBUG_PRINTLN("============================================\n");
+    delay(2000);  // Pause so user can read results
+  #endif
 
     // Run system test (if enabled)
   #if ENABLE_STARTUP_TEST
