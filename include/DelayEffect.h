@@ -3,6 +3,73 @@
  *
  * Digital delay effect with feedback and wet/dry mix control.
  * Uses circular buffer for delay line.
+ *
+ * ═══════════════════════════════════════════════════════════════════════════
+ * EFFECT MANUAL - DELAY
+ * ═══════════════════════════════════════════════════════════════════════════
+ *
+ * WHAT IT DOES:
+ * The delay effect creates echoes by storing incoming audio in a buffer and
+ * playing it back after a specified time. The delayed signal can be fed back
+ * into the buffer to create multiple repeating echoes.
+ *
+ * HOW IT WORKS:
+ * - Circular buffer stores incoming audio samples
+ * - Delay time determines how far back in the buffer we read
+ * - Feedback controls how much of the delayed signal is fed back
+ * - Mix controls the balance between original (dry) and delayed (wet) signals
+ *
+ * PARAMETERS:
+ *
+ * 1. DELAY TIME (10-2000ms)
+ *    - The time between the original sound and its echo
+ *    - Short delays (50-150ms): Slapback echo, doubling effect
+ *    - Medium delays (200-400ms): Classic echo, rhythmic repeats
+ *    - Long delays (500-2000ms): Ambient soundscapes, dub effects
+ *    Example: setDelayTime(300) for a 300ms echo
+ *
+ * 2. FEEDBACK (0.0-0.95)
+ *    - How much of the delayed signal feeds back into the buffer
+ *    - 0.0: Single echo (no repeats)
+ *    - 0.3-0.5: Few gentle repeats
+ *    - 0.6-0.8: Multiple distinct echoes
+ *    - 0.9-0.95: Very long decay, ambient trails
+ *    WARNING: Keep below 1.0 to prevent runaway feedback!
+ *    Example: setFeedback(0.6) for moderate repeats
+ *
+ * 3. MIX (0.0-1.0)
+ *    - Balance between dry (original) and wet (delayed) signal
+ *    - 0.0: 100% dry, no delay heard
+ *    - 0.3: Subtle delay enhancement
+ *    - 0.5: Equal mix of dry and wet
+ *    - 1.0: 100% wet, only delayed signal
+ *    Example: setMix(0.3) for subtle echo
+ *
+ * TYPICAL PRESETS:
+ *
+ * Slapback Echo (rockabilly style):
+ *   setDelayTime(100);
+ *   setFeedback(0.3);
+ *   setMix(0.4);
+ *
+ * Rhythmic Echo:
+ *   setDelayTime(375);  // Matches 160 BPM
+ *   setFeedback(0.6);
+ *   setMix(0.4);
+ *
+ * Ambient Wash:
+ *   setDelayTime(800);
+ *   setFeedback(0.85);
+ *   setMix(0.5);
+ *
+ * MEMORY USAGE:
+ * Buffer size = (delay_time_ms / 1000) * sample_rate * 2 bytes
+ * Example: 300ms delay at 22050 Hz = ~13 KB RAM
+ *
+ * CPU USAGE:
+ * Very low - simple buffer read/write operations
+ *
+ * ═══════════════════════════════════════════════════════════════════════════
  */
 
 #pragma once
