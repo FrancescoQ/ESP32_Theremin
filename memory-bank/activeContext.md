@@ -674,6 +674,20 @@ When resuming work on this project:
 - [ ] Connect ControlHandler to GPIO inputs
 - [ ] Add SSD1306 OLED display (optional)
 
+**Future: Audio Filters (Phase 7+):**
+- **Enhancement Idea:** Low-pass, high-pass, and band-pass filters for timbral shaping
+- **Application Options:**
+  - Per-oscillator filtering (before mixing)
+  - Post-mix filtering (in AudioEngine after oscillator sum)
+- **Recommended Design:** State Variable Filter (SVF) - efficient on ESP32
+- **Features:** Resonance control for classic synthesizer character
+- **Estimated CPU:** 3-5% per filter (very doable with 85% current headroom!)
+- **Musical Use Cases:**
+  - Low-pass: Warmth, subtractive synthesis, removing harshness
+  - High-pass: Removing mud, emphasis on brightness
+  - Band-pass: Vocal-like formant shaping, telephone effect
+- **Note:** Excellent enhancement for timbral control - deferred to maintain focus on current roadmap
+
 **Documentation (Optional - Already well documented):**
 - [ ] Create `docs/improvements/EFFECTS_IMPLEMENTATION.md` (condensed summary)
 - [ ] Update `docs/README.md` to reference effects documentation

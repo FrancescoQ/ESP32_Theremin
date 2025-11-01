@@ -663,8 +663,13 @@ The 4-position rotary switches (Off/Sine/Square/Saw) are not just waveform selec
 **Goal:** THE TONE™ perfection (never truly ends)
 
 **Ideas for Future Iterations:**
+- **Audio Filters:** Low-pass, high-pass, band-pass filters for timbral shaping
+  - Could be applied per-oscillator OR in audio engine post-mix
+  - State Variable Filter (SVF) design recommended (efficient on ESP32)
+  - Resonance control for classic synth character
+  - Estimated CPU: 3-5% per filter (very doable with current headroom!)
 - **I2S DAC Upgrade:** Switch to MAX98357A or PCM5102 for 16-bit audio
-- **Reverb Effect:** With better DAC and optimized code
+- **Reverb Quality:** Full 8-comb + 4-allpass Freeverb (see Phase G in EFFECTS_IMPLEMENTATION_PLAN.md)
 - **More Waveforms:** Arbitrary wavetables, user-loadable
 - **MIDI In:** Control theremin via MIDI keyboard/sequencer
 - **CV/Gate Out:** Integrate with Eurorack modular system
