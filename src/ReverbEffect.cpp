@@ -19,14 +19,14 @@ ReverbEffect::ReverbEffect(uint32_t sampleRate)
       enabled(false) {
 
     // Initialize comb filters with tuned delay lengths (in milliseconds)
-    initCombFilter(combs[0], COMB_DELAY_1_MS);
-    initCombFilter(combs[1], COMB_DELAY_2_MS);
-    initCombFilter(combs[2], COMB_DELAY_3_MS);
-    initCombFilter(combs[3], COMB_DELAY_4_MS);
+    for (int i = 0; i < NUM_COMBS; i++) {
+        initCombFilter(combs[i], COMB_DELAYS_MS[i]);
+    }
 
     // Initialize allpass filters (in milliseconds)
-    initAllpassFilter(allpasses[0], ALLPASS_DELAY_1_MS);
-    initAllpassFilter(allpasses[1], ALLPASS_DELAY_2_MS);
+    for (int i = 0; i < NUM_ALLPASSES; i++) {
+        initAllpassFilter(allpasses[i], ALLPASS_DELAYS_MS[i]);
+    }
 
     // Set initial parameters
     updateCombs();
@@ -105,7 +105,7 @@ int16_t ReverbEffect::processComb(CombFilter& comb, int16_t input) {
 
     // Noise gate: Prevent very small float values from accumulating as noise
     // This eliminates buzzing when the reverb tail decays to silence
-    if (comb.filterStore > -0.5f && comb.filterStore < 0.5f) {
+    if (comb.filterStore > -FILTER_NOISE_GATE_THRESHOLD && comb.filterStore < FILTER_NOISE_GATE_THRESHOLD) {
         comb.filterStore = 0.0f;
     }
 
@@ -113,8 +113,8 @@ int16_t ReverbEffect::processComb(CombFilter& comb, int16_t input) {
     int32_t newValue = input + (int32_t)(comb.filterStore * comb.feedback);
 
     // Clamp to prevent overflow
-    if (newValue > 32767) newValue = 32767;
-    if (newValue < -32768) newValue = -32768;
+    if (newValue > Audio::SAMPLE_MAX) newValue = Audio::SAMPLE_MAX;
+    if (newValue < Audio::SAMPLE_MIN) newValue = Audio::SAMPLE_MIN;
 
     comb.buffer[comb.bufferIndex] = (int16_t)newValue;
 
@@ -137,8 +137,8 @@ int16_t ReverbEffect::processAllpass(AllpassFilter& allpass, int16_t input) {
     int32_t store = input + (bufferOut >> 1);  // Divide by 2 (0.5 feedback)
 
     // Clamp
-    if (store > 32767) store = 32767;
-    if (store < -32768) store = -32768;
+    if (store > Audio::SAMPLE_MAX) store = Audio::SAMPLE_MAX;
+    if (store < Audio::SAMPLE_MIN) store = Audio::SAMPLE_MIN;
 
     allpass.buffer[allpass.bufferIndex] = (int16_t)store;
 
@@ -149,8 +149,8 @@ int16_t ReverbEffect::processAllpass(AllpassFilter& allpass, int16_t input) {
     }
 
     // Clamp output
-    if (output > 32767) output = 32767;
-    if (output < -32768) output = -32768;
+    if (output > Audio::SAMPLE_MAX) output = Audio::SAMPLE_MAX;
+    if (output < Audio::SAMPLE_MIN) output = Audio::SAMPLE_MIN;
 
     return (int16_t)output;
 }
@@ -163,7 +163,7 @@ int16_t ReverbEffect::process(int16_t input) {
 
     // Noise gate: Silence very quiet inputs to prevent noise circulation
     // This prevents quantization noise from entering the feedback loops
-    if (input > -50 && input < 50) {
+    if (input > -NOISE_GATE_THRESHOLD && input < NOISE_GATE_THRESHOLD) {
         input = 0;
     }
 
@@ -188,12 +188,12 @@ int16_t ReverbEffect::process(int16_t input) {
     int32_t output = (dry * (1.0f - wetDryMix)) + (wet * wetDryMix);
 
     // Clamp output
-    if (output > 32767) output = 32767;
-    if (output < -32768) output = -32768;
+    if (output > Audio::SAMPLE_MAX) output = Audio::SAMPLE_MAX;
+    if (output < Audio::SAMPLE_MIN) output = Audio::SAMPLE_MIN;
 
     // Noise gate: Ensure output below noise floor is silenced
     // This ensures the reverb tail decays to true silence without buzzing
-    if (output > -50 && output < 50) {
+    if (output > -NOISE_GATE_THRESHOLD && output < NOISE_GATE_THRESHOLD) {
         output = 0;
     }
 

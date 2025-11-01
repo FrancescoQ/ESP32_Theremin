@@ -91,17 +91,16 @@ private:
     static const int NUM_ALLPASSES = 2;
 
     // Freeverb tuning constants (in milliseconds - sample-rate agnostic)
-    static constexpr float COMB_DELAY_1_MS = 25.31f;
-    static constexpr float COMB_DELAY_2_MS = 26.94f;
-    static constexpr float COMB_DELAY_3_MS = 28.96f;
-    static constexpr float COMB_DELAY_4_MS = 30.75f;
-
-    static constexpr float ALLPASS_DELAY_1_MS = 12.61f;
-    static constexpr float ALLPASS_DELAY_2_MS = 10.00f;
+    static constexpr float COMB_DELAYS_MS[NUM_COMBS] = {25.31f, 26.94f, 28.96f, 30.75f};
+    static constexpr float ALLPASS_DELAYS_MS[NUM_ALLPASSES] = {12.61f, 10.00f};
 
     static constexpr float FIXED_GAIN = 0.015f;      // Input gain
     static constexpr float SCALE_WET = 3.0f;         // Wet signal scaling
     static constexpr float SCALE_DAMPING = 0.4f;     // Damping scaling
+
+    // Noise gate thresholds
+    static constexpr int16_t NOISE_GATE_THRESHOLD = 50;        // Input/output noise gate
+    static constexpr float FILTER_NOISE_GATE_THRESHOLD = 0.5f; // Comb filter noise gate
 
     uint32_t sampleRate;
     float roomSize;
