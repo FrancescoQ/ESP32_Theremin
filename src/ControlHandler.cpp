@@ -89,6 +89,41 @@ void ControlHandler::printOscillatorStatus(int oscNum) {
   DEBUG_PRINTLN("%");
 }
 
+void ControlHandler::printEffectsStatus() {
+  EffectsChain* fx = theremin->getAudioEngine()->getEffectsChain();
+
+  DEBUG_PRINTLN("\n========== EFFECTS STATUS ==========");
+
+  // Delay status
+  DEBUG_PRINT("Delay:   ");
+  DEBUG_PRINTLN(fx->isDelayEnabled() ? "ENABLED" : "DISABLED");
+  if (fx->getDelay() != nullptr) {
+    DEBUG_PRINT("  Time:     ");
+    DEBUG_PRINT(fx->getDelay()->getDelayTime());
+    DEBUG_PRINTLN(" ms");
+    DEBUG_PRINT("  Feedback: ");
+    DEBUG_PRINTLN(fx->getDelay()->getFeedback());
+    DEBUG_PRINT("  Mix:      ");
+    DEBUG_PRINTLN(fx->getDelay()->getMix());
+  }
+
+  // Chorus status
+  DEBUG_PRINT("\nChorus:  ");
+  DEBUG_PRINTLN(fx->isChorusEnabled() ? "ENABLED" : "DISABLED");
+  if (fx->getChorus() != nullptr) {
+    DEBUG_PRINT("  Rate:     ");
+    DEBUG_PRINT(fx->getChorus()->getRate());
+    DEBUG_PRINTLN(" Hz");
+    DEBUG_PRINT("  Depth:    ");
+    DEBUG_PRINT(fx->getChorus()->getDepth());
+    DEBUG_PRINTLN(" ms");
+    DEBUG_PRINT("  Mix:      ");
+    DEBUG_PRINTLN(fx->getChorus()->getMix());
+  }
+
+  DEBUG_PRINTLN("====================================\n");
+}
+
 // Get waveform name.
 const char* ControlHandler::getWaveformName(Oscillator::Waveform wf) {
   switch (wf) {
@@ -135,6 +170,19 @@ void ControlHandler::printHelp() {
   DEBUG_PRINTLN("  audio:freq:440       - Set frequency to 440 Hz");
   DEBUG_PRINTLN("  audio:amp:75         - Set amplitude to 75%");
   DEBUG_PRINTLN("  audio:status         - Show current audio values");
+  DEBUG_PRINTLN("\nEffects Control:");
+  DEBUG_PRINTLN("  delay:on             - Enable delay effect");
+  DEBUG_PRINTLN("  delay:off            - Disable delay effect");
+  DEBUG_PRINTLN("  delay:time:300       - Set delay time to 300ms");
+  DEBUG_PRINTLN("  delay:feedback:0.5   - Set feedback to 50%");
+  DEBUG_PRINTLN("  delay:mix:0.3        - Set wet/dry mix to 30%");
+  DEBUG_PRINTLN("\n  chorus:on            - Enable chorus effect");
+  DEBUG_PRINTLN("  chorus:off           - Disable chorus effect");
+  DEBUG_PRINTLN("  chorus:rate:2.0      - Set LFO rate to 2.0 Hz");
+  DEBUG_PRINTLN("  chorus:depth:15      - Set modulation depth to 15ms");
+  DEBUG_PRINTLN("  chorus:mix:0.4       - Set wet/dry mix to 40%");
+  DEBUG_PRINTLN("\n  effects:status       - Show all effect states");
+  DEBUG_PRINTLN("  effects:reset        - Clear all effect buffers");
   DEBUG_PRINTLN("\nNote: Replace 'osc1' with 'osc2' or 'osc3' for other oscillators");
   DEBUG_PRINTLN("      Abbreviations: 'tri'=triangle, 'saw'=sawtooth, 'oct'=octave, 'vol'=volume");
   DEBUG_PRINTLN("      When sensors disabled, manual audio: commands persist");
@@ -268,6 +316,100 @@ void ControlHandler::executeCommand(String cmd) {
     DEBUG_PRINT(theremin->getAudioEngine()->getAmplitude());
     DEBUG_PRINTLN("%");
     DEBUG_PRINTLN("==================================\n");
+    return;
+  }
+
+  // ========== EFFECTS CONTROL ==========
+
+  // Delay enable/disable
+  if (cmd == "delay:on") {
+    theremin->getAudioEngine()->getEffectsChain()->setDelayEnabled(true);
+    DEBUG_PRINTLN("[CTRL] Delay effect enabled");
+    return;
+  }
+
+  if (cmd == "delay:off") {
+    theremin->getAudioEngine()->getEffectsChain()->setDelayEnabled(false);
+    DEBUG_PRINTLN("[CTRL] Delay effect disabled");
+    return;
+  }
+
+  // Delay parameters
+  if (cmd.startsWith("delay:time:")) {
+    int timeMs = cmd.substring(11).toInt();
+    theremin->getAudioEngine()->getEffectsChain()->getDelay()->setDelayTime(timeMs);
+    DEBUG_PRINT("[CTRL] Delay time set to ");
+    DEBUG_PRINT(timeMs);
+    DEBUG_PRINTLN(" ms");
+    return;
+  }
+
+  if (cmd.startsWith("delay:feedback:")) {
+    float feedback = cmd.substring(15).toFloat();
+    theremin->getAudioEngine()->getEffectsChain()->getDelay()->setFeedback(feedback);
+    DEBUG_PRINT("[CTRL] Delay feedback set to ");
+    DEBUG_PRINTLN(feedback);
+    return;
+  }
+
+  if (cmd.startsWith("delay:mix:")) {
+    float mix = cmd.substring(10).toFloat();
+    theremin->getAudioEngine()->getEffectsChain()->getDelay()->setMix(mix);
+    DEBUG_PRINT("[CTRL] Delay mix set to ");
+    DEBUG_PRINTLN(mix);
+    return;
+  }
+
+  // Chorus enable/disable
+  if (cmd == "chorus:on") {
+    theremin->getAudioEngine()->getEffectsChain()->setChorusEnabled(true);
+    DEBUG_PRINTLN("[CTRL] Chorus effect enabled");
+    return;
+  }
+
+  if (cmd == "chorus:off") {
+    theremin->getAudioEngine()->getEffectsChain()->setChorusEnabled(false);
+    DEBUG_PRINTLN("[CTRL] Chorus effect disabled");
+    return;
+  }
+
+  // Chorus parameters
+  if (cmd.startsWith("chorus:rate:")) {
+    float rate = cmd.substring(12).toFloat();
+    theremin->getAudioEngine()->getEffectsChain()->getChorus()->setRate(rate);
+    DEBUG_PRINT("[CTRL] Chorus rate set to ");
+    DEBUG_PRINT(rate);
+    DEBUG_PRINTLN(" Hz");
+    return;
+  }
+
+  if (cmd.startsWith("chorus:depth:")) {
+    float depth = cmd.substring(13).toFloat();
+    theremin->getAudioEngine()->getEffectsChain()->getChorus()->setDepth(depth);
+    DEBUG_PRINT("[CTRL] Chorus depth set to ");
+    DEBUG_PRINT(depth);
+    DEBUG_PRINTLN(" ms");
+    return;
+  }
+
+  if (cmd.startsWith("chorus:mix:")) {
+    float mix = cmd.substring(11).toFloat();
+    theremin->getAudioEngine()->getEffectsChain()->getChorus()->setMix(mix);
+    DEBUG_PRINT("[CTRL] Chorus mix set to ");
+    DEBUG_PRINTLN(mix);
+    return;
+  }
+
+  // Effects status
+  if (cmd == "effects:status") {
+    printEffectsStatus();
+    return;
+  }
+
+  // Effects reset
+  if (cmd == "effects:reset") {
+    theremin->getAudioEngine()->getEffectsChain()->reset();
+    DEBUG_PRINTLN("[CTRL] All effects reset");
     return;
   }
 

@@ -71,6 +71,11 @@ private:
   void printOscillatorStatus(int oscNum);
 
   /**
+   * Print status of all effects
+   */
+  void printEffectsStatus();
+
+  /**
    * Get waveform name from enum
    */
   const char* getWaveformName(Oscillator::Waveform wf);
