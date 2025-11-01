@@ -121,6 +121,18 @@ void ControlHandler::printEffectsStatus() {
     DEBUG_PRINTLN(fx->getChorus()->getMix());
   }
 
+  // Reverb status
+  DEBUG_PRINT("\nReverb:  ");
+  DEBUG_PRINTLN(fx->isReverbEnabled() ? "ENABLED" : "DISABLED");
+  if (fx->getReverb() != nullptr) {
+    DEBUG_PRINT("  Room:     ");
+    DEBUG_PRINTLN(fx->getReverb()->getRoomSize());
+    DEBUG_PRINT("  Damping:  ");
+    DEBUG_PRINTLN(fx->getReverb()->getDamping());
+    DEBUG_PRINT("  Mix:      ");
+    DEBUG_PRINTLN(fx->getReverb()->getMix());
+  }
+
   DEBUG_PRINTLN("====================================\n");
 }
 
@@ -181,6 +193,11 @@ void ControlHandler::printHelp() {
   DEBUG_PRINTLN("  chorus:rate:2.0      - Set LFO rate to 2.0 Hz");
   DEBUG_PRINTLN("  chorus:depth:15      - Set modulation depth to 15ms");
   DEBUG_PRINTLN("  chorus:mix:0.4       - Set wet/dry mix to 40%");
+  DEBUG_PRINTLN("\n  reverb:on            - Enable reverb effect");
+  DEBUG_PRINTLN("  reverb:off           - Disable reverb effect");
+  DEBUG_PRINTLN("  reverb:room:0.5      - Set room size (0.0-1.0)");
+  DEBUG_PRINTLN("  reverb:damp:0.5      - Set damping (0.0=bright, 1.0=dark)");
+  DEBUG_PRINTLN("  reverb:mix:0.3       - Set wet/dry mix to 30%");
   DEBUG_PRINTLN("\n  effects:status       - Show all effect states");
   DEBUG_PRINTLN("  effects:reset        - Clear all effect buffers");
   DEBUG_PRINTLN("\nNote: Replace 'osc1' with 'osc2' or 'osc3' for other oscillators");
@@ -396,6 +413,44 @@ void ControlHandler::executeCommand(String cmd) {
     float mix = cmd.substring(11).toFloat();
     theremin->getAudioEngine()->getEffectsChain()->getChorus()->setMix(mix);
     DEBUG_PRINT("[CTRL] Chorus mix set to ");
+    DEBUG_PRINTLN(mix);
+    return;
+  }
+
+  // Reverb enable/disable
+  if (cmd == "reverb:on") {
+    theremin->getAudioEngine()->getEffectsChain()->setReverbEnabled(true);
+    DEBUG_PRINTLN("[CTRL] Reverb effect enabled");
+    return;
+  }
+
+  if (cmd == "reverb:off") {
+    theremin->getAudioEngine()->getEffectsChain()->setReverbEnabled(false);
+    DEBUG_PRINTLN("[CTRL] Reverb effect disabled");
+    return;
+  }
+
+  // Reverb parameters
+  if (cmd.startsWith("reverb:room:")) {
+    float room = cmd.substring(12).toFloat();
+    theremin->getAudioEngine()->getEffectsChain()->getReverb()->setRoomSize(room);
+    DEBUG_PRINT("[CTRL] Reverb room size set to ");
+    DEBUG_PRINTLN(room);
+    return;
+  }
+
+  if (cmd.startsWith("reverb:damp:")) {
+    float damp = cmd.substring(12).toFloat();
+    theremin->getAudioEngine()->getEffectsChain()->getReverb()->setDamping(damp);
+    DEBUG_PRINT("[CTRL] Reverb damping set to ");
+    DEBUG_PRINTLN(damp);
+    return;
+  }
+
+  if (cmd.startsWith("reverb:mix:")) {
+    float mix = cmd.substring(11).toFloat();
+    theremin->getAudioEngine()->getEffectsChain()->getReverb()->setMix(mix);
+    DEBUG_PRINT("[CTRL] Reverb mix set to ");
     DEBUG_PRINTLN(mix);
     return;
   }

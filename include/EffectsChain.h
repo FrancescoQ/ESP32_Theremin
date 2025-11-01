@@ -9,7 +9,7 @@
 #include "AudioConstants.h"
 #include "DelayEffect.h"
 #include "ChorusEffect.h"
-// Future: #include "ReverbEffect.h"
+#include "ReverbEffect.h"
 
 class EffectsChain {
 public:
@@ -31,14 +31,14 @@ public:
      */
     void setDelayEnabled(bool enabled);
     void setChorusEnabled(bool enabled);
-    // Future: void setReverbEnabled(bool enabled);
+    void setReverbEnabled(bool enabled);
 
     /**
      * Get effect instances (for parameter control)
      */
     DelayEffect* getDelay() { return &delay; }
     ChorusEffect* getChorus() { return &chorus; }
-    // Future: ReverbEffect* getReverb() { return &reverb; }
+    ReverbEffect* getReverb() { return &reverb; }
 
     /**
      * Reset all effect buffers
@@ -50,12 +50,12 @@ public:
      */
     bool isDelayEnabled() const;
     bool isChorusEnabled() const;
-    // Future: bool isReverbEnabled() const;
+    bool isReverbEnabled() const;
 
 private:
     uint32_t sampleRate;
 
     DelayEffect delay;
     ChorusEffect chorus;
-    // Future: ReverbEffect reverb;
+    ReverbEffect reverb;
 };

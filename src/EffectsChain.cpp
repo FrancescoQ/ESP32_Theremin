@@ -10,7 +10,8 @@
 EffectsChain::EffectsChain(uint32_t sampleRate)
     : sampleRate(sampleRate),
       delay(300, sampleRate),    // Direct initialization on stack
-      chorus(sampleRate) {        // Direct initialization on stack
+      chorus(sampleRate),         // Direct initialization on stack
+      reverb(sampleRate) {        // Direct initialization on stack
 
     // Configure delay (object already constructed)
     delay.setFeedback(0.5f);
@@ -23,7 +24,13 @@ EffectsChain::EffectsChain(uint32_t sampleRate)
     chorus.setMix(0.2f);
     chorus.setEnabled(false);
 
-    DEBUG_PRINTLN("[CHAIN] EffectsChain initialized with Delay + Chorus");
+    // Configure reverb (object already constructed)
+    reverb.setRoomSize(0.5f);
+    reverb.setDamping(0.5f);
+    reverb.setMix(0.3f);
+    reverb.setEnabled(false);
+
+    DEBUG_PRINTLN("[CHAIN] EffectsChain initialized with Delay + Chorus + Reverb");
 }
 
 int16_t EffectsChain::process(int16_t input) {
@@ -33,8 +40,7 @@ int16_t EffectsChain::process(int16_t input) {
     // (Only process if enabled - effect handles bypass internally)
     output = delay.process(output);
     output = chorus.process(output);
-
-    // Future: output = reverb.process(output);
+    output = reverb.process(output);  // Reverb at the end of chain
 
     return output;
 }
@@ -55,10 +61,18 @@ bool EffectsChain::isChorusEnabled() const {
     return chorus.isEnabled();
 }
 
+void EffectsChain::setReverbEnabled(bool enabled) {
+    reverb.setEnabled(enabled);
+}
+
+bool EffectsChain::isReverbEnabled() const {
+    return reverb.isEnabled();
+}
+
 void EffectsChain::reset() {
     delay.reset();
     chorus.reset();
-    // Future: reverb.reset();
+    reverb.reset();
 
     DEBUG_PRINTLN("[CHAIN] All effects reset");
 }
