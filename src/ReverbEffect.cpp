@@ -4,6 +4,7 @@
  * Implementation of Freeverb-based reverb effect.
  * Based on the classic Freeverb algorithm by Jezar at Dreampoint.
  * @see https://github.com/sinshu/freeverb/tree/main
+ * @see https://ccrma.stanford.edu/~jos//waveguide/Freeverb.html
  */
 
 #include "ReverbEffect.h"
