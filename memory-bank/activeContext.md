@@ -6,6 +6,15 @@
 
 ## Current Work Focus
 
+### Development Tools
+**PlatformIO Path:** `/Users/fquagliati/.platformio/penv/bin/pio`
+
+**Common Build Commands:**
+- Build: `/Users/fquagliati/.platformio/penv/bin/pio run`
+- Upload: `/Users/fquagliati/.platformio/penv/bin/pio run -t upload`
+- Monitor: `/Users/fquagliati/.platformio/penv/bin/pio device monitor`
+- Clean: `/Users/fquagliati/.platformio/penv/bin/pio run -t clean`
+
 ### Project Status
 **Phase:** Phase 4 (Effects) ✅ **COMPLETE!** Phase G (Optional Polish) Next
 **Date:** November 1, 2025
