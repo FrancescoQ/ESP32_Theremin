@@ -28,15 +28,8 @@ AudioEngine::AudioEngine(PerformanceMonitor* perfMon)
   paramMutex = xSemaphoreCreateMutex();
 
   // Create effects chain
-  // NOTE: Allocated on heap (using 'new') rather than as direct member for:
-  // 1. Didactic purpose - demonstrates heap allocation pattern with pointers
-  // 2. Future flexibility - easy to make effects optional (conditional creation)
-  // 3. Explicit about size - clear that EffectsChain is large (~13 KB)
-  //
-  // Alternative approach: Could be direct member (EffectsChain effectsChain;)
-  // since AudioEngine is global (lives in static data, not function stack).
-  // Both approaches use same total RAM, just different memory locations.
-  // The heap approach is more common for large/optional components in practice.
+  // Manual new/delete pattern - see AudioEngine.h for full memory management explanation
+  // and comparison with modern alternatives (std::unique_ptr, std::vector)
   effectsChain = new EffectsChain();
   DEBUG_PRINTLN("[AUDIO] Effects chain created");
 }

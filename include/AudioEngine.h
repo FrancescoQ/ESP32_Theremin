@@ -268,6 +268,57 @@ class AudioEngine {
   Oscillator oscillator3;
 
   // Effects chain
+  // ════════════════════════════════════════════════════════════════════════
+  // MEMORY MANAGEMENT PATTERN - Manual new/delete (Single Object)
+  // ════════════════════════════════════════════════════════════════════════
+  //
+  // WHY HEAP ALLOCATION:
+  //   1. Didactic purpose - demonstrates traditional C++ heap allocation with pointers
+  //   2. Future flexibility - easy to make effects optional (conditional creation)
+  //   3. Explicit about size - clear that EffectsChain is large (~13 KB)
+  //
+  // PATTERN USED HERE (Manual):
+  //   Constructor:  effectsChain = new EffectsChain();
+  //   Destructor:   delete effectsChain; effectsChain = nullptr;
+  //
+  // MODERN C++ ALTERNATIVE - std::unique_ptr<T> (Single Object):
+  //   Header:       std::unique_ptr<EffectsChain> effectsChain;
+  //   Constructor:  effectsChain.reset(new EffectsChain());  // C++11 compatible
+  //   Destructor:   (nothing - automatic cleanup!)
+  //   Usage:        effectsChain->process(sample);  // same syntax with ->
+  //
+  // WHY MANUAL PATTERN IS USED HERE:
+  //   - Educational reference: Shows traditional C++ memory management
+  //   - Explicit ownership: Makes resource lifecycle visible
+  //   - Industry reality: Still common in embedded codebases
+  //   - This file intentionally demonstrates the manual approach for learning
+  //
+  // MEMORY MANAGEMENT PATTERNS ACROSS THIS CODEBASE:
+  //   ┌────────────────────────┬─────────────────────┬──────────────────────┐
+  //   │ File                   │ Pattern             │ Use Case             │
+  //   ├────────────────────────┼─────────────────────┼──────────────────────┤
+  //   │ AudioEngine.h (this)   │ Raw new/delete      │ Single object        │
+  //   │                        │ (manual)            │ Educational ref      │
+  //   ├────────────────────────┼─────────────────────┼──────────────────────┤
+  //   │ DelayEffect.h          │ std::vector         │ Dynamic array        │
+  //   │                        │ (RAII)              │ Can resize           │
+  //   ├────────────────────────┼─────────────────────┼──────────────────────┤
+  //   │ ChorusEffect.h         │ std::unique_ptr<[]> │ Fixed array          │
+  //   │                        │ (RAII)              │ Never resizes        │
+  //   └────────────────────────┴─────────────────────┴──────────────────────┘
+  //
+  // WHEN TO USE EACH PATTERN:
+  //   • Raw new/delete:          Legacy code, educational purposes, explicit control
+  //   • std::unique_ptr<T>:      Single objects on heap, automatic cleanup
+  //   • std::unique_ptr<T[]>:    Fixed-size arrays, zero overhead, automatic cleanup
+  //   • std::vector<T>:          Dynamic arrays that can grow/shrink
+  //
+  // In modern embedded C++ (C++11+), prefer smart pointers (unique_ptr/vector)
+  // for automatic resource management and exception safety. This file uses
+  // manual management intentionally to document the traditional approach.
+  //
+  // See also: DelayEffect.h and ChorusEffect.h for modern RAII examples
+  // ════════════════════════════════════════════════════════════════════════
   EffectsChain* effectsChain;
 
   // FreeRTOS task management
