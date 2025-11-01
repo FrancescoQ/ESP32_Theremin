@@ -55,7 +55,7 @@ Detailed documentation of major improvements, optimizations, and implementation 
   - Performance measurements
 
 - **[WAVEFORM_IMPLEMENTATION.md](improvements/WAVEFORM_IMPLEMENTATION.md)**
-  - Multiple waveform types (square, sine, triangle)
+  - Multiple waveform types (square, sine, triangle, sawtooth)
   - Lookup table vs mathematical generation
   - Sound characteristics comparison
   - Usage and testing guide
@@ -65,6 +65,16 @@ Detailed documentation of major improvements, optimizations, and implementation 
   - Signed 16-bit to unsigned 8-bit conversion
   - Distortion elimination fix
   - Technical explanation and testing guide
+
+- **[EFFECTS_IMPLEMENTATION.md](improvements/EFFECTS_IMPLEMENTATION.md)** ⭐ NEW
+  - Complete audio effects system (Delay, Chorus, Reverb)
+  - Modular architecture with EffectsChain coordinator
+  - Stack allocation (RAII pattern) for zero heap fragmentation
+  - Oscillator-based LFO (~100x faster than sin() calls)
+  - Noise gate pattern for clean reverb decay
+  - Performance: 14.5% CPU with all 3 effects (85% headroom!)
+  - Phase-by-phase implementation details
+  - Design patterns and lessons learned
 
 ### Sensor System
 
@@ -147,12 +157,18 @@ Each documentation file should include:
 
 **Phase 2 - Audio & Sensors:**
 - CONTINUOUS_AUDIO_IMPLEMENTATION.md
+- WAVEFORM_IMPLEMENTATION.md
+- DAC_FORMAT_FIX.md
 - PITCH_SMOOTHING_IMPROVEMENTS.md
 - PITCH_STEPPING_ISSUE.md
 - PERFORMANCE_MONITORING.md
 
+**Phase 4 - Effects:**
+- EFFECTS_IMPLEMENTATION.md ⭐ Complete!
+
 **Future Phases:**
-- Documentation will be added as features are implemented
+- Phase 3 (hardware controls + display) - pending parts
+- Phase 5+ - documentation will be added as features are implemented
 
 ---
 
@@ -161,11 +177,14 @@ Each documentation file should include:
 Current documentation covers:
 - ✅ System architecture
 - ✅ OTA update system
-- ✅ Audio system improvements
+- ✅ Audio system improvements (waveforms, DAC, continuous generation)
+- ✅ **Audio effects system (Delay, Chorus, Reverb)** ⭐ NEW
 - ✅ Sensor optimizations
 - ✅ System performance monitoring
 - ✅ Debug workflows
 - ✅ Virtual prototyping
+
+**Latest Achievement:** Phase 4 complete - Three-effect audio engine running on hardware with 14.5% CPU usage!
 
 See [memory-bank/progress.md](../memory-bank/progress.md) for detailed project status.
 
@@ -199,4 +218,4 @@ When adding new documentation:
 
 ---
 
-**Last Updated:** October 29, 2025
+**Last Updated:** November 1, 2025

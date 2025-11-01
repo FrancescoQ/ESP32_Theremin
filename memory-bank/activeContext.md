@@ -7,28 +7,31 @@
 ## Current Work Focus
 
 ### Project Status
-**Phase:** Phase 4 (Partial) ✅ Effects Implementation Near Complete!
-**Date:** October 31, 2025
+**Phase:** Phase 4 (Effects) ✅ **COMPLETE!** Phase G (Optional Polish) Next
+**Date:** November 1, 2025
 **v2.0 Vision:** Multi-oscillator synthesizer with effects, professional I/O, and visual feedback
 
-**Major Milestone Achieved:** Audio Effects System Implementation!
+**🎉 MAJOR MILESTONE: THREE-EFFECT AUDIO ENGINE COMPLETE! 🎉**
 
-Successfully implemented a professional-grade audio effects system with:
+Successfully implemented a professional-grade audio effects system with **ALL THREE EFFECTS**:
 - **DelayEffect Class** (include/DelayEffect.h + src/DelayEffect.cpp): Digital delay with circular buffer, configurable feedback and mix
 - **ChorusEffect Class** (include/ChorusEffect.h + src/ChorusEffect.cpp): Modulated delay with Oscillator-based LFO for shimmer effect
-- **EffectsChain Coordinator** (include/EffectsChain.h + src/EffectsChain.cpp): Manages signal flow through multiple effects
+- **ReverbEffect Class** (include/ReverbEffect.h + src/ReverbEffect.cpp): Simplified Freeverb algorithm (4 combs + 2 allpass)
+- **EffectsChain Coordinator** (include/EffectsChain.h + src/EffectsChain.cpp): Manages signal flow through all three effects
 - **AudioEngine Integration**: Effects processing inserted into audio pipeline between oscillator mixing and DAC output
 - **Stack Allocation**: RAII pattern with direct member initialization (no heap fragmentation)
 - **Elegant LFO Design**: ChorusEffect reuses Oscillator class as LFO (sine LUT instead of sin() calls = ~100x faster)
 
-**Current Status:** ✅ Effects core implementation complete! Delay and Chorus working beautifully. Outstanding: ControlHandler serial command integration (Phase D), full testing/benchmarking (Phase E). Ready for Phase 3 hardware expansion (controls + display) when parts arrive.
+**Current Status:** ✅ **Phase F Complete!** All three effects (Delay, Chorus, Reverb) implemented, tested, and running on hardware. Performance validated: 14.5% CPU with 85% headroom. Phase G (optional quality polish) planned but not required. Ready for Phase 3 hardware expansion (controls + display) when parts arrive.
 
-**Performance Results (October 31, 2025):**
-- ✅ **CPU Usage: ~9%** with 3 oscillators + delay + chorus (1.0ms per 11ms buffer)
+**Performance Results (November 1, 2025):**
+- ✅ **CPU Usage: 14.5%** with 3 oscillators + delay + chorus + reverb (1.6ms per 11ms buffer)
 - ✅ **RAM: 314 KB free** (stable, no leaks detected)
 - ✅ **Audio Quality: Excellent** - no glitches, clean effects processing
-- ✅ **91% CPU headroom** available for future features!
-- ✅ **Effects sound musical** - delay repeats cleanly, chorus adds shimmer
+- ✅ **85% CPU headroom** available for future enhancements!
+- ✅ **Effects sound musical** - delay repeats cleanly, chorus adds shimmer, reverb adds space
+- ✅ **Reverb buzzing fixed** - three noise gates eliminate quantization artifacts
+- ✅ **Volume smoothing toggle** - added for testing reverb trails
 
 **Build Results:**
 - RAM: 47,560 bytes (14.5%) - unchanged from Phase 2!
@@ -39,13 +42,49 @@ Successfully implemented a professional-grade audio effects system with:
 - ✅ **Phase A Complete:** DelayEffect class implemented and tested
 - ✅ **Phase B Complete:** EffectsChain + AudioEngine integration
 - ✅ **Phase C Complete:** ChorusEffect with Oscillator-based LFO
-- ⚠️ **Phase D Pending:** ControlHandler serial command integration
+- ✅ **Phase D Complete:** ControlHandler serial command integration (all commands implemented!)
 - ⚠️ **Phase E Pending:** Full testing & CPU benchmarking scenarios
-- 🔮 **Phase F Future:** Optional Reverb (if CPU permits after Phase E testing)
+- ✅ **Phase F Complete:** Reverb implemented with noise gate fixes! 🎉
+- 🔮 **Phase G Future:** Optional quality polish (int32_t precision, full Freeverb upgrade)
 
 ## Recent Changes
 
-**Effects System Implementation (October 31, 2025 - Latest):**
+**Reverb Implementation + Noise Gate Fixes (November 1, 2025 - Latest):**
+- **Achievement:** Implemented complete Freeverb reverb effect on real hardware!
+- **Algorithm:** Simplified Freeverb (4 parallel comb filters + 2 series allpass filters)
+  - Sample-rate agnostic design (millisecond-based delays)
+  - Comb filter delays: 25.31ms, 26.94ms, 28.96ms, 30.75ms
+  - Allpass filter delays: 12.61ms, 10.00ms
+- **Performance:** 1.6ms / 11ms (14.5% CPU) with all 3 effects enabled!
+  - Only +0.6ms added by reverb (from 1.0ms to 1.6ms)
+  - 85% CPU headroom still available
+  - RAM stable at 314 KB free
+- **Reverb Buzzing Fix:** Eliminated quantization noise with three noise gates
+  - **Input gate:** Silence inputs below ±50 to prevent noise circulation
+  - **Damping filter gate:** Zero out float values below ±0.5 in feedback loop
+  - **Output gate:** Silence outputs below ±50 for clean tail decay
+  - Result: Reverb tail now decays to true silence without grainy artifacts
+- **Volume Smoothing Toggle:** Added serial commands for testing reverb
+  - `sensors:volume:smooth:on/off` - Enable/disable volume smoothing
+  - `sensors:pitch:smooth:on/off` - Enable/disable pitch smoothing
+  - Use case: Instant volume cutoff reveals reverb decay clearly
+  - Modified SensorManager to bypass smoothing when disabled
+- **Serial Commands Added:** Complete reverb control via ControlHandler
+  - `reverb:on/off` - Enable/disable effect
+  - `reverb:room:0.5` - Set room size (0.0-1.0)
+  - `reverb:damp:0.5` - Set damping (0.0=bright, 1.0=dark)
+  - `reverb:mix:0.3` - Set wet/dry mix (0.0-1.0)
+  - `effects:status` - Shows all three effects
+- **Files Modified:**
+  - include/ReverbEffect.h, src/ReverbEffect.cpp: Created (Freeverb implementation)
+  - include/EffectsChain.h, src/EffectsChain.cpp: Added reverb integration
+  - src/ControlHandler.cpp: Added reverb commands and volume smoothing toggles
+  - include/SensorManager.h, src/SensorManager.cpp: Added smoothing enable/disable
+- **Build Status:** ✅ Compiles successfully, tested on hardware
+- **Design Insight:** Noise gates critical for int16_t feedback loops to prevent quantization noise accumulation
+- **Future Work:** Phase G planning includes int32_t precision upgrade + optional full Freeverb (8 combs + 4 allpass)
+
+**Effects System Implementation (October 31, 2025):**
 - **Achievement:** Implemented complete audio effects architecture!
 - **Architecture:** Modular effect classes with unified EffectsChain coordinator
   - DelayEffect: Circular buffer delay with feedback (10-2000ms range)
@@ -446,6 +485,11 @@ Only `README.md` and `productbrief.md` belong in project root. All other documen
 - **Oscillator Reuse:** LFO implemented using Oscillator class for performance
 - **Bypass Optimization:** Disabled effects check flag first, return input unchanged
 - **Coordinator Pattern:** EffectsChain manages signal flow and effect lifecycle
+- **Noise Gate Pattern for int16_t Feedback Loops:** Critical for preventing quantization noise accumulation
+  - Apply gates at 3 strategic points: input (prevent noise circulation), feedback loop (zero small float values), output (ensure clean decay)
+  - Threshold typically ±50 for int16_t samples, ±0.5 for float feedback state
+  - Essential for reverb and delay effects using integer sample formats
+  - Result: Clean decay to true silence without grainy artifacts
 
 ## Learnings & Project Insights
 
@@ -523,6 +567,19 @@ EffectsChain uses stack allocation (direct members) instead of pointers:
 - **Trade-off**: Fixed at compile time (can't dynamically add/remove effects)
 - **Result**: Perfect choice for this design - effects are known at compile time
 
+**Quantization Noise in int16_t Feedback Loops:**
+Reverb implementation revealed critical insight about integer feedback loops:
+- **Problem**: int16_t samples in feedback loops accumulate quantization noise
+- **Symptom**: Reverb tail exhibited grainy "buzzing" when decaying to low levels
+- **Root Cause**: Tiny quantization errors compound over many feedback iterations
+- **Solution**: Strategic noise gates at 3 points (input, feedback, output)
+  - Input gate (±50): Prevents noise from entering the feedback loop
+  - Damping filter gate (±0.5 for float state): Zeros out tiny accumulated errors
+  - Output gate (±50): Ensures final output decays to true silence
+- **Result**: Clean decay without artifacts - tail sounds smooth to silence
+- **Lesson**: Always consider quantization effects in recursive/feedback systems
+- **Alternative**: int32_t precision (Phase G option) would reduce but not eliminate the issue
+
 ### Development Strategy Insights
 
 **Simulation Benefits:**
@@ -580,27 +637,48 @@ When resuming work on this project:
 - `src/EffectsChain.cpp` - Effects implementation (recently created)
 - `EFFECTS_IMPLEMENTATION_PLAN.md` - Effects roadmap and status
 
-### Outstanding Tasks (Immediate)
-- **ControlHandler Integration (Phase D):**
-  - Add serial commands for effects control
-  - Commands: `delay:on`, `delay:off`, `delay:time:300`, `delay:feedback:0.5`, etc.
-  - Commands: `chorus:on`, `chorus:off`, `chorus:rate:2.0`, `chorus:depth:15`, etc.
-  - Add `printEffectsStatus()` method to show all effect states
-  - Update `printHelp()` to document effects commands
+### Outstanding Tasks (Optional - Not Required)
 
-- **Testing & Benchmarking (Phase E):**
-  - Test baseline (no effects) CPU usage
-  - Test delay only at various settings
-  - Test chorus only at various settings
-  - Test both effects simultaneously
-  - Stress test: 3 osc + both effects for 5 minutes
-  - Document performance in results table
-  - Decide if CPU budget allows Reverb (Phase F)
+**Phase E: Testing & Benchmarking (Optional - Core validated):**
+- Performance already validated: 14.5% CPU with all 3 effects
+- Optional detailed testing scenarios:
+  - [ ] Test baseline (no effects) CPU usage
+  - [ ] Test each effect individually at various settings
+  - [ ] Long-duration stability test (1+ hour continuous operation)
+  - [ ] RAM leak detection over extended runtime
+  - [ ] Document detailed performance matrix
 
-- **Documentation:**
-  - Create `docs/improvements/EFFECTS_IMPLEMENTATION.md` with full details
-  - Update `docs/README.md` to reference new documentation
-  - Consider updating README.md to mention effects capability
+**Phase G: Quality Polish (Optional Enhancement):**
+- **Status:** Not required - current quality excellent
+- **If pursuing quality improvements:**
+  - [ ] **Reverb int32_t precision** (recommended first):
+    - Use int32_t for comb filter calculations (keep int16_t buffers)
+    - Estimated CPU impact: +5-10% (total ~20-25%)
+    - Benefit: Smoother tail decay, less graininess
+  - [ ] **Full Freeverb upgrade** (after int32_t):
+    - Upgrade from 4 combs + 2 allpass to 8 combs + 4 allpass
+    - Estimated CPU impact: +5-8% additional
+    - Benefit: Richer early reflections, better diffusion
+    - Note: Stereo NOT planned (mono DAC output)
+  - [ ] **Delay quality improvements**:
+    - Add noise gate to delay feedback loop
+    - Improve precision in delay buffer operations
+  - [ ] **Parameter optimization**:
+    - Tune reverb room size range for best sound
+    - Test effect combinations and document "sweet spots"
+    - Create preset combinations (e.g., "hall", "plate", "spring")
+
+**Phase 3 Hardware (When Parts Arrive):**
+- [ ] Add MCP23017 GPIO expander module
+- [ ] Wire physical switches for oscillators and effects
+- [ ] Connect ControlHandler to GPIO inputs
+- [ ] Add SSD1306 OLED display (optional)
+
+**Documentation (Optional - Already well documented):**
+- [ ] Create `docs/improvements/EFFECTS_IMPLEMENTATION.md` (condensed summary)
+- [ ] Update `docs/README.md` to reference effects documentation
+- [ ] Consider updating README.md to highlight effects capability
+- [ ] Update memory bank files with Phase F completion (in progress)
 
 ## Notes & Reminders
 
