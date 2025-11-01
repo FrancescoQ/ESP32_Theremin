@@ -16,7 +16,7 @@
 #define PIN_SENSOR_I2C_SDA        21  // I2C data line (shared bus)
 #define PIN_SENSOR_I2C_SCL        22  // I2C clock line (shared bus)
 #define PIN_SENSOR_PITCH_XSHUT    16  // Pitch sensor shutdown control
-#define PIN_SENSOR_VOLUME_XSHUT   17  // Volume sensor shutdown control
+#define PIN_SENSOR_VOLUME_XSHUT   19  // Volume sensor shutdown control
 
 // I2C Addresses (set via XSHUT initialization)
 #define I2C_ADDR_SENSOR_PITCH     0x30  // Pitch sensor (reassigned)
@@ -91,7 +91,7 @@
  * Current GPIO Allocation (Phase 1):
  * ----------------------------------
  *   16  - Sensor XSHUT (pitch)
- *   17  - Sensor XSHUT (volume)
+ *   19  - Sensor XSHUT (volume)
  *   21  - I2C SDA (shared bus)
  *   22  - I2C SCL (shared bus)
  *   25  - Audio DAC output (I2S built-in DAC mode)
