@@ -104,8 +104,7 @@ int16_t ChorusEffect::process(int16_t input) {
     int32_t output = (dry * (1.0f - wetDryMix)) + (wet * wetDryMix);
 
     // Clamp
-    if (output > 32767) output = 32767;
-    if (output < -32768) output = -32768;
+    output = constrain(output, -32768, 32767);
 
     // Advance write pointer
     writeIndex = (writeIndex + 1) % bufferSize;
@@ -137,8 +136,7 @@ void ChorusEffect::setEnabled(bool en) {
 
 void ChorusEffect::setRate(float hz) {
     // Constrain to reasonable range
-    if (hz < 0.1f) hz = 0.1f;
-    if (hz > 10.0f) hz = 10.0f;
+    hz = constrain(hz, 0.1f, 10.0f);
 
     lfo.setFrequency(hz);  // Just delegate to Oscillator!
 
@@ -153,8 +151,7 @@ float ChorusEffect::getRate() const {
 
 void ChorusEffect::setDepth(float ms) {
     // Constrain to reasonable range
-    if (ms < 1.0f) ms = 1.0f;
-    if (ms > 50.0f) ms = 50.0f;
+    ms = constrain(ms, 1.0f, 50.0f);
 
     lfoDepthMs = ms;
 
@@ -164,8 +161,7 @@ void ChorusEffect::setDepth(float ms) {
 }
 
 void ChorusEffect::setMix(float mix) {
-    if (mix < 0.0f) mix = 0.0f;
-    if (mix > 1.0f) mix = 1.0f;
+    mix = constrain(mix, 0.0f, 1.0f);
 
     wetDryMix = mix;
 
