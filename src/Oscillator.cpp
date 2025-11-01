@@ -7,10 +7,10 @@
 
 #include "Oscillator.h"
 
-// Sine wave lookup table (256 entries)
+// Sine wave lookup table (SINE_TABLE_SIZE entries)
 // Pre-calculated sine values for one complete cycle
 // Stored in Flash memory (PROGMEM) to save RAM
-const int16_t Oscillator::SINE_TABLE[256] PROGMEM = {
+const int16_t Oscillator::SINE_TABLE[SINE_TABLE_SIZE] PROGMEM = {
   0, 804, 1608, 2410, 3212, 4011, 4808, 5602, 6393, 7179, 7962, 8739, 9512, 10278, 11039, 11793,
   12539, 13279, 14010, 14732, 15446, 16151, 16846, 17530, 18204, 18868, 19519, 20159, 20787, 21403, 22005, 22594,
   23170, 23731, 24279, 24811, 25329, 25832, 26319, 26790, 27245, 27683, 28105, 28510, 28898, 29268, 29621, 29956,
@@ -141,9 +141,9 @@ int16_t Oscillator::generateSquareWave() const {
   // Second half of cycle: minimum value
 
   if (phase < PHASE_HALF_CYCLE) {
-    return SAMPLE_MAX;  // Maximum positive value (16-bit)
+    return Audio::SAMPLE_MAX;  // Maximum positive value (16-bit)
   } else {
-    return SAMPLE_MIN;  // Maximum negative value (16-bit)
+    return Audio::SAMPLE_MIN;  // Maximum negative value (16-bit)
   }
 }
 
@@ -166,10 +166,10 @@ int16_t Oscillator::generateTriangleWave() const {
 
   if (phase < PHASE_HALF_CYCLE) {
     // Rising edge: map 0.0-0.5 to SAMPLE_MIN to SAMPLE_MAX
-    sample = (int16_t)((phase * OCTAVE_MULTIPLIER * (float)SAMPLE_RANGE) - (float)SAMPLE_MAX - 1.0f);
+    sample = (int16_t)((phase * OCTAVE_MULTIPLIER * (float)Audio::SAMPLE_RANGE) - (float)Audio::SAMPLE_MAX - 1.0f);
   } else {
     // Falling edge: map 0.5-1.0 to SAMPLE_MAX to SAMPLE_MIN
-    sample = (int16_t)(((1.0f - phase) * OCTAVE_MULTIPLIER * (float)SAMPLE_RANGE) - (float)SAMPLE_MAX - 1.0f);
+    sample = (int16_t)(((1.0f - phase) * OCTAVE_MULTIPLIER * (float)Audio::SAMPLE_RANGE) - (float)Audio::SAMPLE_MAX - 1.0f);
   }
 
   return sample;
@@ -181,5 +181,5 @@ int16_t Oscillator::generateSawtoothWave() const {
   // Simplest waveform - direct linear mapping of phase to amplitude
   // Phase 0.0 → SAMPLE_MIN, Phase 1.0 → SAMPLE_MAX
 
-  return (int16_t)((phase * (float)SAMPLE_RANGE) - (float)SAMPLE_MAX - 1.0f);
+  return (int16_t)((phase * (float)Audio::SAMPLE_RANGE) - (float)Audio::SAMPLE_MAX - 1.0f);
 }

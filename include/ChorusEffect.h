@@ -109,6 +109,7 @@
 #pragma once
 #include <Arduino.h>
 #include "Oscillator.h"  // Reuse Oscillator as LFO!
+#include "AudioConstants.h"
 
 class ChorusEffect {
 public:
@@ -116,7 +117,7 @@ public:
      * Constructor
      * @param sampleRate Audio sample rate
      */
-    ChorusEffect(uint32_t sampleRate);
+    ChorusEffect(uint32_t sampleRate = Audio::SAMPLE_RATE);
 
     /**
      * Destructor

@@ -5,6 +5,7 @@
  */
 
 #include "ChorusEffect.h"
+#include "AudioConstants.h"
 #include "Debug.h"
 #include <string.h>
 
@@ -104,7 +105,7 @@ int16_t ChorusEffect::process(int16_t input) {
     int32_t output = (dry * (1.0f - wetDryMix)) + (wet * wetDryMix);
 
     // Clamp
-    output = constrain(output, -32768, 32767);
+    output = constrain(output, Audio::SAMPLE_MIN, Audio::SAMPLE_MAX);
 
     // Advance write pointer
     writeIndex = (writeIndex + 1) % bufferSize;

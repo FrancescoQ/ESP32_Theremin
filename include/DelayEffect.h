@@ -74,6 +74,7 @@
 
 #pragma once
 #include <Arduino.h>
+#include "AudioConstants.h"
 
 class DelayEffect {
 public:
@@ -82,7 +83,7 @@ public:
      * @param delayTimeMs Delay time in milliseconds
      * @param sampleRate Audio sample rate (e.g., 22050 Hz)
      */
-    DelayEffect(uint32_t delayTimeMs, uint32_t sampleRate);
+    DelayEffect(uint32_t delayTimeMs, uint32_t sampleRate = Audio::SAMPLE_RATE);
 
     /**
      * Destructor - frees delay buffer

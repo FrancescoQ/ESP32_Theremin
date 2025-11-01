@@ -5,6 +5,7 @@
  */
 
 #include "DelayEffect.h"
+#include "AudioConstants.h"
 #include "Debug.h"
 #include <string.h>  // for memset
 
@@ -61,7 +62,7 @@ int16_t DelayEffect::process(int16_t input) {
     int32_t newSample = input + ((int32_t)delayedSample * feedback);
 
     // Clamp to prevent overflow
-    newSample = constrain(newSample, -32768, 32767);
+    newSample = constrain(newSample, Audio::SAMPLE_MIN, Audio::SAMPLE_MAX);
 
     delayBuffer[writeIndex] = (int16_t)newSample;
 
@@ -78,7 +79,7 @@ int16_t DelayEffect::process(int16_t input) {
     int32_t output = (dry * (1.0f - wetDryMix)) + (wet * wetDryMix);
 
     // Clamp output
-    output = constrain(output, -32768, 32767);
+    output = constrain(output, Audio::SAMPLE_MIN, Audio::SAMPLE_MAX);
 
     return (int16_t)output;
 }

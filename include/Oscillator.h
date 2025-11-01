@@ -8,6 +8,7 @@
 
 #pragma once
 #include <Arduino.h>
+#include "AudioConstants.h"
 
 class Oscillator {
  public:
@@ -147,15 +148,12 @@ class Oscillator {
    */
   int16_t generateSawtoothWave() const;
 
-  // Sine wave lookup table (256 entries)
-  // Stored in Flash memory to save RAM
-  static const int16_t SINE_TABLE[256] PROGMEM;
-
-  // Audio sample constants (16-bit signed audio)
-  static constexpr int16_t SAMPLE_MAX = 32767;
-  static constexpr int16_t SAMPLE_MIN = -32768;
-  static constexpr uint32_t SAMPLE_RANGE = 65535;
+  // Oscillator-specific constants
   static constexpr uint16_t SINE_TABLE_SIZE = 256;
   static constexpr float PHASE_HALF_CYCLE = 0.5f;
   static constexpr float OCTAVE_MULTIPLIER = 2.0f;
+
+  // Sine wave lookup table (SINE_TABLE_SIZE entries)
+  // Stored in Flash memory to save RAM
+  static const int16_t SINE_TABLE[SINE_TABLE_SIZE] PROGMEM;
 };

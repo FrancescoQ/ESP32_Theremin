@@ -6,6 +6,7 @@
 
 #pragma once
 #include <Arduino.h>
+#include "AudioConstants.h"
 #include "DelayEffect.h"
 #include "ChorusEffect.h"
 // Future: #include "ReverbEffect.h"
@@ -16,7 +17,7 @@ public:
      * Constructor
      * @param sampleRate Audio sample rate
      */
-    EffectsChain(uint32_t sampleRate);
+    EffectsChain(uint32_t sampleRate = Audio::SAMPLE_RATE);
 
     /**
      * Process audio sample through effect chain

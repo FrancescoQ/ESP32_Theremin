@@ -37,7 +37,7 @@ AudioEngine::AudioEngine(PerformanceMonitor* perfMon)
   // since AudioEngine is global (lives in static data, not function stack).
   // Both approaches use same total RAM, just different memory locations.
   // The heap approach is more common for large/optional components in practice.
-  effectsChain = new EffectsChain(SAMPLE_RATE);
+  effectsChain = new EffectsChain();
   DEBUG_PRINTLN("[AUDIO] Effects chain created");
 }
 
@@ -596,7 +596,7 @@ bool AudioEngine::setupI2S() {
   // I2S configuration for built-in DAC
   i2s_config_t i2s_config = {
       .mode = (i2s_mode_t)(I2S_MODE_MASTER | I2S_MODE_TX | I2S_MODE_DAC_BUILT_IN),
-      .sample_rate = SAMPLE_RATE,
+      .sample_rate = Audio::SAMPLE_RATE,
       .bits_per_sample = I2S_BITS_PER_SAMPLE_16BIT,
       .channel_format = I2S_CHANNEL_FMT_ONLY_RIGHT,  // Mono output on DAC1 (GPIO25)
       .communication_format = I2S_COMM_FORMAT_STAND_MSB,
@@ -656,15 +656,15 @@ void AudioEngine::generateAudioBuffer() {
 
     // Add samples from all active oscillators
     if (oscillator1.isActive()) {
-      mixedSample += oscillator1.getNextSample((float)SAMPLE_RATE);
+      mixedSample += oscillator1.getNextSample((float)Audio::SAMPLE_RATE);
       activeCount++;
     }
     if (oscillator2.isActive()) {
-      mixedSample += oscillator2.getNextSample((float)SAMPLE_RATE);
+      mixedSample += oscillator2.getNextSample((float)Audio::SAMPLE_RATE);
       activeCount++;
     }
     if (oscillator3.isActive()) {
-      mixedSample += oscillator3.getNextSample((float)SAMPLE_RATE);
+      mixedSample += oscillator3.getNextSample((float)Audio::SAMPLE_RATE);
       activeCount++;
     }
 
