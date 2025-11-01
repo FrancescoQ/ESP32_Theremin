@@ -11,6 +11,10 @@
 #include "Debug.h"
 #include <string.h>
 
+// Define static constexpr arrays (required for C++14 and earlier)
+constexpr float ReverbEffect::COMB_DELAYS_MS[NUM_COMBS];
+constexpr float ReverbEffect::ALLPASS_DELAYS_MS[NUM_ALLPASSES];
+
 ReverbEffect::ReverbEffect(uint32_t sampleRate)
     : sampleRate(sampleRate),
       roomSize(0.5f),
@@ -31,7 +35,7 @@ ReverbEffect::ReverbEffect(uint32_t sampleRate)
     // Set initial parameters
     updateCombs();
 
-    DEBUG_PRINTLN("[REVERB] Initialized with 4 comb + 2 allpass filters");
+    DEBUG_PRINTLN("[REVERB] Initialized with 8 comb + 4 allpass filters (Full Freeverb)");
 }
 
 ReverbEffect::~ReverbEffect() {
@@ -182,9 +186,11 @@ int16_t ReverbEffect::process(int16_t input) {
         combSum += processComb(combs[i], scaledInput);
     }
 
-    // Series allpass filters (cascade)
-    int16_t allpassOut = processAllpass(allpasses[0], combSum >> 2);  // Divide by 4 to prevent overflow
+    // Series allpass filters (cascade all 4)
+    int16_t allpassOut = processAllpass(allpasses[0], combSum >> 3);  // Divide by 8 to prevent overflow
     allpassOut = processAllpass(allpasses[1], allpassOut);
+    allpassOut = processAllpass(allpasses[2], allpassOut);
+    allpassOut = processAllpass(allpasses[3], allpassOut);
 
     // Scale wet signal
     int32_t wet = (int32_t)(allpassOut * SCALE_WET);

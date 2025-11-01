@@ -1442,21 +1442,229 @@ sensors:status             - Show sensor and smoothing states
 - [x] Fix buzzing issue with noise gates
 - [x] Add volume smoothing toggle for testing
 
-### Phase G: Effects Polish & Fine-Tuning 🎯 NEXT PHASE
+### Phase G: Effects Polish & Fine-Tuning ✅ COMPLETE
 
 **Goal:** Improve audio quality of all three effects while maintaining excellent performance.
 
-**Current Status:**
-- ✅ All effects functional and integrated
-- ✅ Performance: 1.6ms / 11ms (14.5% CPU) with 3 osc + all effects
-- ✅ Headroom: 85% available
-- ⚠️ Reverb tail has characteristic "16-bit grainy" sound (expected with int16_t)
-- ⚠️ Delay may have background noise at end of repetitions
+**Implementation Date:** November 1, 2025
 
-**Quality Improvements to Implement:**
+**Optimization Journey:**
 
-#### G.1 Reverb Audio Quality Enhancement
+#### G.1 Reverb Noise Gate Fine-Tuning ✅
+**Issue:** Graininess and infinite noise at high reverb settings (room:1.0)
+
+**Iterations:**
+1. **Initial attempt:** int32_t precision (256x scale-up) → Found scaling bug in damping filter
+2. **Feedback limiting:** Reduced max feedback from 0.98 to 0.90 → Too short reverb tails
+3. **Aggressive gates (4x):** Increased all gates to ±200/2.0 → Killed infinite noise but tails too short
+4. **Balanced solution (2x):** Gates at ±100/1.0, feedback at 0.94 → Good balance achieved
+
+**Final Settings:**
+- Reverb input/output gates: ±100 (2x original ±50)
+- FilterStore gate: ±1.0 (2x original ±0.5)
+- Max feedback: 0.94 (was 0.98)
+
+**Result:** Infinite noise eliminated, decent tail length preserved.
+
+#### G.2 Full Freeverb Upgrade ✅
+**Implementation:** Upgraded from simplified to full Freeverb algorithm
+
+**Changes:**
+- **Comb filters:** 4 → 8 (doubled for richer early reflections)
+- **Allpass filters:** 2 → 4 (doubled for better diffusion)
+- **New delays:**
+  - Combs 5-8: 32.24ms, 33.81ms, 35.31ms, 36.66ms
+  - Allpass 3-4: 7.73ms, 5.10ms
+
+**Performance Impact:**
+- RAM: 23,984 bytes (unchanged - efficient buffer allocation)
+- Flash: 373,485 bytes (+80 bytes)
+- CPU: Still ~2.0-2.1ms with 3 osc + all effects
+
+**Result:** Richer reverb texture, better diffusion, still grainy at low levels.
+
+#### G.3 Master Output Noise Gate ✅
+**Implementation:** Final cleanup stage after all effects
+
+**Logic:**
+```cpp
+// After effects chain, before DAC:
+if (scaledSample > -150 && scaledSample < 150) {
+  scaledSample = 0;
+}
+```
+
+**Purpose:** Catch cumulative quantization noise from stacked effects (delay + chorus + reverb)
+
+**Result:** Slight improvement but graininess persists at low levels.
+
+#### G.4 Root Cause Identified 🎯
+**Discovery:** The graininess is NOT the audio processing or effects - it's the **8-bit ESP32 built-in DAC**!
+
+**Analysis:**
+- Audio processing: 16-bit (int16_t) = 65,536 discrete levels
+- ESP32 built-in DAC: **8-bit = only 256 levels**
+- **Bottleneck:** 99.6% of audio precision thrown away at output stage!
+
+**Conclusion:** All noise gate optimization was working around DAC limitations, not fixing audio engine issues.
+
+**STATUS:** ✅ **PHASE G COMPLETE** - Optimized within 8-bit DAC constraints. Waiting for PCM5102 (24-bit DAC) to unlock true audio quality.
+
+---
+
+### Phase H: PCM5102 External DAC Integration ⏸️ ON HOLD
+
+**Goal:** Eliminate graininess by upgrading from 8-bit ESP32 DAC to 24-bit external DAC.
+
+**Hardware:** PCM5102 24-bit I2S DAC module (on order)
+
+**Expected Improvements:**
+- **Output resolution:** 8-bit (256 levels) → 24-bit (16.7M levels)
+- **Precision utilization:** 16-bit audio → 24-bit DAC = perfect fit (no truncation)
+- **Graininess:** Should be **completely eliminated**
+- **Reverb tails:** Smooth decay to silence
+- **Volume fades:** Clean transitions without artifacts
+
+#### H.1 I2S Configuration Update
+**Tasks:**
+- [ ] Modify `AudioEngine::setupI2S()` for external DAC
+- [ ] Change from `I2S_MODE_DAC_BUILT_IN` to standard I2S mode
+- [ ] Configure GPIO pins (BCK, WS, DATA)
+- [ ] Update sample format from 8-bit to 16-bit output
+- [ ] Remove DAC offset conversion (no longer needed)
+
+**Changes to `src/AudioEngine.cpp`:**
+```cpp
+// In setupI2S():
+i2s_config_t i2s_config = {
+    .mode = (i2s_mode_t)(I2S_MODE_MASTER | I2S_MODE_TX),  // Remove DAC_BUILT_IN
+    .sample_rate = Audio::SAMPLE_RATE,
+    .bits_per_sample = I2S_BITS_PER_SAMPLE_16BIT,
+    .channel_format = I2S_CHANNEL_FMT_ONLY_RIGHT,
+    // ... rest of config
+};
+
+// Add pin configuration:
+i2s_pin_config_t pin_config = {
+    .bck_io_num = 26,    // Bit clock
+    .ws_io_num = 25,     // Word select
+    .data_out_num = 22,  // Data out
+    .data_in_num = -1    // Not used
+};
+
+i2s_set_pin((i2s_port_t)I2S_NUM, &pin_config);
+```
+
+**In `generateAudioBuffer()`:**
+```cpp
+// Remove DAC offset conversion:
+// OLD: uint8_t dacSample = (sample >> 8) + 128;
+// NEW: Direct 16-bit output
+buffer[i] = scaledSample;  // No conversion needed!
+```
+
+#### H.2 Post-PCM5102 Testing Plan
+**Tasks:**
+- [ ] Upload firmware with PCM5102 config
+- [ ] Test with current noise gate settings
+- [ ] Listen for graininess at low levels
+- [ ] Test reverb tail decay quality
+- [ ] Test volume smoothing fades
+
+#### H.3 Noise Gate Re-tuning (If Needed)
+**If audio is clean:** Consider softening or removing gates
+
+**Reverb gates:** ±100 → ±50 (back to original) or disable
+**Master gate:** ±150 → ±75 or disable (set to 0)
+**Feedback:** 0.94 → 0.96-0.98 (longer tails)
+
+**Tasks:**
+- [ ] Test with original gate settings (±50/0.5)
+- [ ] Test with master gate disabled (threshold = 0)
+- [ ] Test higher feedback values (0.96-0.98)
+- [ ] Find optimal settings for 24-bit output
+- [ ] Document final configuration
+
+#### H.4 Final Validation
+**Success Criteria:**
+- [ ] No graininess at any volume level
+- [ ] Smooth reverb tail decay to silence
+- [ ] Clean volume fades with smoothing enabled
+- [ ] All 3 effects sound professional
+- [ ] CPU usage still <25%
+
+#### H.5 Bit Depth Options Reference
+
+**PCM5102 Capabilities:**
+- **Digital Input (I2S):** Accepts 16-bit, 24-bit, or 32-bit frames
+- **Internal DAC:** 24-bit precision digital-to-analog conversion
+- **Analog Output:** Professional quality based on input bit depth
+
+**Decision: Stick with 16-bit (Recommended)**
+
+Current architecture already uses 16-bit (`int16_t`) throughout:
+- Oscillators: Generate at 16-bit precision
+- Effects: Process at 16-bit precision
+- Output: Send 16-bit to PCM5102
+
+**Expected Result:** Upgrading from 8-bit DAC to PCM5102 with 16-bit input = **256x improvement** (256 levels → 65,536 levels). This should eliminate 99% of graininess.
+
+**Future Option: 24-bit Hybrid Architecture (If Needed)**
+
+If 16-bit reverb tail is still grainy after PCM5102 testing:
+
+```cpp
+// Oscillators: Stay efficient at 16-bit
+int16_t osc = oscillator.getNextSample();  // int16_t = 16-bit storage
+
+// Upscale to 24-bit precision for effects
+int32_t sample24 = (int32_t)osc << 8;  // int32_t = 32-bit storage
+                                        // Audio in upper 24 bits
+                                        // Lower 8 bits = padding
+
+// Effects process at 24-bit precision
+sample24 = delay.process24(sample24);
+sample24 = chorus.process24(sample24);
+sample24 = reverb.process24(sample24);  // Higher precision = smoother tail
+
+// Send 24-bit to PCM5102
+output_to_i2s(sample24);  // Full 24-bit DAC resolution
+```
+
+**Why "24-bit audio" uses int32_t:**
+- Industry convention: "24-bit audio" = 24 bits of audio data stored in 32-bit container
+- Storage: `int32_t` (32 bits total)
+- Audio data: Upper 24 bits (16,777,216 levels)
+- Padding: Lower 8 bits (unused, typically zeros)
+- CPU efficiency: Processors work in 32-bit word sizes naturally
+- I2S convention: Sends 32-bit frames with 24-bit audio in upper bits
+
+**Cost of 24-bit upgrade:**
+- Effect buffers: 2x RAM (int16_t → int32_t)
+- Reverb: ~6 KB → ~12 KB
+- CPU: +30-50% for effects processing
+- Code complexity: Moderate (upscaling + int32_t effect variants)
+
+**Benefit of 24-bit upgrade:**
+- 256x more precision in reverb feedback loops
+- Smoother decay to silence
+- Less quantization noise accumulation
+- Professional studio-quality reverb tail
+
+**Recommendation:** Test 16-bit with PCM5102 first. Likely sufficient! CD audio is 16-bit and sounds professional. Upgrade to 24-bit only if reverb quality demands it.
+
+**STATUS:** ⏸️ **PHASE H ON HOLD** - Waiting for PCM5102 hardware arrival
+
+---
+
+### Phase I: Final Polish & Documentation
+
+**Goal:** Finalize project with optimal settings and comprehensive documentation.
+
+#### I.1 Parameter Optimization
 **Issue:** Reverb tail exhibits graininess when decaying to low levels due to int16_t quantization.
+
+#### I.1 Parameter Optimization (After PCM5102)
 
 **Options (in order of recommendation):**
 

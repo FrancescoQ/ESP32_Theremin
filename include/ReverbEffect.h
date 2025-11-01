@@ -87,12 +87,19 @@ private:
         size_t bufferIndex;
     };
 
-    static const int NUM_COMBS = 4;
-    static const int NUM_ALLPASSES = 2;
+    static const int NUM_COMBS = 8;        // Full Freeverb: 8 comb filters
+    static const int NUM_ALLPASSES = 4;    // Full Freeverb: 4 allpass filters
 
     // Freeverb tuning constants (in milliseconds - sample-rate agnostic)
-    static constexpr float COMB_DELAYS_MS[NUM_COMBS] = {25.31f, 26.94f, 28.96f, 30.75f};
-    static constexpr float ALLPASS_DELAYS_MS[NUM_ALLPASSES] = {12.61f, 10.00f};
+    // Original Freeverb delay times converted from 44.1kHz sample rate
+    static constexpr float COMB_DELAYS_MS[NUM_COMBS] = {
+        25.31f, 26.94f, 28.96f, 30.75f,   // Original 4 combs
+        32.24f, 33.81f, 35.31f, 36.66f    // Additional 4 combs for Full Freeverb
+    };
+    static constexpr float ALLPASS_DELAYS_MS[NUM_ALLPASSES] = {
+        12.61f, 10.00f,  // Original 2 allpass
+        7.73f, 5.10f     // Additional 2 allpass for Full Freeverb
+    };
 
     static constexpr float FIXED_GAIN = 0.015f;      // Input gain
     static constexpr float SCALE_WET = 3.0f;         // Wet signal scaling

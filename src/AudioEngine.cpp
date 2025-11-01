@@ -622,6 +622,10 @@ bool AudioEngine::setupI2S() {
 
 // Generate audio buffer and write to I2S
 void AudioEngine::generateAudioBuffer() {
+  // Master output noise gate threshold
+  // Eliminates cumulative quantization noise from stacked effects
+  static constexpr int16_t MASTER_NOISE_GATE_THRESHOLD = 150;
+
   // ESP32 built-in DAC expects unsigned 8-bit samples (0-255)
   // We use uint16_t buffer for proper I2S DMA alignment (2 bytes per sample)
   // Only the upper byte is used by the DAC
@@ -670,6 +674,13 @@ void AudioEngine::generateAudioBuffer() {
     // Process through effects chain
     if (effectsChain != nullptr) {
       scaledSample = effectsChain->process(scaledSample);
+    }
+
+    // MASTER OUTPUT NOISE GATE
+    // Eliminates cumulative quantization noise from stacked effects (delay + chorus + reverb)
+    // Kills low-level graininess that accumulates through the effects chain
+    if (scaledSample > -MASTER_NOISE_GATE_THRESHOLD && scaledSample < MASTER_NOISE_GATE_THRESHOLD) {
+      scaledSample = 0;
     }
 
     // Convert signed 16-bit to unsigned 8-bit for DAC:
