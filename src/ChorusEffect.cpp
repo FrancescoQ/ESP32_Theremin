@@ -5,7 +5,6 @@
  */
 
 #include "ChorusEffect.h"
-#include "AudioConstants.h"
 #include "Debug.h"
 #include <string.h>
 
@@ -27,7 +26,7 @@ ChorusEffect::ChorusEffect(uint32_t sampleRate)
 
     // Allocate buffer for max depth (50ms + safety margin)
     bufferSize = (size_t)((50.0f / 1000.0f) * sampleRate) + 100;
-    delayBuffer = new int16_t[bufferSize];
+    delayBuffer.reset(new int16_t[bufferSize]);  // C++11 compatible
 
     reset();
 
@@ -48,10 +47,7 @@ ChorusEffect::ChorusEffect(uint32_t sampleRate)
 }
 
 ChorusEffect::~ChorusEffect() {
-    if (delayBuffer != nullptr) {
-        delete[] delayBuffer;
-        delayBuffer = nullptr;
-    }
+    // std::unique_ptr automatically frees memory - no manual cleanup needed!
     DEBUG_PRINTLN("[CHORUS] Destroyed");
 }
 
@@ -171,8 +167,8 @@ void ChorusEffect::setMix(float mix) {
 }
 
 void ChorusEffect::reset() {
-    if (delayBuffer != nullptr) {
-        memset(delayBuffer, 0, bufferSize * sizeof(int16_t));
+    if (delayBuffer) {
+        memset(delayBuffer.get(), 0, bufferSize * sizeof(int16_t));
         writeIndex = 0;
         // Note: No need to reset LFO phase - continuous modulation is fine
         DEBUG_PRINTLN("[CHORUS] Buffer cleared");

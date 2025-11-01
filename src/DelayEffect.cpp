@@ -5,7 +5,6 @@
  */
 
 #include "DelayEffect.h"
-#include "AudioConstants.h"
 #include "Debug.h"
 #include <string.h>  // for memset
 
@@ -15,12 +14,11 @@ DelayEffect::DelayEffect(uint32_t delayTimeMs, uint32_t sampleRate)
       feedback(0.5f),
       wetDryMix(0.3f),
       enabled(false),
-      writeIndex(0),
-      delayBuffer(nullptr) {
+      writeIndex(0) {
 
-    // Calculate and allocate buffer
-    bufferSize = calculateBufferSize(delayTimeMs);
-    delayBuffer = new int16_t[bufferSize];
+    // Calculate and allocate buffer using std::vector
+    size_t bufferSize = calculateBufferSize(delayTimeMs);
+    delayBuffer.resize(bufferSize);
 
     // Initialize to silence
     reset();
@@ -35,10 +33,7 @@ DelayEffect::DelayEffect(uint32_t delayTimeMs, uint32_t sampleRate)
 }
 
 DelayEffect::~DelayEffect() {
-    if (delayBuffer != nullptr) {
-        delete[] delayBuffer;
-        delayBuffer = nullptr;
-    }
+    // std::vector automatically frees memory - no manual cleanup needed!
     DEBUG_PRINTLN("[DELAY] Destroyed");
 }
 
@@ -68,7 +63,7 @@ int16_t DelayEffect::process(int16_t input) {
 
     // Advance write pointer (circular)
     writeIndex++;
-    if (writeIndex >= bufferSize) {
+    if (writeIndex >= delayBuffer.size()) {
         writeIndex = 0;
     }
 
@@ -96,18 +91,16 @@ void DelayEffect::setDelayTime(uint32_t timeMs) {
 
     delayTimeMs = timeMs;
 
-    // Reallocate buffer if needed
+    // Resize buffer if needed (std::vector handles reallocation automatically)
     size_t newSize = calculateBufferSize(timeMs);
-    if (newSize != bufferSize) {
-        delete[] delayBuffer;
-        bufferSize = newSize;
-        delayBuffer = new int16_t[bufferSize];
+    if (newSize != delayBuffer.size()) {
+        delayBuffer.resize(newSize);
         reset();
 
         DEBUG_PRINT("[DELAY] Time changed to ");
         DEBUG_PRINT(delayTimeMs);
         DEBUG_PRINT("ms, new buffer: ");
-        DEBUG_PRINT((bufferSize * sizeof(int16_t)) / 1024);
+        DEBUG_PRINT((newSize * sizeof(int16_t)) / 1024);
         DEBUG_PRINTLN(" KB");
     }
 }
@@ -133,8 +126,8 @@ void DelayEffect::setMix(float mix) {
 }
 
 void DelayEffect::reset() {
-    if (delayBuffer != nullptr) {
-        memset(delayBuffer, 0, bufferSize * sizeof(int16_t));
+    if (!delayBuffer.empty()) {
+        std::fill(delayBuffer.begin(), delayBuffer.end(), 0);
         writeIndex = 0;
         DEBUG_PRINTLN("[DELAY] Buffer cleared");
     }

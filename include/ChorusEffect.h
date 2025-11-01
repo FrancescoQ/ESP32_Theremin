@@ -108,8 +108,33 @@
 
 #pragma once
 #include <Arduino.h>
+#include <memory>
 #include "Oscillator.h"  // Reuse Oscillator as LFO!
 #include "AudioConstants.h"
+
+/*
+ * MEMORY MANAGEMENT EVOLUTION:
+ *
+ * Version 1 (Old C++ style - manual management):
+ *   int16_t* delayBuffer = new int16_t[bufferSize];
+ *   delete[] delayBuffer;  // Easy to forget, leads to memory leaks!
+ *
+ * Version 2 (Modern C++ - RAII with std::unique_ptr):
+ *   std::unique_ptr<int16_t[]> delayBuffer;
+ *   delayBuffer.reset(new int16_t[bufferSize]);  // Automatic cleanup when object destroyed
+ *
+ * WHY std::unique_ptr FOR CHORUS EFFECT:
+ *   - Buffer size is FIXED (50ms, never changes after construction)
+ *   - Automatic memory management (no manual new/delete)
+ *   - Exception-safe (if allocation fails, automatic cleanup)
+ *   - Zero overhead (just a wrapper around raw pointer)
+ *   - Perfect for fixed-size allocations
+ *
+ * COMPARISON:
+ *   Raw new[]/delete[]: Manual, error-prone, zero overhead
+ *   std::unique_ptr:    Automatic, safe, zero overhead ✓ (BEST for fixed-size)
+ *   std::vector:        Automatic, safe, ~12 bytes overhead, overkill for fixed buffers
+ */
 
 class ChorusEffect {
 public:
@@ -166,7 +191,7 @@ public:
     float getMix() const { return wetDryMix; }
 
 private:
-    int16_t* delayBuffer;
+    std::unique_ptr<int16_t[]> delayBuffer;  // Fixed-size buffer (auto-managed)
     size_t bufferSize;
     size_t writeIndex;
 

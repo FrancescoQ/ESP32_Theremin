@@ -74,7 +74,32 @@
 
 #pragma once
 #include <Arduino.h>
+#include <vector>
 #include "AudioConstants.h"
+
+/*
+ * MEMORY MANAGEMENT EVOLUTION:
+ *
+ * Version 1 (Old C++ style - manual management):
+ *   int16_t* delayBuffer = new int16_t[bufferSize];
+ *   delete[] delayBuffer;  // Easy to forget, leads to memory leaks!
+ *
+ * Version 2 (Modern C++ - RAII with std::vector):
+ *   std::vector<int16_t> delayBuffer;
+ *   delayBuffer.resize(bufferSize);  // Automatic cleanup when object destroyed
+ *
+ * WHY std::vector FOR DELAY EFFECT:
+ *   - Buffer size CHANGES dynamically (setDelayTime can resize)
+ *   - Automatic memory management (no manual new/delete)
+ *   - Exception-safe (if allocation fails, automatic cleanup)
+ *   - Simplifies resize logic (one line instead of delete + new)
+ *   - Overhead: ~12 bytes (0.09% of 13KB buffer) - negligible!
+ *
+ * COMPARISON:
+ *   Raw new[]/delete[]: Manual, error-prone, zero overhead, must handle resize carefully
+ *   std::unique_ptr:    Automatic, safe, zero overhead, manual resize pattern
+ *   std::vector:        Automatic, safe, tiny overhead, built-in resize ✓ (BEST for dynamic)
+ */
 
 class DelayEffect {
 public:
@@ -140,9 +165,8 @@ public:
     float getMix() const { return wetDryMix; }
 
 private:
-    int16_t* delayBuffer;      // Circular buffer for delay line
-    size_t bufferSize;         // Buffer size in samples
-    size_t writeIndex;         // Current write position
+    std::vector<int16_t> delayBuffer;  // Circular buffer (auto-managed, resizable)
+    size_t writeIndex;                  // Current write position
 
     uint32_t sampleRate;       // Audio sample rate
     uint32_t delayTimeMs;      // Delay time in milliseconds
