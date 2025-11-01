@@ -1460,7 +1460,7 @@ sensors:status             - Show sensor and smoothing states
 
 **Options (in order of recommendation):**
 
-1. **Int32_t Intermediate Precision** ⭐ Recommended
+1. **Int32_t Intermediate Precision** ⭐ Recommended First
    - Use int32_t for comb filter calculations, keep int16_t buffers
    - Estimated CPU impact: +5-10%
    - Benefit: Much smoother tail decay
@@ -1468,6 +1468,16 @@ sensors:status             - Show sensor and smoothing states
      - [ ] Modify `processComb()` to use int32_t intermediate math
      - [ ] Keep damping filter in higher precision
      - [ ] Test and measure CPU impact
+
+   **After int32_t improvement, consider:**
+   - [ ] Upgrade to "Full Freeverb" (8 combs + 4 allpass vs current 4 + 2)
+     - Adds 4 more comb filters for richer early reflections
+     - Adds 2 more allpass filters for better diffusion
+     - Estimated additional CPU: +5-8% (total reverb ~12-15%)
+     - RAM increase: ~7 KB additional (still plenty available)
+     - Note: Stereo implementation not planned (mono DAC output)
+     - Better density and smoother tail than simplified version
+     - Original Freeverb spec: https://github.com/sinshu/freeverb
 
 2. **Add Dithering**
    - Add low-level noise (~1-2 LSB) to mask quantization
