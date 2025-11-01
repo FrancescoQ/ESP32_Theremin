@@ -80,8 +80,9 @@ void ReverbEffect::initAllpassFilter(AllpassFilter& allpass, float delayMs) {
 void ReverbEffect::updateCombs() {
     // Calculate feedback based on room size
     // Larger rooms = more feedback = longer reverb tail
-    float feedback = 0.28f + (roomSize * 0.7f);
-    if (feedback > 0.98f) feedback = 0.98f;  // Prevent instability
+    // Limited to 0.94 max (balanced between tail length and noise control)
+    float feedback = 0.28f + (roomSize * 0.66f);  // Max = 0.28 + 0.66 = 0.94
+    if (feedback > 0.94f) feedback = 0.94f;  // Prevent infinite noise circulation
 
     // Calculate damping coefficients
     float damp = damping * SCALE_DAMPING;
@@ -97,10 +98,11 @@ void ReverbEffect::updateCombs() {
 }
 
 int16_t ReverbEffect::processComb(CombFilter& comb, int16_t input) {
-    // Read from circular buffer
+    // Read from circular buffer at normal scale
     int16_t output = comb.buffer[comb.bufferIndex];
 
-    // Apply damping filter (one-pole lowpass)
+    // Apply damping filter (one-pole lowpass) at NORMAL scale
+    // This prevents filterStore from accumulating huge values
     comb.filterStore = (output * comb.damp2) + (comb.filterStore * comb.damp1);
 
     // Noise gate: Prevent very small float values from accumulating as noise
@@ -109,14 +111,20 @@ int16_t ReverbEffect::processComb(CombFilter& comb, int16_t input) {
         comb.filterStore = 0.0f;
     }
 
-    // Write new value with feedback
-    int32_t newValue = input + (int32_t)(comb.filterStore * comb.feedback);
+    // Scale input UP to int32_t precision for high-precision feedback calculation
+    int32_t input32 = (int32_t)input << PRECISION_SHIFT;
 
-    // Clamp to prevent overflow
-    if (newValue > Audio::SAMPLE_MAX) newValue = Audio::SAMPLE_MAX;
-    if (newValue < Audio::SAMPLE_MIN) newValue = Audio::SAMPLE_MIN;
+    // Compute feedback: scale filterStore UP when multiplying for precision
+    int32_t feedback32 = (int32_t)(comb.filterStore * comb.feedback * (1 << PRECISION_SHIFT));
+    int32_t newValue32 = input32 + feedback32;
 
-    comb.buffer[comb.bufferIndex] = (int16_t)newValue;
+    // Clamp at 32-bit scaled range
+    int32_t maxVal = (int32_t)Audio::SAMPLE_MAX << PRECISION_SHIFT;
+    int32_t minVal = (int32_t)Audio::SAMPLE_MIN << PRECISION_SHIFT;
+    newValue32 = constrain(newValue32, minVal, maxVal);
+
+    // Scale DOWN and store as int16_t
+    comb.buffer[comb.bufferIndex] = (int16_t)(newValue32 >> PRECISION_SHIFT);
 
     // Advance buffer index (circular)
     comb.bufferIndex++;
@@ -124,6 +132,7 @@ int16_t ReverbEffect::processComb(CombFilter& comb, int16_t input) {
         comb.bufferIndex = 0;
     }
 
+    // Return output (already at normal scale)
     return output;
 }
 
@@ -136,10 +145,8 @@ int16_t ReverbEffect::processAllpass(AllpassFilter& allpass, int16_t input) {
     int32_t output = -input + bufferOut;
     int32_t store = input + (bufferOut >> 1);  // Divide by 2 (0.5 feedback)
 
-    // Clamp
-    if (store > Audio::SAMPLE_MAX) store = Audio::SAMPLE_MAX;
-    if (store < Audio::SAMPLE_MIN) store = Audio::SAMPLE_MIN;
-
+    // Clamp store value
+    store = constrain(store, Audio::SAMPLE_MIN, Audio::SAMPLE_MAX);
     allpass.buffer[allpass.bufferIndex] = (int16_t)store;
 
     // Advance buffer index
@@ -149,8 +156,7 @@ int16_t ReverbEffect::processAllpass(AllpassFilter& allpass, int16_t input) {
     }
 
     // Clamp output
-    if (output > Audio::SAMPLE_MAX) output = Audio::SAMPLE_MAX;
-    if (output < Audio::SAMPLE_MIN) output = Audio::SAMPLE_MIN;
+    output = constrain(output, Audio::SAMPLE_MIN, Audio::SAMPLE_MAX);
 
     return (int16_t)output;
 }
@@ -188,8 +194,7 @@ int16_t ReverbEffect::process(int16_t input) {
     int32_t output = (dry * (1.0f - wetDryMix)) + (wet * wetDryMix);
 
     // Clamp output
-    if (output > Audio::SAMPLE_MAX) output = Audio::SAMPLE_MAX;
-    if (output < Audio::SAMPLE_MIN) output = Audio::SAMPLE_MIN;
+    output = constrain(output, Audio::SAMPLE_MIN, Audio::SAMPLE_MAX);
 
     // Noise gate: Ensure output below noise floor is silenced
     // This ensures the reverb tail decays to true silence without buzzing
