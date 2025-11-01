@@ -3,6 +3,7 @@
  *
  * Implementation of Freeverb-based reverb effect.
  * Based on the classic Freeverb algorithm by Jezar at Dreampoint.
+ * @see https://github.com/sinshu/freeverb/tree/main
  */
 
 #include "ReverbEffect.h"
@@ -101,6 +102,12 @@ int16_t ReverbEffect::processComb(CombFilter& comb, int16_t input) {
     // Apply damping filter (one-pole lowpass)
     comb.filterStore = (output * comb.damp2) + (comb.filterStore * comb.damp1);
 
+    // Noise gate: Prevent very small float values from accumulating as noise
+    // This eliminates buzzing when the reverb tail decays to silence
+    if (comb.filterStore > -0.5f && comb.filterStore < 0.5f) {
+        comb.filterStore = 0.0f;
+    }
+
     // Write new value with feedback
     int32_t newValue = input + (int32_t)(comb.filterStore * comb.feedback);
 
@@ -153,6 +160,12 @@ int16_t ReverbEffect::process(int16_t input) {
         return input;
     }
 
+    // Noise gate: Silence very quiet inputs to prevent noise circulation
+    // This prevents quantization noise from entering the feedback loops
+    if (input > -50 && input < 50) {
+        input = 0;
+    }
+
     // Scale input
     int32_t scaledInput = (int32_t)(input * FIXED_GAIN);
 
@@ -176,6 +189,12 @@ int16_t ReverbEffect::process(int16_t input) {
     // Clamp output
     if (output > 32767) output = 32767;
     if (output < -32768) output = -32768;
+
+    // Noise gate: Ensure output below noise floor is silenced
+    // This ensures the reverb tail decays to true silence without buzzing
+    if (output > -50 && output < 50) {
+        output = 0;
+    }
 
     return (int16_t)output;
 }

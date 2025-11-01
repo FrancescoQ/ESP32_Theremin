@@ -171,13 +171,18 @@ void ControlHandler::printHelp() {
   DEBUG_PRINTLN("  osc1:sine;osc1:octave:1;osc1:vol:0.8");
   DEBUG_PRINTLN("  - Execute multiple commands separated by ';'");
   DEBUG_PRINTLN("\nSensor Control:");
-  DEBUG_PRINTLN("  sensors:pitch:on     - Enable pitch sensor");
-  DEBUG_PRINTLN("  sensors:pitch:off    - Disable pitch sensor");
-  DEBUG_PRINTLN("  sensors:volume:on    - Enable volume sensor");
-  DEBUG_PRINTLN("  sensors:volume:off   - Disable volume sensor");
-  DEBUG_PRINTLN("  sensors:enable       - Enable both sensors (alias)");
-  DEBUG_PRINTLN("  sensors:disable      - Disable both sensors (alias)");
-  DEBUG_PRINTLN("  sensors:status       - Show sensor enable states");
+  DEBUG_PRINTLN("  sensors:pitch:on           - Enable pitch sensor");
+  DEBUG_PRINTLN("  sensors:pitch:off          - Disable pitch sensor");
+  DEBUG_PRINTLN("  sensors:volume:on          - Enable volume sensor");
+  DEBUG_PRINTLN("  sensors:volume:off         - Disable volume sensor");
+  DEBUG_PRINTLN("  sensors:enable             - Enable both sensors (alias)");
+  DEBUG_PRINTLN("  sensors:disable            - Disable both sensors (alias)");
+  DEBUG_PRINTLN("  sensors:status             - Show sensor enable states");
+  DEBUG_PRINTLN("\nSensor Smoothing:");
+  DEBUG_PRINTLN("  sensors:volume:smooth:on   - Enable volume smoothing (default)");
+  DEBUG_PRINTLN("  sensors:volume:smooth:off  - Instant response (for testing reverb)");
+  DEBUG_PRINTLN("  sensors:pitch:smooth:on    - Enable pitch smoothing (default)");
+  DEBUG_PRINTLN("  sensors:pitch:smooth:off   - Instant response");
   DEBUG_PRINTLN("\nAudio Control:");
   DEBUG_PRINTLN("  audio:freq:440       - Set frequency to 440 Hz");
   DEBUG_PRINTLN("  audio:amp:75         - Set amplitude to 75%");
@@ -300,7 +305,36 @@ void ControlHandler::executeCommand(String cmd) {
     DEBUG_PRINTLN(theremin->getSensorManager()->isPitchEnabled() ? "ENABLED" : "DISABLED");
     DEBUG_PRINT("Volume sensor: ");
     DEBUG_PRINTLN(theremin->getSensorManager()->isVolumeEnabled() ? "ENABLED" : "DISABLED");
+    DEBUG_PRINT("\nPitch smoothing:  ");
+    DEBUG_PRINTLN(theremin->getSensorManager()->isPitchSmoothingEnabled() ? "ENABLED" : "DISABLED");
+    DEBUG_PRINT("Volume smoothing: ");
+    DEBUG_PRINTLN(theremin->getSensorManager()->isVolumeSmoothingEnabled() ? "ENABLED" : "DISABLED");
     DEBUG_PRINTLN("===================================\n");
+    return;
+  }
+
+  // Sensor smoothing control
+  if (cmd == "sensors:volume:smooth:on") {
+    theremin->getSensorManager()->setVolumeSmoothingEnabled(true);
+    DEBUG_PRINTLN("[CTRL] Volume smoothing enabled - smooth transitions");
+    return;
+  }
+
+  if (cmd == "sensors:volume:smooth:off") {
+    theremin->getSensorManager()->setVolumeSmoothingEnabled(false);
+    DEBUG_PRINTLN("[CTRL] Volume smoothing disabled - instant response");
+    return;
+  }
+
+  if (cmd == "sensors:pitch:smooth:on") {
+    theremin->getSensorManager()->setPitchSmoothingEnabled(true);
+    DEBUG_PRINTLN("[CTRL] Pitch smoothing enabled - smooth transitions");
+    return;
+  }
+
+  if (cmd == "sensors:pitch:smooth:off") {
+    theremin->getSensorManager()->setPitchSmoothingEnabled(false);
+    DEBUG_PRINTLN("[CTRL] Pitch smoothing disabled - instant response");
     return;
   }
 

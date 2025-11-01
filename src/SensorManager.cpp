@@ -16,10 +16,13 @@ SensorManager::SensorManager()
       cachedPitchRaw(0),
       cachedVolumeRaw(0),
       pitchEnabled(true),
-      volumeEnabled(true) {
+      volumeEnabled(true),
+      pitchSmoothingEnabled(true),
+      volumeSmoothingEnabled(true) {
   // Exponential smoothing values initialized to 0, will be set on first reading
   // Cached raw values initialized to 0, will be updated by updateReadings()
   // Sensors enabled by default
+  // Smoothing enabled by default
 }
 
 // Initialize sensors
@@ -84,12 +87,23 @@ void SensorManager::updateReadings() {
 
 // Get smoothed pitch distance (uses cached raw value)
 int SensorManager::getPitchDistance() {
+  if (!pitchSmoothingEnabled) {
+    // Return raw, unsmoothed value for instant response
+    return cachedPitchRaw;
+  }
   return applyExponentialSmoothing(smoothedPitchDistance, cachedPitchRaw, firstReading);
 }
 
 // Get smoothed volume distance (uses cached raw value)
 int SensorManager::getVolumeDistance() {
-  int result = applyExponentialSmoothing(smoothedVolumeDistance, cachedVolumeRaw, firstReading);
+  int result;
+
+  if (!volumeSmoothingEnabled) {
+    // Return raw, unsmoothed value for instant response
+    result = cachedVolumeRaw;
+  } else {
+    result = applyExponentialSmoothing(smoothedVolumeDistance, cachedVolumeRaw, firstReading);
+  }
 
   // After first reading of both sensors, clear the flag
   if (firstReading) {
@@ -134,4 +148,16 @@ void SensorManager::setVolumeEnabled(bool enabled) {
   volumeEnabled = enabled;
   DEBUG_PRINT("[SENSOR] Volume sensor ");
   DEBUG_PRINTLN(enabled ? "enabled" : "disabled");
+}
+
+void SensorManager::setPitchSmoothingEnabled(bool enabled) {
+  pitchSmoothingEnabled = enabled;
+  DEBUG_PRINT("[SENSOR] Pitch smoothing ");
+  DEBUG_PRINTLN(enabled ? "enabled" : "disabled");
+}
+
+void SensorManager::setVolumeSmoothingEnabled(bool enabled) {
+  volumeSmoothingEnabled = enabled;
+  DEBUG_PRINT("[SENSOR] Volume smoothing ");
+  DEBUG_PRINTLN(enabled ? "enabled (smooth transitions)" : "disabled (instant response)");
 }

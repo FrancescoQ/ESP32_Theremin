@@ -70,6 +70,32 @@ class SensorManager {
    */
   bool isVolumeEnabled() const { return volumeEnabled; }
 
+  /**
+   * Enable or disable volume smoothing
+   * When disabled, provides instant/raw sensor response (useful for testing reverb trails)
+   * @param enabled True to enable smoothing (default), false for instant response
+   */
+  void setVolumeSmoothingEnabled(bool enabled);
+
+  /**
+   * Check if volume smoothing is enabled
+   * @return True if smoothing enabled
+   */
+  bool isVolumeSmoothingEnabled() const { return volumeSmoothingEnabled; }
+
+  /**
+   * Enable or disable pitch smoothing
+   * When disabled, provides instant/raw sensor response
+   * @param enabled True to enable smoothing (default), false for instant response
+   */
+  void setPitchSmoothingEnabled(bool enabled);
+
+  /**
+   * Check if pitch smoothing is enabled
+   * @return True if smoothing enabled
+   */
+  bool isPitchSmoothingEnabled() const { return pitchSmoothingEnabled; }
+
   // Distance ranges (same for both modes)
   static const int PITCH_MIN_DIST = 50;
   static const int PITCH_MAX_DIST = 500;
@@ -94,6 +120,10 @@ class SensorManager {
   // Sensor enable state
   bool pitchEnabled;   // Pitch sensor enable state
   bool volumeEnabled;  // Volume sensor enable state
+
+  // Smoothing enable state
+  bool pitchSmoothingEnabled;   // Pitch smoothing enable state
+  bool volumeSmoothingEnabled;  // Volume smoothing enable state
 
   /**
    * Apply exponential weighted moving average (EWMA) smoothing to sensor readings.
