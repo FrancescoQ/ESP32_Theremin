@@ -101,11 +101,11 @@ void AudioEngine::setDefaultSettings() {
 
   setOscillatorWaveform(2, Oscillator::OFF);
   setOscillatorOctave(2, Oscillator::OCTAVE_BASE);
-  setOscillatorVolume(2, 1.0);
+  setOscillatorVolume(2, 0.6);
 
   setOscillatorWaveform(3, Oscillator::OFF);
   setOscillatorOctave(3, Oscillator::OCTAVE_BASE);
-  setOscillatorVolume(3, 1.0);
+  setOscillatorVolume(3, 0.5);
 }
 
 // Set frequency (thread-safe)
