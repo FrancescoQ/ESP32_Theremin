@@ -176,10 +176,11 @@ class AudioEngine {
    * @param oscNum Which oscillator to use (1-3, default 1)
    * @param waveform Which waveform to use (default SINE)
    * @param staccato Note articulation (1.0 = legato/smooth, 0.8 = standard staccato, 0.5 = very short)
+   * @param amplitude Amplitude percentage (0-100, default 20)
    */
   void playMelody(const int notes[], const int durations[], int length,
                   int oscNum = 1, Oscillator::Waveform waveform = Oscillator::SINE,
-                  float staccato = 0.8);
+                  float staccato = 0.8, int amplitude = 20);
 
   /**
    * Run system test sequence

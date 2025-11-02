@@ -8,6 +8,7 @@
 #pragma once
 #include <Arduino.h>
 #include "Oscillator.h"
+#include "GPIOControls.h"
 
 // Forward declaration to avoid circular dependency:
 // Theremin.h includes ControlHandler.h (to contain ControlHandler as a member)
@@ -36,6 +37,7 @@ public:
 
 private:
   Theremin* theremin;
+  GPIOControls gpioControls;  // Physical switch controls
 
   /**
    * Check for and process serial commands

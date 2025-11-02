@@ -44,7 +44,7 @@ OTAManager ota("Theremin-OTA", "", PIN_OTA_ENABLE);
 #if ENABLE_GPIO_MONITOR
 // Create GPIO monitor instance for MCP23017 debugging
 // Address 0x20 from PinConfig.h (PIN_SWITCH_EXPANDER_ADDR)
-GPIOMonitor gpioMonitor(0x20);
+GPIOMonitor gpioMonitor(PIN_SWITCH_EXPANDER_ADDR);
 #endif
 
 void setup() {

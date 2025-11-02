@@ -360,7 +360,7 @@ void AudioEngine::playStartupSound() {
 
 // Play a melody sequence
 void AudioEngine::playMelody(const int notes[], const int durations[], int length,
-                             int oscNum, Oscillator::Waveform waveform, float staccato) {
+                             int oscNum, Oscillator::Waveform waveform, float staccato, int amplitude) {
   DEBUG_PRINTLN("[AUDIO] Playing melody...");
 
   // Save current state to restore later
@@ -371,7 +371,7 @@ void AudioEngine::playMelody(const int notes[], const int durations[], int lengt
   Oscillator::Waveform savedWaveform3 = oscillator3.getWaveform();
 
   // Configure specified oscillator for melody, silence others
-  setAmplitude(40);
+  setAmplitude(amplitude);
 
   for (int i = 1; i <= 3; i++) {
     if (i == oscNum) {
@@ -391,7 +391,7 @@ void AudioEngine::playMelody(const int notes[], const int durations[], int lengt
     } else {
       // Play note with staccato articulation
       setFrequency(notes[i]);
-      setAmplitude(60);
+      setAmplitude(amplitude);
 
       // Apply staccato: play for X% of duration, then gap
       int soundDuration = (int)(durations[i] * staccato);

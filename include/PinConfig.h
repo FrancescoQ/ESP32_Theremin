@@ -66,14 +66,14 @@
 
 // Octave Toggle Switches (3-position, 2 GPIO each = 6 total)
 // Uses MCP23017 pins 6-11:
-#define PIN_OSC1_OCT_UP 7
-#define PIN_OSC1_OCT_DOWN 15
+#define PIN_OSC1_OCT_UP 15
+#define PIN_OSC1_OCT_DOWN 7
 
-#define PIN_OSC2_OCT_UP 12
-#define PIN_OSC2_OCT_DOWN 13
+#define PIN_OSC2_OCT_UP 13
+#define PIN_OSC2_OCT_DOWN 12
 
-#define PIN_OSC3_OCT_UP 10
-#define PIN_OSC3_OCT_DOWN 2
+#define PIN_OSC3_OCT_UP 2
+#define PIN_OSC3_OCT_DOWN 10
 
 //=============================================================================
 // EFFECTS CONTROL PINS - Phase 4 (v2.0 Feature)

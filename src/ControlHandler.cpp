@@ -9,16 +9,23 @@
 #include "Debug.h"
 
 ControlHandler::ControlHandler(Theremin* thereminPtr)
-    : theremin(thereminPtr) {
+    : theremin(thereminPtr), gpioControls(thereminPtr) {
 }
 
 void ControlHandler::begin() {
   DEBUG_PRINTLN("[CTRL] Control handler initialized");
+
+  // Initialize GPIO controls
+  if (gpioControls.begin()) {
+    DEBUG_PRINTLN("[CTRL] Physical switches enabled");
+  } else {
+    DEBUG_PRINTLN("[CTRL] Physical switches unavailable - serial only");
+  }
 }
 
 void ControlHandler::update() {
   handleSerialCommands();
-  // GPIO reading will be added in Phase D
+  gpioControls.update();  // Read physical switches
 }
 
 void ControlHandler::handleSerialCommands() {
