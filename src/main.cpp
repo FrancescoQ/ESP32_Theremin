@@ -8,6 +8,7 @@
  */
 
 #include <Arduino.h>
+#include <Wire.h>
 #include "Debug.h"
 #include "Theremin.h"
 #include "PinConfig.h"
@@ -15,6 +16,10 @@
 
 #if ENABLE_OTA
 #include "OTAManager.h"
+#endif
+
+#if ENABLE_GPIO_MONITOR
+#include "GPIOMonitor.h"
 #endif
 
 // Main loop timing
@@ -36,6 +41,12 @@ Theremin theremin(&performanceMonitor);
 OTAManager ota("Theremin-OTA", "", PIN_OTA_ENABLE);
 #endif
 
+#if ENABLE_GPIO_MONITOR
+// Create GPIO monitor instance for MCP23017 debugging
+// Address 0x20 from PinConfig.h (PIN_SWITCH_EXPANDER_ADDR)
+GPIOMonitor gpioMonitor(0x20);
+#endif
+
 void setup() {
   // Initialize debug output
   Serial.begin(115200);
@@ -47,6 +58,24 @@ void setup() {
   DEBUG_PRINTLN("========================================\n");
   DEBUG_FLUSH();  // Ensure banner is sent before continuing
   delay(100);
+
+  // Initialize I2C bus (shared by sensors, MCP23017, and future OLED)
+  Wire.begin(PIN_SENSOR_I2C_SDA, PIN_SENSOR_I2C_SCL);
+  DEBUG_PRINTLN("[I2C] Bus initialized on SDA=21, SCL=22");
+  delay(50);
+
+  #if ENABLE_GPIO_MONITOR
+    // Initialize GPIO monitor for MCP23017 debugging
+    if (gpioMonitor.begin()) {
+      DEBUG_PRINTLN("[GPIO] Monitor initialized - wiggle controls!");
+      // Print initial state for reference
+      gpioMonitor.printCurrentState();
+    } else {
+      DEBUG_PRINTLN("[GPIO] WARNING: Monitor failed to initialize");
+      DEBUG_PRINTLN("[GPIO] Check MCP23017 wiring and I2C address (0x20)");
+    }
+    delay(100);
+  #endif
 
   // Initialize theremin (sensors + audio)
   if (!theremin.begin()) {
@@ -88,6 +117,11 @@ void setup() {
 void loop() {
   // Update theremin (handles controls, sensors, and audio)
   theremin.update();
+
+  #if ENABLE_GPIO_MONITOR
+    // Poll GPIO monitor for pin changes (non-blocking)
+    gpioMonitor.update();
+  #endif
 
   #if ENABLE_OTA
     // Handle OTA requests (non-blocking)

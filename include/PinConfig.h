@@ -48,25 +48,32 @@
 // OSCILLATOR CONTROL PINS - Phase 3 (v2.0 Feature)
 //=============================================================================
 // MCP23017 I2C GPIO Expander
-// #define PIN_SWITCH_EXPANDER_ADDR  0x20  // MCP23017 I2C address
-//
+#define PIN_SWITCH_EXPANDER_ADDR  0x20  // MCP23017 I2C address
+
 // Waveform Rotary Switches (4-position, 2 GPIO each = 6 total)
 // Uses MCP23017 pins 0-5:
-// #define PIN_OSC1_WAVE_A           0   // Oscillator 1 waveform bit A
-// #define PIN_OSC1_WAVE_B           1   // Oscillator 1 waveform bit B
-// #define PIN_OSC2_WAVE_A           2   // Oscillator 2 waveform bit A
-// #define PIN_OSC2_WAVE_B           3   // Oscillator 2 waveform bit B
-// #define PIN_OSC3_WAVE_A           4   // Oscillator 3 waveform bit A
-// #define PIN_OSC3_WAVE_B           5   // Oscillator 3 waveform bit B
-//
+#define PIN_OSC1_WAVE_A 6
+#define PIN_OSC1_WAVE_B 5
+#define PIN_OSC1_WAVE_C 14
+
+#define PIN_OSC2_WAVE_A 4
+#define PIN_OSC2_WAVE_B 11
+#define PIN_OSC2_WAVE_C 3
+
+#define PIN_OSC3_WAVE_A 1
+#define PIN_OSC3_WAVE_B 9
+#define PIN_OS3_WAVE_C 0
+
 // Octave Toggle Switches (3-position, 2 GPIO each = 6 total)
 // Uses MCP23017 pins 6-11:
-// #define PIN_OSC1_OCT_A            6   // Oscillator 1 octave bit A
-// #define PIN_OSC1_OCT_B            7   // Oscillator 1 octave bit B
-// #define PIN_OSC2_OCT_A            8   // Oscillator 2 octave bit A
-// #define PIN_OSC2_OCT_B            9   // Oscillator 2 octave bit B
-// #define PIN_OSC3_OCT_A            10  // Oscillator 3 octave bit A
-// #define PIN_OSC3_OCT_B            11  // Oscillator 3 octave bit B
+#define PIN_OSC1_OCT_UP 7
+#define PIN_OSC1_OCT_DOWN 15
+
+#define PIN_OSC2_OCT_UP 12
+#define PIN_OSC2_OCT_DOWN 13
+
+#define PIN_OSC3_OCT_UP 10
+#define PIN_OSC3_OCT_DOWN 2
 
 //=============================================================================
 // EFFECTS CONTROL PINS - Phase 4 (v2.0 Feature)
@@ -120,10 +127,8 @@
  *
  * MCP23017 GPIO Expander Allocation (Phase 3+):
  * ----------------------------------------------
- *   Pins 0-5   : Oscillator waveform switches (3x rotary, 2 pins each)
- *   Pins 6-11  : Oscillator octave switches (3x toggle, 2 pins each)
- *   Pins 12-14 : Effects enable switches (3x toggle)
- *   Pin 15     : Available for future use
+ *   See definitions above for waveforms and octave switch, only 1 free pin left
+ *   at the moment.
  */
 
 //=============================================================================

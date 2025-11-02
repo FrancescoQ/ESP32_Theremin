@@ -27,10 +27,8 @@ SensorManager::SensorManager()
 
 // Initialize sensors
 bool SensorManager::begin() {
-  // Initialize I2C and VL53L0X sensors
-  Wire.begin(PIN_SENSOR_I2C_SDA, PIN_SENSOR_I2C_SCL);
-  DEBUG_PRINTLN("[SENSOR] I2C initialized");
-  delay(50);  // Let Serial transmit before continuing
+  // Note: Wire.begin() must be called before this in main.cpp
+  // since multiple I2C devices share the bus (sensors + MCP23017)
 
   // Configure XSHUT pins
   pinMode(PIN_SENSOR_PITCH_XSHUT, OUTPUT);
