@@ -16,8 +16,8 @@
 - Clean: `/Users/fquagliati/.platformio/penv/bin/pio run -t clean`
 
 ### Project Status
-**Phase:** Phase 4 (Effects) ✅ **COMPLETE!** Phase G (Optional Polish) Next
-**Date:** November 1, 2025
+**Phase:** Physical Controls Implementation ✅ **COMPLETE!** Phase 3 Hardware Ready
+**Date:** November 2, 2025
 **v2.0 Vision:** Multi-oscillator synthesizer with effects, professional I/O, and visual feedback
 
 **🎉 MAJOR MILESTONE: THREE-EFFECT AUDIO ENGINE COMPLETE! 🎉**
@@ -58,7 +58,35 @@ Successfully implemented a professional-grade audio effects system with **ALL TH
 
 ## Recent Changes
 
-**Reverb Implementation + Noise Gate Fixes (November 1, 2025 - Latest):**
+**GPIO Controls + Architecture Refactor (November 2, 2025 - Latest):**
+- **Achievement:** Implemented complete physical control system with MCP23017!
+- **Hardware:** 3 oscillators × (3-pin waveform + 2-pin octave switches) = 15 GPIO pins
+  - MCP23017 I2C GPIO expander (address 0x20)
+  - Active LOW with INPUT_PULLUP configuration
+  - 50ms debouncing prevents switch bounce
+- **Architecture Refactor:** ControlHandler → SerialControls + GPIOControls
+  - Clean separation: SerialControls (serial commands) and GPIOControls (physical switches) as siblings
+  - No artificial nesting, easy to add WebControls/BLEControls in future
+  - "Last wins" behavior: Serial or GPIO, whichever is used last takes control
+- **Startup Bug Fix:** Added `firstUpdate` flag to force initial sync
+  - Problem: Oscillator defaults (TRIANGLE) didn't match physical switches (OFF)
+  - Solution: First update applies switch positions regardless of comparison
+- **Enable/Disable Feature:** Added for future web interface override
+  - `gpioControls.setEnabled(false)` disables physical switches
+  - Ready for hybrid control modes (web + physical)
+- **Files Created:**
+  - include/GPIOControls.h, src/GPIOControls.cpp (~275 lines)
+  - include/SerialControls.h, src/SerialControls.cpp (renamed from ControlHandler)
+- **Files Modified:**
+  - include/Theremin.h, src/Theremin.cpp: Both controls as siblings
+  - include/PinConfig.h: MCP23017 pin mappings
+- **Build Status:**
+  - RAM: 7.3% (24,080 bytes)
+  - Flash: 29.2% (382,409 bytes)
+  - ✅ Compiles cleanly, tested on hardware
+- **User Confirmation:** "everything works like a charm!"
+
+**Reverb Implementation + Noise Gate Fixes (November 1, 2025):**
 - **Achievement:** Implemented complete Freeverb reverb effect on real hardware!
 - **Algorithm:** Simplified Freeverb (4 parallel comb filters + 2 series allpass filters)
   - Sample-rate agnostic design (millisecond-based delays)

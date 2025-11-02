@@ -18,9 +18,10 @@ This plan implements a control system that allows runtime modification of oscill
 **✅ Phase B: Complete** - Serial command parser (ControlHandler class)
 **✅ Refinements: Complete** - Serial initialization fix, code style improvements
 **✅ Phase C: Complete** - Extended serial commands (help, status, batch) + Status introspection with getters
-**⏳ Phase C2: Pending** - Audio & Sensor Control Commands
-**⏳ Phase D: Pending** - GPIO reading
-**⏳ Phase E: Pending** - Polish & integration
+**✅ Phase C2: Complete** - Audio & Sensor Control Commands
+**✅ Phase D: Complete** - GPIO controls with MCP23017 via GPIOControls class
+**✅ Architecture Refactor: Complete** - ControlHandler → SerialControls, GPIO elevated to sibling
+**✅ Phase E: Complete** - Polish & integration with startup bug fix and enable/disable features
 
 ### Key Architectural Principles
 
@@ -1519,15 +1520,76 @@ Example for waveform switch (4 positions, 2 bits):
    - Audio changes in real-time
    - Same as serial commands from Phase B/C
 
-### Success Criteria for Phase D
+### Phase D: COMPLETED ✅ (MCP23017 Implementation)
 
-- [ ] GPIO pins initialize correctly
-- [ ] Moving waveform switch changes oscillator waveform
-- [ ] Moving octave switch changes oscillator octave
-- [ ] Debouncing prevents switch bounce glitches
-- [ ] Serial commands still work alongside GPIO
-- [ ] Debug output shows switch state changes
-- [ ] Audio responds smoothly to switch changes
+**Date Completed:** November 2, 2025
+
+**Actual Implementation:** Instead of direct GPIO pins, Phase D was implemented using MCP23017 I2C GPIO expander with a dedicated GPIOControls class.
+
+**Files Created:**
+- `include/GPIOControls.h` - Dedicated GPIO control class (~95 lines)
+- `src/GPIOControls.cpp` - MCP23017 integration (~180 lines)
+
+**Files Modified:**
+- `include/PinConfig.h` - Added MCP23017 pin mappings
+- `include/ControlHandler.h` - Added GPIOControls member (later refactored)
+- `src/ControlHandler.cpp` - Integrated GPIO controls (later refactored)
+
+**Key Implementation Details:**
+
+1. **MCP23017 Integration**
+   - I2C address: 0x20
+   - 16 GPIO pins for 3 oscillators
+   - INPUT_PULLUP configuration (active LOW)
+   - Graceful degradation if MCP23017 not found
+
+2. **Pin Mappings** (3-pin waveform + 2-pin octave per oscillator)
+   ```cpp
+   // OSC1: Waveform pins 6,5,14 | Octave pins 7,15
+   // OSC2: Waveform pins 4,11,3 | Octave pins 12,13
+   // OSC3: Waveform pins 1,9,0  | Octave pins 10,2
+   ```
+
+3. **Switch Reading Logic**
+   - 3-pin waveform switch: SINE/TRIANGLE/SQUARE (all HIGH = OFF)
+   - 2-pin octave switch: +1/-1 (both LOW = 0)
+   - Debouncing: 50ms delay prevents switch bounce
+   - State tracking per oscillator
+
+4. **Architecture Pattern**
+   - Stack allocation (RAII pattern) - consistent with effects
+   - Forward declarations to resolve circular dependencies
+   - Clean separation: GPIOControls reads hardware, ControlHandler coordinates
+
+**Build Impact:**
+- RAM: 7.4% (24,104 bytes) - +144 bytes for GPIO state tracking
+- Flash: 29.3% (383,565 bytes) - ~30KB for GPIO controls + MCP23017 library
+- Compilation time: ~8.5 seconds (full rebuild)
+
+**Success Criteria:**
+- [x] MCP23017 initializes correctly via I2C
+- [x] All 16 GPIO pins configured as INPUT_PULLUP
+- [x] Moving waveform switches changes oscillator waveforms
+- [x] Moving octave switches changes oscillator octaves
+- [x] Debouncing prevents switch bounce glitches
+- [x] Serial commands work alongside GPIO controls
+- [x] Debug output shows switch state changes
+- [x] Audio responds smoothly to switch changes
+- [x] System works without MCP23017 (serial fallback)
+
+**Testing Notes:**
+- Hardware tested with MCP23017 on breadboard
+- All 3 oscillators controllable via physical switches
+- "Last wins" behavior: Serial or GPIO, whichever is used last takes control
+- No audio glitches during rapid switch changes
+- Startup sync issue discovered and fixed in Phase E
+
+**Architecture Decision:**
+The MCP23017 approach provides:
+- More available pins (16 vs limited ESP32 GPIO)
+- I2C reduces wire count
+- Easy to add more controls in future
+- Isolated from ESP32 critical pins
 
 ---
 

@@ -7,39 +7,86 @@ The ESP32 Theremin has been refactored from a single monolithic file into a clea
 ## Architecture Diagram
 
 ```
-┌─────────────────────────────────────────────────────────┐
-│                      main.cpp                           │
-│                   (Entry Point)                         │
-│  - Creates Theremin instance                            │
-│  - Creates OTAManager instance (optional)               │
-│  - Calls begin() and update()                           │
-└────────┬──────────────────────────────────┬─────────────┘
-         │                                  │
-         ▼                                  ▼
-┌────────────────────────┐    ┌─────────────────────────┐
-│  Theremin.h/cpp        │    │   OTAManager.h/cpp      │
-│  (Main Coordinator)    │    │   (Firmware Updates)    │
-├────────────────────────┤    ├─────────────────────────┤
-│ - Manages subsystems   │    │ - WiFi AP mode          │
-│ - Maps sensor → audio  │    │ - ElegantOTA server     │
-│ - Debug output         │    │ - handle()              │
-└───┬─────────────────┬──┘    │ - HTTP auth             │
-    │                 │       │                         │
-    ▼                 ▼       │ Features:               │
-┌──────────────┐ ┌──────────┐│ ✓ Access Point mode     │
-│SensorManager │ │AudioEngine││ ✓ Non-blocking          │
-│  .h/cpp      │ │  .h/cpp   ││ ✓ Conditional (#ifdef)  │
-├──────────────┤ ├──────────┤└─────────────────────────┘
-│- getPitch    │ │- setFreq │
-│  Distance()  │ │  ()      │
-│- getVolume   │ │- setAmp  │
-│  Distance()  │ │  ()      │
-│- Smoothing   │ │- update()│
-│                           │
-│ Supports:    │ │Future:   │
-│✓ Simulation  │ │• DAC out │
-│✓ Hardware    │ │• Waveform│
-└──────────────┘ └──────────┘
+┌──────────────────────────────────────────────────────────────────────────┐
+│                              main.cpp                                     │
+│                          (Entry Point)                                    │
+│  - Creates Theremin, PerformanceMonitor instances                         │
+│  - Creates OTAManager instance (optional)                                 │
+│  - Creates SerialControls, GPIOControls, GPIOMonitor (Phase 3)            │
+│  - Calls begin() and update() on all systems                              │
+└────┬─────────────────────────────────────────┬──────────────┬────────────┘
+     │                                         │              │
+     ▼                                         ▼              ▼
+┌─────────────────────┐          ┌──────────────────┐  ┌──────────────────┐
+│  Theremin.h/cpp     │          │ OTAManager       │  │PerformanceMonitor│
+│  (Coordinator)      │          │ .h/cpp           │  │ .h/cpp           │
+├─────────────────────┤          ├──────────────────┤  ├──────────────────┤
+│ - Manages:          │          │ - WiFi AP mode   │  │ - CPU tracking   │
+│   • SensorManager   │          │ - ElegantOTA     │  │ - RAM monitoring │
+│   • AudioEngine     │          │ - Non-blocking   │  │ - Task timing    │
+│ - Maps sensor→audio │          │ - HTTP auth      │  │ - Debug output   │
+└──┬──────────────┬───┘          └──────────────────┘  └──────────────────┘
+   │              │
+   ▼              ▼
+┌──────────────┐ ┌────────────────────────────────────────────────────────┐
+│SensorManager │ │              AudioEngine.h/cpp                         │
+│  .h/cpp      │ │              (Audio Synthesis)                         │
+├──────────────┤ ├────────────────────────────────────────────────────────┤
+│- Dual VL53L0X│ │ - 3x Oscillator instances (sine/square/tri/saw)       │
+│- Smoothing   │ │ - Frequency/amplitude control (sensor-driven)          │
+│- Enable flags│ │ - EffectsChain integration                             │
+│- getPitch    │ │ - I2S DAC output (22050 Hz)                            │
+│- getVolume   │ │ - FreeRTOS audio task (Core 1, high priority)          │
+│              │ │                                                         │
+│Features:     │ │ Components:                                             │
+│✓ Hardware I2C│ │ ┌──────────────────────────────────────────────────┐  │
+│✓ Pitch/Vol   │ │ │         Oscillator.h/cpp (x3)                    │  │
+│✓ Sensor on/  │ │ │  - Wavetable synthesis (1024 samples)            │  │
+│  off control │ │ │  - Waveform: OFF/SINE/SQUARE/TRIANGLE/SAW        │  │
+└──────────────┘ │ │  - Octave shift: -1/0/+1                         │  │
+                 │ │  - Volume control per oscillator                 │  │
+                 │ │  - Phase accumulator (anti-aliased)              │  │
+                 │ └──────────────────────────────────────────────────┘  │
+                 │                         ↓                               │
+                 │ ┌──────────────────────────────────────────────────┐  │
+                 │ │      EffectsChain.h/cpp                          │  │
+                 │ │  - Delay → Chorus → Reverb processing chain      │  │
+                 │ │  - Enable/disable per effect                     │  │
+                 │ │  - CPU: 14.5% with all effects (85% headroom!)   │  │
+                 │ │                                                   │  │
+                 │ │  Components:                                      │  │
+                 │ │  • DelayEffect (circular buffer, feedback)       │  │
+                 │ │  • ChorusEffect (modulated delay, Osc-based LFO) │  │
+                 │ │  • ReverbEffect (4 combs + 2 allpass, Freeverb)  │  │
+                 │ └──────────────────────────────────────────────────┘  │
+                 │                         ↓                               │
+                 │                  I2S DAC Output                         │
+                 └────────────────────────────────────────────────────────┘
+
+┌──────────────────────────────────────────────────────────────────────────┐
+│                        Control System (Phase 3)                           │
+├────────────────────────┬─────────────────────┬─────────────────────────┤
+│  SerialControls        │  GPIOControls       │  GPIOMonitor            │
+│  .h/cpp                │  .h/cpp             │  .h/cpp                 │
+├────────────────────────┼─────────────────────┼─────────────────────────┤
+│ - Command parser       │ - MCP23017 I2C GPIO │ - Debug visualization   │
+│ - Oscillator control   │   expander          │ - Pin state reporting   │
+│ - Effects control      │ - 3x waveform SW    │ - State change logging  │
+│ - Sensor enable/disable│ - 3x octave SW      │                         │
+│ - Audio control        │ - Debouncing (50ms) │                         │
+│ - Help/Status commands │ - Interrupt-driven  │                         │
+│                        │ - Startup sync      │                         │
+└────────────────────────┴─────────────────────┴─────────────────────────┘
+
+Signal Flow:
+  Sensors → Theremin → AudioEngine → [3 Oscillators] → [Mix]
+                                                          ↓
+                          ← DAC ← [EffectsChain] ← [Mixer Output]
+                                   (Delay→Chorus→Reverb)
+
+Control Flow:
+  Serial Commands → SerialControls → AudioEngine/EffectsChain
+  GPIO Switches → GPIOControls → AudioEngine (via oscillator control)
 ```
 
 ## File Structure

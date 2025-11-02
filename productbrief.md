@@ -13,14 +13,15 @@
 **Type:** DIY Performance Electronic Musical Instrument
 **Goal:** Create a professional-grade theremin using ESP32 and Time-of-Flight sensors with multiple oscillators, effects, and versatile I/O options for live performance and recording.
 
-**Current Status (November 1, 2025):**
+**Current Status (November 2, 2025):**
 - ✅ Phase 0 COMPLETE: Wokwi simulation functional
 - ✅ Phase 1 COMPLETE: Hardware assembled and tested
 - ✅ Phase 2 COMPLETE: DAC + oscillators + waveforms working
+- ✅ **Phase 3 COMPLETE: Control system with serial commands + MCP23017 GPIO!**
 - ✅ **Phase 4 COMPLETE: Three-effect audio engine! (Delay + Chorus + Reverb)**
 - ✅ 14.5% CPU usage with 85% headroom - performance EXCEEDED targets!
-- ⏳ Phase 3 pending: Hardware controls + display (waiting for parts)
-- 🔮 Phase G optional: Quality polish if desired
+- 🎯 Ready for Phase 5: Polish & professional I/O
+- 🔮 Phase G (effects quality) optional if desired
 
 ---
 
