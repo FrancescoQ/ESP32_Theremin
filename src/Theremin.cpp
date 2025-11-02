@@ -10,7 +10,7 @@
 
 // Constructor
 Theremin::Theremin(PerformanceMonitor* perfMon)
-    : audio(perfMon), controls(this), debugEnabled(false) {}
+    : audio(perfMon), serialControls(this), gpioControls(this), debugEnabled(false) {}
 
 // Initialize theremin
 bool Theremin::begin() {
@@ -25,8 +25,15 @@ bool Theremin::begin() {
   // Initialize audio
   audio.begin();
 
-  // Initialize controls
-  controls.begin();
+  // Initialize serial controls
+  serialControls.begin();
+
+  // Initialize GPIO controls
+  if (gpioControls.begin()) {
+    DEBUG_PRINTLN("[INIT] Physical GPIO controls enabled");
+  } else {
+    DEBUG_PRINTLN("[INIT] Physical GPIO controls unavailable - serial only");
+  }
 
   DEBUG_PRINTLN("=== Initialization Complete ===\n");
   return true;
@@ -40,8 +47,9 @@ float Theremin::mapFloat(float x, float in_min, float in_max, float out_min, flo
 
 // Main update loop
 void Theremin::update() {
-  // Handle control inputs (serial commands, GPIO in future phases)
-  controls.update();
+  // Handle control inputs (serial commands and GPIO switches)
+  serialControls.update();
+  gpioControls.update();
 
   // Update sensor readings (reads both sensors once and caches results)
   // Always read hardware, even if sensors are disabled

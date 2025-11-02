@@ -1,34 +1,26 @@
 /*
- * ControlHandler.cpp
+ * SerialControls.cpp
  *
- * Implementation of control input handling.
+ * Implementation of serial command handling.
  */
 
-#include "ControlHandler.h"
+#include "SerialControls.h"
 #include "Theremin.h"
 #include "Debug.h"
 
-ControlHandler::ControlHandler(Theremin* thereminPtr)
-    : theremin(thereminPtr), gpioControls(thereminPtr) {
+SerialControls::SerialControls(Theremin* thereminPtr)
+    : theremin(thereminPtr) {
 }
 
-void ControlHandler::begin() {
-  DEBUG_PRINTLN("[CTRL] Control handler initialized");
-
-  // Initialize GPIO controls
-  if (gpioControls.begin()) {
-    DEBUG_PRINTLN("[CTRL] Physical switches enabled");
-  } else {
-    DEBUG_PRINTLN("[CTRL] Physical switches unavailable - serial only");
-  }
+void SerialControls::begin() {
+  DEBUG_PRINTLN("[SERIAL] Serial control handler initialized");
 }
 
-void ControlHandler::update() {
+void SerialControls::update() {
   handleSerialCommands();
-  gpioControls.update();  // Read physical switches
 }
 
-void ControlHandler::handleSerialCommands() {
+void SerialControls::handleSerialCommands() {
   // Check if serial data available
   if (Serial.available() > 0) {
     String command = Serial.readStringUntil('\n');
@@ -42,7 +34,7 @@ void ControlHandler::handleSerialCommands() {
   }
 }
 
-int ControlHandler::parseWaveform(String name) {
+int SerialControls::parseWaveform(String name) {
   if (name == "off") {
     return Oscillator::OFF;
   }
@@ -61,7 +53,7 @@ int ControlHandler::parseWaveform(String name) {
   return -1;  // Invalid
 }
 
-void ControlHandler::printStatus() {
+void SerialControls::printStatus() {
   DEBUG_PRINTLN("\n========== OSCILLATOR STATUS ==========");
   printOscillatorStatus(1);
   printOscillatorStatus(2);
@@ -69,7 +61,7 @@ void ControlHandler::printStatus() {
   DEBUG_PRINTLN("=======================================\n");
 }
 
-void ControlHandler::printOscillatorStatus(int oscNum) {
+void SerialControls::printOscillatorStatus(int oscNum) {
   DEBUG_PRINT("Oscillator ");
   DEBUG_PRINT(oscNum);
   DEBUG_PRINTLN(":");
@@ -96,7 +88,7 @@ void ControlHandler::printOscillatorStatus(int oscNum) {
   DEBUG_PRINTLN("%");
 }
 
-void ControlHandler::printEffectsStatus() {
+void SerialControls::printEffectsStatus() {
   EffectsChain* fx = theremin->getAudioEngine()->getEffectsChain();
 
   DEBUG_PRINTLN("\n========== EFFECTS STATUS ==========");
@@ -144,7 +136,7 @@ void ControlHandler::printEffectsStatus() {
 }
 
 // Get waveform name.
-const char* ControlHandler::getWaveformName(Oscillator::Waveform wf) {
+const char* SerialControls::getWaveformName(Oscillator::Waveform wf) {
   switch (wf) {
     case Oscillator::OFF: return "OFF";
     case Oscillator::SQUARE: return "SQUARE";
@@ -155,7 +147,7 @@ const char* ControlHandler::getWaveformName(Oscillator::Waveform wf) {
   }
 }
 
-void ControlHandler::printHelp() {
+void SerialControls::printHelp() {
   DEBUG_PRINTLN("\n========== OSCILLATOR CONTROL COMMANDS ==========");
   DEBUG_PRINTLN("Waveform:");
   DEBUG_PRINTLN("  osc1:off         - Turn off oscillator 1");
@@ -222,7 +214,7 @@ void ControlHandler::printHelp() {
 // Parse and execute a single command string.
 // This contains the list of all supported commands, including the batch
 // processing of multiple commands in one line.
-void ControlHandler::executeCommand(String cmd) {
+void SerialControls::executeCommand(String cmd) {
   cmd.toLowerCase();  // Case-insensitive
 
   // Handle batch commands (separated by semicolons)

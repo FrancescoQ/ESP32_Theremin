@@ -1,28 +1,27 @@
 /*
- * ControlHandler.h
+ * SerialControls.h
  *
- * Manages oscillator control inputs from serial commands and GPIO.
- * Provides unified interface for changing oscillator parameters.
+ * Manages oscillator control inputs from serial commands.
+ * Provides interface for changing oscillator parameters via serial.
  */
 
 #pragma once
 #include <Arduino.h>
 #include "Oscillator.h"
-#include "GPIOControls.h"
 
 // Forward declaration to avoid circular dependency:
-// Theremin.h includes ControlHandler.h (to contain ControlHandler as a member)
-// ControlHandler only needs a pointer to Theremin, so we declare it here
-// instead of including Theremin.h. Full definition included in ControlHandler.cpp
+// Theremin.h includes SerialControls.h (to contain SerialControls as a member)
+// SerialControls only needs a pointer to Theremin, so we declare it here
+// instead of including Theremin.h. Full definition included in SerialControls.cpp
 class Theremin;
 
-class ControlHandler {
+class SerialControls {
 public:
   /**
    * Constructor
    * @param theremin Pointer to Theremin instance (for full control access)
    */
-  ControlHandler(Theremin* theremin);
+  SerialControls(Theremin* theremin);
 
   /**
    * Initialize control handler
@@ -37,7 +36,6 @@ public:
 
 private:
   Theremin* theremin;
-  GPIOControls gpioControls;  // Physical switch controls
 
   /**
    * Check for and process serial commands
