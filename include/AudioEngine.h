@@ -180,7 +180,7 @@ class AudioEngine {
    */
   void playMelody(const int notes[], const int durations[], int length,
                   int oscNum = 1, Oscillator::Waveform waveform = Oscillator::SINE,
-                  float staccato = 0.8, int amplitude = 20);
+                  float staccato = 0.8, int amplitude = 40);
 
   /**
    * Run system test sequence
