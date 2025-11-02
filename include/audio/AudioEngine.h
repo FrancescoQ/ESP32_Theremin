@@ -222,8 +222,8 @@ class AudioEngine {
   }
 
   /**
-   * Define some "special states" for the audioengine, that can be i.e.
-   * as startup check to perform "things". (i.e. enable OTA during startup)
+   * Define some "special states" for the audioengine, that can be checked
+   * (i.e.) during startup to perform "things". (i.e. enable OTA)
    */
   bool getSpecialState(int state);
 

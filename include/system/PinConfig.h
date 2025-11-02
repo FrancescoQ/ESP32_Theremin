@@ -39,18 +39,18 @@
                                       // to require button press during boot
 
 //=============================================================================
-// DISPLAY PINS - Phase 2 (v2.0 Feature)
+// DISPLAY PINS
 //=============================================================================
 // #define PIN_DISPLAY_I2C_ADDR      0x3C  // SSD1306 OLED (shares I2C bus)
 // Note: Display uses same SDA/SCL as sensors (GPIO 21/22)
 
 //=============================================================================
-// OSCILLATOR CONTROL PINS - Phase 3 (v2.0 Feature)
+// OSCILLATOR CONTROL PINS
 //=============================================================================
 // MCP23017 I2C GPIO Expander
 #define PIN_SWITCH_EXPANDER_ADDR  0x20  // MCP23017 I2C address
 
-// Waveform Rotary Switches (4-position, 2 GPIO each = 6 total)
+// Waveform Rotary Switches (4-position, 3 GPIO each = 9 total)
 // Uses MCP23017 pins 0-5:
 #define PIN_OSC1_WAVE_A 6
 #define PIN_OSC1_WAVE_B 5
@@ -76,15 +76,14 @@
 #define PIN_OSC3_OCT_DOWN 10
 
 //=============================================================================
-// EFFECTS CONTROL PINS - Phase 4 (v2.0 Feature)
+// EFFECTS CONTROL PINS
 //=============================================================================
-// Uses MCP23017 pins 12-14:
 // #define PIN_EFFECT_DELAY_EN       12  // Delay effect enable switch
 // #define PIN_EFFECT_CHORUS_EN      13  // Chorus effect enable switch
 // #define PIN_EFFECT_REVERB_EN      14  // Reverb effect enable switch (optional)
 
 //=============================================================================
-// LED METER PINS - Phase 4 (v2.0 Feature)
+// LED METER PINS
 //=============================================================================
 // #define PIN_LED_PITCH             4   // WS2812B data line for pitch meter
 // #define PIN_LED_VOLUME            5   // WS2812B data line for volume meter
