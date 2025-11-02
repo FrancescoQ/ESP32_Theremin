@@ -10,7 +10,7 @@
 #include "Debug.h"
 
 GPIOControls::GPIOControls(Theremin* thereminPtr)
-    : theremin(thereminPtr), initialized(false) {
+    : theremin(thereminPtr), initialized(false), controlsEnabled(true), firstUpdate(true) {
   // Initialize state tracking
   osc1State.waveform = Oscillator::OFF;
   osc1State.octave = 0;
@@ -53,7 +53,7 @@ bool GPIOControls::begin() {
 }
 
 void GPIOControls::update() {
-  if (!initialized) {
+  if (!initialized || !controlsEnabled) {
     return;
   }
 
@@ -69,6 +69,11 @@ void GPIOControls::update() {
   updateOscillator(3, osc3State,
                    PIN_OSC3_WAVE_A, PIN_OSC3_WAVE_B, PIN_OS3_WAVE_C,
                    PIN_OSC3_OCT_UP, PIN_OSC3_OCT_DOWN);
+
+  // Clear first update flag after initial sync
+  if (firstUpdate) {
+    firstUpdate = false;
+  }
 }
 
 void GPIOControls::updateOscillator(int oscNum, OscillatorState& state,
@@ -80,9 +85,9 @@ void GPIOControls::updateOscillator(int oscNum, OscillatorState& state,
   Oscillator::Waveform currentWaveform = readWaveform(pinA, pinB, pinC);
   int8_t currentOctave = readOctave(pinUp, pinDown);
 
-  // Check for waveform change
-  if (currentWaveform != state.waveform) {
-    if (now - state.lastChangeTime > DEBOUNCE_MS) {
+  // Check for waveform change (force update on first call)
+  if (firstUpdate || currentWaveform != state.waveform) {
+    if (firstUpdate || (now - state.lastChangeTime > DEBOUNCE_MS)) {
       state.waveform = currentWaveform;
       state.lastChangeTime = now;
 
@@ -95,9 +100,9 @@ void GPIOControls::updateOscillator(int oscNum, OscillatorState& state,
     }
   }
 
-  // Check for octave change
-  if (currentOctave != state.octave) {
-    if (now - state.lastChangeTime > DEBOUNCE_MS) {
+  // Check for octave change (force update on first call)
+  if (firstUpdate || currentOctave != state.octave) {
+    if (firstUpdate || (now - state.lastChangeTime > DEBOUNCE_MS)) {
       state.octave = currentOctave;
       state.lastChangeTime = now;
 
@@ -161,6 +166,12 @@ int8_t GPIOControls::readOctave(uint8_t pinUp, uint8_t pinDown) {
   // Both active (invalid) → default to 0
   DEBUG_PRINTLN("[GPIO] WARNING: Both octave switches active!");
   return 0;
+}
+
+void GPIOControls::setEnabled(bool enabled) {
+  controlsEnabled = enabled;
+  DEBUG_PRINT("[GPIO] Physical controls ");
+  DEBUG_PRINTLN(enabled ? "enabled" : "disabled");
 }
 
 const char* GPIOControls::getWaveformName(Oscillator::Waveform wf) {

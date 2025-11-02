@@ -41,10 +41,25 @@ public:
    */
   bool isInitialized() const { return initialized; }
 
+  /**
+   * Enable or disable GPIO controls
+   * Useful for web interface override
+   * @param enabled True to enable, false to disable
+   */
+  void setEnabled(bool enabled);
+
+  /**
+   * Check if GPIO controls are enabled
+   * @return true if enabled
+   */
+  bool isEnabled() const { return controlsEnabled; }
+
 private:
   Theremin* theremin;
   Adafruit_MCP23X17 mcp;
   bool initialized;
+  bool controlsEnabled;  // Master enable/disable for web interface override
+  bool firstUpdate;      // Force initial sync with switch positions
 
   // State tracking for debouncing
   struct OscillatorState {
