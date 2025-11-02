@@ -423,6 +423,321 @@ Audio/Buzzer
 - With sensor reads: actual ~50Hz (20ms per sensor pair)
 - Trade-off: responsiveness vs. stability
 
+## Controls Architecture (Phase 3 - November 2, 2025)
+
+### Controls System Overview
+
+```
+Control Flow Architecture:
+
+┌──────────────────────────────────────────────────────────────┐
+│                        main.cpp                               │
+│  Creates: SerialControls, GPIOControls, Theremin             │
+└────────┬──────────────────────────────────┬──────────────────┘
+         │                                  │
+         ▼                                  ▼
+┌─────────────────────┐         ┌──────────────────────────┐
+│ SerialControls      │         │ GPIOControls             │
+│ .h/cpp              │         │ .h/cpp                   │
+├─────────────────────┤         ├──────────────────────────┤
+│ - Command parser    │         │ - MCP23017 I2C GPIO      │
+│ - Oscillator ctrl   │         │ - 3x waveform switches   │
+│ - Effects ctrl      │         │ - 3x octave switches     │
+│ - Sensor enable     │         │ - 50ms debouncing        │
+│ - Help/Status       │         │ - Startup sync           │
+└──────────┬──────────┘         └───────────┬──────────────┘
+           │                                │
+           └────────────┬───────────────────┘
+                        │
+                        ▼
+            ┌───────────────────────┐
+            │    Theremin.h/cpp     │
+            │    (Coordinator)      │
+            ├───────────────────────┤
+            │ - getSensorManager()  │
+            │ - AudioEngine access  │
+            └───────────┬───────────┘
+                        │
+                        ▼
+            ┌───────────────────────┐
+            │   AudioEngine.h/cpp   │
+            │   (Audio Synthesis)   │
+            ├───────────────────────┤
+            │ - Oscillator control  │
+            │ - Effects chain       │
+            │ - Thread-safe setters │
+            └───────────────────────┘
+```
+
+### 9. GPIO Controls Pattern (MCP23017)
+
+```cpp
+// Hardware Control via I2C GPIO Expander
+// Clean architecture: Controls as siblings of Theremin
+
+class GPIOControls {
+private:
+    Theremin* theremin;
+    Adafruit_MCP23X17 mcp;
+    bool initialized;
+    bool controlsEnabled;  // Master enable/disable
+    bool firstUpdate;      // Force initial sync
+
+    // State tracking for debouncing
+    struct OscillatorState {
+        Oscillator::Waveform waveform;
+        int8_t octave;
+        unsigned long lastChangeTime;
+    };
+
+    OscillatorState osc1State, osc2State, osc3State;
+    static constexpr unsigned long DEBOUNCE_MS = 50;
+
+public:
+    GPIOControls(Theremin* theremin)
+        : theremin(theremin), initialized(false),
+          controlsEnabled(true), firstUpdate(true) {}
+
+    bool begin() {
+        // Initialize MCP23017
+        if (!mcp.begin_I2C(0x20)) {
+            Serial.println("[GPIO] MCP23017 not found!");
+            return false;
+        }
+
+        // Configure all pins as INPUT_PULLUP
+        for (uint8_t pin = 0; pin < 16; pin++) {
+            mcp.pinMode(pin, INPUT_PULLUP);
+        }
+
+        initialized = true;
+
+        // Critical: Read initial switch positions and apply
+        // This ensures oscillators match physical switches at boot
+        update();  // Force initial sync
+        firstUpdate = false;  // Subsequent updates use debouncing
+
+        return true;
+    }
+
+    void update() {
+        if (!initialized || !controlsEnabled) return;
+
+        // Update each oscillator from switches
+        updateOscillator(1, osc1State,
+            PIN_OSC1_SINE, PIN_OSC1_TRI, PIN_OSC1_SQ,
+            PIN_OSC1_OCT_UP, PIN_OSC1_OCT_DOWN);
+        // ... repeat for osc2, osc3
+    }
+
+private:
+    void updateOscillator(int oscNum, OscillatorState& state,
+                         uint8_t pinA, uint8_t pinB, uint8_t pinC,
+                         uint8_t pinUp, uint8_t pinDown) {
+        // Read current switch positions
+        Oscillator::Waveform newWaveform = readWaveform(pinA, pinB, pinC);
+        int8_t newOctave = readOctave(pinUp, pinDown);
+
+        // Check if state changed
+        bool changed = (newWaveform != state.waveform ||
+                       newOctave != state.octave);
+
+        // Debouncing: Ignore if too soon after last change
+        unsigned long now = millis();
+        if (!firstUpdate && changed &&
+            (now - state.lastChangeTime < DEBOUNCE_MS)) {
+            return;  // Too soon, ignore
+        }
+
+        // Apply changes (firstUpdate skips debouncing)
+        if (firstUpdate || changed) {
+            AudioEngine* audio = theremin->getAudioEngine();
+            audio->setOscillatorWaveform(oscNum, newWaveform);
+            audio->setOscillatorOctave(oscNum, newOctave);
+
+            state.waveform = newWaveform;
+            state.octave = newOctave;
+            state.lastChangeTime = now;
+
+            Serial.printf("[GPIO] Osc%d: %s, Octave %+d\n",
+                oscNum, getWaveformName(newWaveform), newOctave);
+        }
+    }
+
+    Oscillator::Waveform readWaveform(uint8_t pinA, uint8_t pinB, uint8_t pinC) {
+        // Active LOW with INPUT_PULLUP
+        bool a = !mcp.digitalRead(pinA);  // SINE
+        bool b = !mcp.digitalRead(pinB);  // TRIANGLE
+        bool c = !mcp.digitalRead(pinC);  // SQUARE
+
+        if (a) return Oscillator::SINE;
+        if (b) return Oscillator::TRIANGLE;
+        if (c) return Oscillator::SQUARE;
+        return Oscillator::OFF;  // All HIGH = OFF
+    }
+
+    int8_t readOctave(uint8_t pinUp, uint8_t pinDown) {
+        // Binary encoding: 00=normal, 01=+1, 10=-1, 11=normal
+        bool up = !mcp.digitalRead(pinUp);
+        bool down = !mcp.digitalRead(pinDown);
+
+        if (!up && !down) return 0;   // Both open
+        if (!up && down) return -1;   // Down closed
+        if (up && !down) return 1;    // Up closed
+        return 0;                      // Both closed
+    }
+};
+```
+
+**Key Design Patterns:**
+
+1. **Startup Sync Pattern**
+   - Problem: Oscillators initialized with defaults, switches might be different
+   - Solution: `firstUpdate` flag forces initial application without debouncing
+   - Critical: Call update() in begin() before returning
+
+2. **Debouncing Pattern**
+   - Time-based debouncing (50ms window)
+   - Track lastChangeTime per oscillator
+   - Prevents switch bounce from causing audio glitches
+
+3. **Active LOW Pattern**
+   - MCP23017 pins configured INPUT_PULLUP
+   - Switch connects pin to GND when closed
+   - Pin HIGH = open, LOW = closed
+   - Read with !mcp.digitalRead(pin) to invert logic
+
+4. **Graceful Degradation**
+   - System continues if MCP23017 not found
+   - Serial commands still work (fallback mode)
+   - Easy development without hardware
+
+### 10. Serial Controls Pattern
+
+```cpp
+// Text-based control interface for debugging/testing
+
+class SerialControls {
+private:
+    Theremin* theremin;
+
+public:
+    SerialControls(Theremin* theremin) : theremin(theremin) {}
+
+    void update() {
+        handleSerialCommands();
+    }
+
+private:
+    void handleSerialCommands() {
+        if (!Serial.available()) return;
+
+        String cmd = Serial.readStringUntil('\n');
+        cmd.trim();
+
+        if (cmd.length() == 0) return;
+
+        // Support batch commands (semicolon-separated)
+        int sepIndex;
+        while ((sepIndex = cmd.indexOf(';')) != -1) {
+            String subcmd = cmd.substring(0, sepIndex);
+            subcmd.trim();
+            executeCommand(subcmd);
+            cmd = cmd.substring(sepIndex + 1);
+            cmd.trim();
+        }
+        executeCommand(cmd);
+    }
+
+    void executeCommand(String cmd) {
+        cmd.toLowerCase();
+
+        // Help commands
+        if (cmd == "help" || cmd == "?") {
+            printHelp();
+            return;
+        }
+
+        // Status commands
+        if (cmd == "status") {
+            printStatus();
+            return;
+        }
+
+        // Oscillator commands: osc1:sine, osc2:octave:-1, etc.
+        if (cmd.startsWith("osc")) {
+            int oscNum = cmd.charAt(3) - '0';
+            if (oscNum < 1 || oscNum > 3) {
+                Serial.println("[CMD] Invalid oscillator (1-3)");
+                return;
+            }
+
+            // Parse parameter: osc1:waveform or osc1:octave:value
+            int colon1 = cmd.indexOf(':', 4);
+            if (colon1 == -1) return;
+
+            String param = cmd.substring(colon1 + 1);
+
+            // Handle waveform change
+            if (param.startsWith("sine") || param.startsWith("square") ||
+                param.startsWith("tri") || param.startsWith("saw") ||
+                param.startsWith("off")) {
+                int wf = parseWaveform(param);
+                if (wf != -1) {
+                    theremin->getAudioEngine()->setOscillatorWaveform(
+                        oscNum, (Oscillator::Waveform)wf);
+                    Serial.printf("[CMD] Osc%d waveform: %s\n",
+                        oscNum, param.c_str());
+                }
+            }
+            // Handle octave change: osc1:octave:-1
+            else if (param.startsWith("oct")) {
+                int colon2 = param.indexOf(':');
+                if (colon2 != -1) {
+                    int octave = param.substring(colon2 + 1).toInt();
+                    theremin->getAudioEngine()->setOscillatorOctave(
+                        oscNum, octave);
+                    Serial.printf("[CMD] Osc%d octave: %+d\n",
+                        oscNum, octave);
+                }
+            }
+            // Handle volume change: osc1:vol:0.5
+            else if (param.startsWith("vol")) {
+                int colon2 = param.indexOf(':');
+                if (colon2 != -1) {
+                    float volume = param.substring(colon2 + 1).toFloat();
+                    theremin->getAudioEngine()->setOscillatorVolume(
+                        oscNum, volume);
+                    Serial.printf("[CMD] Osc%d volume: %.2f\n",
+                        oscNum, volume);
+                }
+            }
+        }
+
+        // Effects commands: delay:on, chorus:mix:0.3, etc.
+        // Sensor commands: sensors:pitch:off, etc.
+        // ... (similar pattern)
+    }
+};
+```
+
+**Key Design Patterns:**
+
+1. **Batch Command Pattern**
+   - Support semicolon-separated commands
+   - Example: `osc1:sine;osc1:octave:1;osc1:vol:0.8`
+   - Useful for preset loading
+
+2. **"Last Wins" Behavior**
+   - Serial and GPIO both control same oscillators
+   - No arbitration needed - whichever is used last takes control
+   - Useful for debugging: override hardware with serial
+
+3. **Forward Declaration Pattern**
+   - Avoid circular dependencies
+   - SerialControls.h forward declares Theremin
+   - Full Theremin.h included only in SerialControls.cpp
+
 ## Effects Architecture (Phase 4 - October 31, 2025)
 
 ### Effects System Overview
