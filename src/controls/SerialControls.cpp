@@ -4,9 +4,9 @@
  * Implementation of serial command handling.
  */
 
-#include "SerialControls.h"
-#include "Theremin.h"
-#include "Debug.h"
+#include "controls/SerialControls.h"
+#include "system/Theremin.h"
+#include "system/Debug.h"
 
 SerialControls::SerialControls(Theremin* thereminPtr)
     : theremin(thereminPtr) {

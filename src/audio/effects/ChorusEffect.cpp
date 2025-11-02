@@ -4,8 +4,8 @@
  * Implementation of chorus effect with Oscillator-based LFO.
  */
 
-#include "ChorusEffect.h"
-#include "Debug.h"
+#include "audio/effects/ChorusEffect.h"
+#include "system/Debug.h"
 #include <string.h>
 
 // Fixed base delay for chorus effect (center of modulation)

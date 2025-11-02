@@ -5,7 +5,7 @@
  * Uses phase accumulator for accurate frequency generation.
  */
 
-#include "Oscillator.h"
+#include "audio/Oscillator.h"
 
 // Sine wave lookup table (SINE_TABLE_SIZE entries)
 // Pre-calculated sine values for one complete cycle

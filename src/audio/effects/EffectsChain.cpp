@@ -4,8 +4,8 @@
  * Implementation of effects processing chain.
  */
 
-#include "EffectsChain.h"
-#include "Debug.h"
+#include "audio/effects/EffectsChain.h"
+#include "system/Debug.h"
 
 EffectsChain::EffectsChain(uint32_t sampleRate)
     : sampleRate(sampleRate),

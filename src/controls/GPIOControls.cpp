@@ -4,10 +4,10 @@
  * Implementation of physical control handling via MCP23017.
  */
 
-#include "GPIOControls.h"
-#include "Theremin.h"
-#include "PinConfig.h"
-#include "Debug.h"
+#include "controls/GPIOControls.h"
+#include "system/Theremin.h"
+#include "system/PinConfig.h"
+#include "system/Debug.h"
 
 GPIOControls::GPIOControls(Theremin* thereminPtr)
     : theremin(thereminPtr), initialized(false), controlsEnabled(true), firstUpdate(true) {

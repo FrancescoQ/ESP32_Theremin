@@ -4,11 +4,11 @@
  * Implementation of OTA firmware update manager using WiFi Access Point mode.
  */
 
-#include "OTAManager.h"
+#include "system/OTAManager.h"
 
 #ifdef ENABLE_OTA
 
-#include "Debug.h"
+#include "system/Debug.h"
 
 // Constructor
 OTAManager::OTAManager(const char* ssid, const char* apPass, int buttonPin)

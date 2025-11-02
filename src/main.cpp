@@ -9,17 +9,17 @@
 
 #include <Arduino.h>
 #include <Wire.h>
-#include "Debug.h"
-#include "Theremin.h"
-#include "PinConfig.h"
-#include "PerformanceMonitor.h"
+#include "system/Debug.h"
+#include "system/Theremin.h"
+#include "system/PinConfig.h"
+#include "system/PerformanceMonitor.h"
 
 #if ENABLE_OTA
-#include "OTAManager.h"
+#include "system/OTAManager.h"
 #endif
 
 #if ENABLE_GPIO_MONITOR
-#include "GPIOMonitor.h"
+#include "controls/GPIOMonitor.h"
 #endif
 
 // Main loop timing

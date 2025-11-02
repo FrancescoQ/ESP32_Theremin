@@ -5,8 +5,8 @@
  * Alerts when timing or RAM approaches critical thresholds.
  */
 
-#include "PerformanceMonitor.h"
-#include "Debug.h"
+#include "system/PerformanceMonitor.h"
+#include "system/Debug.h"
 
 PerformanceMonitor::PerformanceMonitor()
     : lastAudioWarn(0),

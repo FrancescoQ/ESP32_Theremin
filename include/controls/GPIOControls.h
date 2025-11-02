@@ -7,7 +7,7 @@
 
 #pragma once
 #include <Adafruit_MCP23X17.h>
-#include "Oscillator.h"
+#include "audio/Oscillator.h"
 
 // Forward declaration to avoid circular dependency:
 // Theremin.h includes ControlHandler.h which includes GPIOControls.h

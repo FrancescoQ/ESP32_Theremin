@@ -4,8 +4,8 @@
  * Implementation of digital delay effect.
  */
 
-#include "DelayEffect.h"
-#include "Debug.h"
+#include "audio/effects/DelayEffect.h"
+#include "system/Debug.h"
 #include <string.h>  // for memset
 
 DelayEffect::DelayEffect(uint32_t delayTimeMs, uint32_t sampleRate)

@@ -38,7 +38,7 @@
 /*
  * Usage:
  *
- * #include "Debug.h"
+ * #include "system/Debug.h"
  *
  * void setup() {
  *     DEBUG_PRINTLN("Starting...");  // Replaces Serial.println("Starting...")

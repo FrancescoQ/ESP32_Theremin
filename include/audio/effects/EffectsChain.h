@@ -6,10 +6,10 @@
 
 #pragma once
 #include <Arduino.h>
-#include "AudioConstants.h"
-#include "DelayEffect.h"
-#include "ChorusEffect.h"
-#include "ReverbEffect.h"
+#include "audio/AudioConstants.h"
+#include "audio/effects/DelayEffect.h"
+#include "audio/effects/ChorusEffect.h"
+#include "audio/effects/ReverbEffect.h"
 
 class EffectsChain {
 public:

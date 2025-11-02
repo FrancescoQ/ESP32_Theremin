@@ -1,5 +1,67 @@
 # System Patterns - ESP32 Theremin
 
+## Project File Organization (November 2, 2025)
+
+The project uses a hierarchical folder structure organized by subsystem for better maintainability:
+
+```
+include/
+├── audio/
+│   ├── AudioConstants.h      # Audio configuration constants
+│   ├── AudioEngine.h          # Main audio synthesis engine
+│   ├── Oscillator.h           # Waveform generator
+│   └── effects/
+│       ├── EffectsChain.h     # Effects coordinator
+│       ├── DelayEffect.h      # Digital delay
+│       ├── ChorusEffect.h     # Chorus/vibrato
+│       └── ReverbEffect.h     # Reverb (Freeverb)
+├── controls/
+│   ├── SensorManager.h        # VL53L0X sensor interface
+│   ├── GPIOControls.h         # Physical switch controls (MCP23017)
+│   ├── SerialControls.h       # Serial command interface
+│   └── GPIOMonitor.h          # I2C device monitor
+└── system/
+    ├── Theremin.h             # Main coordinator class
+    ├── OTAManager.h           # Over-the-air updates
+    ├── PerformanceMonitor.h   # CPU/RAM monitoring
+    ├── Debug.h                # Debug macros
+    └── PinConfig.h            # Hardware pin definitions
+
+src/
+├── audio/
+│   ├── AudioEngine.cpp
+│   ├── Oscillator.cpp
+│   └── effects/
+│       ├── EffectsChain.cpp
+│       ├── DelayEffect.cpp
+│       ├── ChorusEffect.cpp
+│       └── ReverbEffect.cpp
+├── controls/
+│   ├── SensorManager.cpp
+│   ├── GPIOControls.cpp
+│   ├── SerialControls.cpp
+│   └── GPIOMonitor.cpp
+├── system/
+│   ├── Theremin.cpp
+│   ├── OTAManager.cpp
+│   └── PerformanceMonitor.cpp
+└── main.cpp                  # Application entry point
+```
+
+**Include Path Convention:**
+- All includes use subsystem-relative paths from the `include/` root
+- Example: `#include "audio/AudioEngine.h"`
+- Example: `#include "audio/effects/DelayEffect.h"`
+- Example: `#include "controls/SensorManager.h"`
+- Example: `#include "system/Theremin.h"`
+
+**Benefits:**
+- Clear separation by responsibility (audio/controls/system)
+- Effects get dedicated subdirectory (already 4 files)
+- Easy to locate related components
+- Matches conceptual architecture
+- Future-proof for expansion
+
 ## System Architecture
 
 ### High-Level Architecture - Modular Design

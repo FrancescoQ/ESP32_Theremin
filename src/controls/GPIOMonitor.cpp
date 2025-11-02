@@ -4,7 +4,7 @@
  * Implementation of GPIO monitoring utility for MCP23017
  */
 
-#include "GPIOMonitor.h"
+#include "controls/GPIOMonitor.h"
 
 GPIOMonitor::GPIOMonitor(uint8_t i2cAddress)
     : i2cAddress(i2cAddress), previousState(0) {

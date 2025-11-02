@@ -5,8 +5,8 @@
  * Maps sensor input to audio output.
  */
 
-#include "Theremin.h"
-#include "Debug.h"
+#include "system/Theremin.h"
+#include "system/Debug.h"
 
 // Constructor
 Theremin::Theremin(PerformanceMonitor* perfMon)

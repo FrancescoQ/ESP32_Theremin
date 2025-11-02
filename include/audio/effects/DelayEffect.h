@@ -75,7 +75,7 @@
 #pragma once
 #include <Arduino.h>
 #include <vector>
-#include "AudioConstants.h"
+#include "audio/AudioConstants.h"
 
 /*
  * MEMORY MANAGEMENT EVOLUTION:

@@ -5,8 +5,8 @@
  * Handles both simulation (potentiometers) and hardware (VL53L0X) modes.
  */
 
-#include "SensorManager.h"
-#include "Debug.h"
+#include "controls/SensorManager.h"
+#include "system/Debug.h"
 
 // Constructor
 SensorManager::SensorManager()

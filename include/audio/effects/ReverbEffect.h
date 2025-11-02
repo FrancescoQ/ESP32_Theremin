@@ -12,7 +12,7 @@
 
 #pragma once
 #include <Arduino.h>
-#include "AudioConstants.h"
+#include "audio/AudioConstants.h"
 
 class ReverbEffect {
 public:

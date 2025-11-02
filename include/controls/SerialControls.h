@@ -7,7 +7,7 @@
 
 #pragma once
 #include <Arduino.h>
-#include "Oscillator.h"
+#include "audio/Oscillator.h"
 
 // Forward declaration to avoid circular dependency:
 // Theremin.h includes SerialControls.h (to contain SerialControls as a member)

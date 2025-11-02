@@ -5,9 +5,9 @@
  * Uses I2S in built-in DAC mode for high-quality audio output.
  */
 
-#include "AudioEngine.h"
-#include "PerformanceMonitor.h"
-#include "Debug.h"
+#include "audio/AudioEngine.h"
+#include "system/PerformanceMonitor.h"
+#include "system/Debug.h"
 
 // ============================================================================
 // SECTION 1: LIFECYCLE & INITIALIZATION

@@ -6,10 +6,10 @@
  */
 
 #pragma once
-#include "SensorManager.h"
-#include "AudioEngine.h"
-#include "SerialControls.h"
-#include "GPIOControls.h"
+#include "controls/SensorManager.h"
+#include "audio/AudioEngine.h"
+#include "controls/SerialControls.h"
+#include "controls/GPIOControls.h"
 
 // Forward declaration
 class PerformanceMonitor;

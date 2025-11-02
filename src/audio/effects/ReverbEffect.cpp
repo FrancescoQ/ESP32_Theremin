@@ -7,8 +7,8 @@
  * @see https://ccrma.stanford.edu/~jos//waveguide/Freeverb.html
  */
 
-#include "ReverbEffect.h"
-#include "Debug.h"
+#include "audio/effects/ReverbEffect.h"
+#include "system/Debug.h"
 #include <string.h>
 
 // Define static constexpr arrays (required for C++14 and earlier)

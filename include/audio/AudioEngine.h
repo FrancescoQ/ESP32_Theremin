@@ -11,10 +11,10 @@
 #include <driver/i2s.h>
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
-#include "PinConfig.h"
-#include "Oscillator.h"
-#include "EffectsChain.h"
-#include "AudioConstants.h"
+#include "system/PinConfig.h"
+#include "audio/Oscillator.h"
+#include "audio/effects/EffectsChain.h"
+#include "audio/AudioConstants.h"
 
 // Forward declaration to avoid circular dependency
 class PerformanceMonitor;

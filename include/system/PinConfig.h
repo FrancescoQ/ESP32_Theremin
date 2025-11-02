@@ -5,7 +5,7 @@
  * All GPIO and I2C address assignments defined here.
  *
  * Usage: Include this header in any file that needs pin definitions.
- *        #include "PinConfig.h"
+ *        #include "system/PinConfig.h"
  */
 
 #pragma once

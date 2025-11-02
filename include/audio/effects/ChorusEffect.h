@@ -109,8 +109,8 @@
 #pragma once
 #include <Arduino.h>
 #include <memory>
-#include "Oscillator.h"  // Reuse Oscillator as LFO!
-#include "AudioConstants.h"
+#include "audio/Oscillator.h"  // Reuse Oscillator as LFO!
+#include "audio/AudioConstants.h"
 
 /*
  * MEMORY MANAGEMENT EVOLUTION:
