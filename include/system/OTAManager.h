@@ -37,6 +37,13 @@ class OTAManager {
   bool isInitialized;
 
  public:
+
+  enum OTAForceState {
+    AUTO = 0,
+    ALWAYS_ENABLE = 1,
+    ALWAYS_DISABLE = 2
+  };
+
   /**
    * Constructor
    * @param ssid Access Point name (visible WiFi network name)
@@ -51,7 +58,7 @@ class OTAManager {
    * @param otaPass Password for OTA page authentication
    * @return true if initialization successful, false otherwise
    */
-  bool begin(const char* otaUser = "", const char* otaPass = "");
+  bool begin(const char* otaUser = "", const char* otaPass = "", OTAForceState forceState = AUTO);
 
   /**
    * Handle incoming OTA requests (call in loop())

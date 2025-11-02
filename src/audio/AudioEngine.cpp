@@ -337,6 +337,17 @@ float AudioEngine::getOscillatorVolume(int oscNum) {
   return volume;
 }
 
+// Special states check.
+bool AudioEngine::getSpecialState(int state) {
+  int currentState = 0;
+  // Special state 1: all oscillators OFF and all octave switches at -1
+  if (oscillator1.getWaveform() == Oscillator::OFF && oscillator2.getWaveform() == Oscillator::OFF && oscillator3.getWaveform() == Oscillator::OFF && oscillator1.getOctaveShift() == Oscillator::OCTAVE_DOWN && oscillator2.getOctaveShift() == Oscillator::OCTAVE_DOWN && oscillator3.getOctaveShift() == Oscillator::OCTAVE_DOWN) {
+    currentState = 1;
+  }
+
+  return currentState == state;
+}
+
 // ============================================================================
 // SECTION 5: SOUND EFFECTS & TESTING
 // ============================================================================

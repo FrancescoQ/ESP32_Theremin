@@ -106,7 +106,13 @@ void setup() {
 
   #if ENABLE_OTA
     // Initialize OTA manager
-    if (ota.begin("admin", "theremin")) {
+    // If we start the system with 3 oscillators OFF and all octave switch -1 enable OTA:
+    OTAManager::OTAForceState otaForcedState = OTAManager::AUTO;
+    if (theremin.getAudioEngine()->getSpecialState(1)) {
+      otaForcedState = OTAManager::ALWAYS_ENABLE;
+    }
+
+    if (ota.begin("admin", "theremin", otaForcedState)) {
       DEBUG_PRINTLN("[OTA] OTA updates enabled");
     } else {
       DEBUG_PRINTLN("[OTA] Failed to start OTA manager");

@@ -16,9 +16,17 @@ OTAManager::OTAManager(const char* ssid, const char* apPass, int buttonPin)
       isInitialized(false) {}
 
 // Initialize WiFi AP and ElegantOTA
-bool OTAManager::begin(const char* otaUser, const char* otaPass) {
-  // Check enable pin if configured
-  if (enablePin >= 0) {
+bool OTAManager::begin(const char* otaUser, const char* otaPass, OTAForceState forceState) {
+
+  // Immediately return if OTA is forced as disabled.
+  if (forceState == OTAForceState::ALWAYS_DISABLE) {
+    DEBUG_PRINTLN("[OTA] FORCE DISABLED.");
+    isInitialized = false;
+    return false;
+  }
+
+  // Check enable pin if configured and if we don't want to always force enable.
+  if (forceState != OTAForceState::ALWAYS_ENABLE && enablePin >= 0) {
     pinMode(enablePin, INPUT_PULLUP);
     if (digitalRead(enablePin) != LOW) {
       // Button not pressed during boot
@@ -27,6 +35,10 @@ bool OTAManager::begin(const char* otaUser, const char* otaPass) {
       return false;
     }
     DEBUG_PRINTLN("[OTA] Enable button detected, starting OTA...");
+  }
+
+  if (forceState == OTAForceState::ALWAYS_ENABLE) {
+    DEBUG_PRINTLN("[OTA] FORCE ENABLE.");
   }
 
   DEBUG_PRINTLN("\n=== OTA Manager Initialization ===");

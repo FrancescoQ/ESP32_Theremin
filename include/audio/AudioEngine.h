@@ -222,6 +222,12 @@ class AudioEngine {
   }
 
   /**
+   * Define some "special states" for the audioengine, that can be i.e.
+   * as startup check to perform "things". (i.e. enable OTA during startup)
+   */
+  bool getSpecialState(int state);
+
+  /**
    * Get effects chain for parameter control
    */
   EffectsChain* getEffectsChain() { return effectsChain; }
