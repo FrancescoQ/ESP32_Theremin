@@ -268,6 +268,7 @@ class AudioEngine {
   int currentFrequency;
   int currentAmplitude;     // Target amplitude
   float smoothedAmplitude;  // Actual smoothed amplitude value
+  float smoothedFrequency;  // Actual smoothed frequency value
 
   // Oscillator instance
   Oscillator oscillator1;

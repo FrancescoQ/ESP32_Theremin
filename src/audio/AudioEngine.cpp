@@ -18,6 +18,7 @@ AudioEngine::AudioEngine(PerformanceMonitor* perfMon)
     : currentFrequency(MIN_FREQUENCY),
       currentAmplitude(0),
       smoothedAmplitude(0.0),
+      smoothedFrequency((float)MIN_FREQUENCY),
       audioTaskHandle(NULL),
       paramMutex(NULL),
       taskRunning(false),
@@ -114,10 +115,7 @@ void AudioEngine::setFrequency(int freq) {
     // Constrain to valid range (A3-A5)
     currentFrequency = constrain(freq, MIN_FREQUENCY, MAX_FREQUENCY);
 
-    // Update all oscillator frequencies
-    oscillator1.setFrequency((float)currentFrequency);
-    oscillator2.setFrequency((float)currentFrequency);
-    oscillator3.setFrequency((float)currentFrequency);
+    // Don't update oscillators here - let generateAudioBuffer() do it with smoothing
 
     xSemaphoreGive(paramMutex);
   }
@@ -128,6 +126,8 @@ void AudioEngine::setAmplitude(int amplitude) {
   if (paramMutex != NULL && xSemaphoreTake(paramMutex, portMAX_DELAY) == pdTRUE) {
     // Constrain to 0-100%
     currentAmplitude = constrain(amplitude, 0, 100);
+
+    // Don't update oscillators here - let generateAudioBuffer() do it with smoothing
 
     xSemaphoreGive(paramMutex);
   }
@@ -671,8 +671,16 @@ void AudioEngine::generateAudioBuffer() {
 
   // Lock mutex to safely read parameters
   if (paramMutex != NULL && xSemaphoreTake(paramMutex, 0) == pdTRUE) {
+    // Apply exponential smoothing to frequency (NEW - matches amplitude pattern)
+    smoothedFrequency += (currentFrequency - smoothedFrequency) * SMOOTHING_FACTOR;
+
     // Apply exponential smoothing to amplitude
     smoothedAmplitude += (currentAmplitude - smoothedAmplitude) * SMOOTHING_FACTOR;
+
+    // Update all oscillator frequencies with smoothed value
+    oscillator1.setFrequency(smoothedFrequency);
+    oscillator2.setFrequency(smoothedFrequency);
+    oscillator3.setFrequency(smoothedFrequency);
 
     xSemaphoreGive(paramMutex);
   }
