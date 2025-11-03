@@ -277,7 +277,7 @@ void SerialControls::executeCommand(String cmd) {
   }
 
   // System reset command.
-  if (cmd == "system:reset") {
+  if (cmd == "system:restart") {
     DEBUG_PRINTLN("[CTRL] System reset command received. Restarting...");
     ESP.restart();
   }
