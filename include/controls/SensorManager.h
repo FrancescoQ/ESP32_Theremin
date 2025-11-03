@@ -96,6 +96,28 @@ class SensorManager {
    */
   bool isPitchSmoothingEnabled() const { return pitchSmoothingEnabled; }
 
+  /**
+   * Set pitch smoothing alpha value
+   * @param alpha Smoothing factor (0.0 = very smooth/slow, 1.0 = no smoothing/instant)
+   */
+  void setPitchSmoothingAlpha(float alpha);
+
+  /**
+   * Set volume smoothing alpha value
+   * @param alpha Smoothing factor (0.0 = very smooth/slow, 1.0 = no smoothing/instant)
+   */
+  void setVolumeSmoothingAlpha(float alpha);
+
+  /**
+   * Get current pitch smoothing alpha
+   */
+  float getPitchSmoothingAlpha() const { return pitchSmoothingAlpha; }
+
+  /**
+   * Get current volume smoothing alpha
+   */
+  float getVolumeSmoothingAlpha() const { return volumeSmoothingAlpha; }
+
   // Distance ranges (same for both modes)
   static const int PITCH_MIN_DIST = 50;
   static const int PITCH_MAX_DIST = 400;
@@ -107,11 +129,15 @@ class SensorManager {
   // Alpha controls responsiveness: 0.0 = very smooth/slow, 1.0 = no smoothing/instant
   // Values 0.3-0.4 provide good balance between smoothness and responsiveness
   // Alpha value is "how much (percentage) of new value to mix to the existing smoothed value"
-  static constexpr float SMOOTHING_ALPHA = 0.35f;
+  static constexpr float DEFAULT_SMOOTHING_ALPHA = 0.35f;
 
   float smoothedPitchDistance;
   float smoothedVolumeDistance;
   bool firstReading;  // Track if this is the first reading (to initialize smoothed values)
+
+  // Runtime-configurable smoothing alpha values
+  float pitchSmoothingAlpha;   // Pitch sensor smoothing (0.0-1.0)
+  float volumeSmoothingAlpha;  // Volume sensor smoothing (0.0-1.0)
 
   // Cached raw readings (updated by updateReadings())
   int cachedPitchRaw;
@@ -135,9 +161,10 @@ class SensorManager {
    * @param smoothedValue Current smoothed value (passed by reference, updated in-place)
    * @param newReading New raw reading from sensor
    * @param isFirstReading If true, initialize smoothedValue to newReading
+   * @param alpha Smoothing factor (0.0-1.0)
    * @return Smoothed value
    */
-  int applyExponentialSmoothing(float& smoothedValue, int newReading, bool isFirstReading);
+  int applyExponentialSmoothing(float& smoothedValue, int newReading, bool isFirstReading, float alpha);
 
   // VL53L0X sensors (uses pins from PinConfig.h)
   // PIN_SENSOR_I2C_SDA, PIN_SENSOR_I2C_SCL

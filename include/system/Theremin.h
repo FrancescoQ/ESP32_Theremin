@@ -17,6 +17,15 @@ class PerformanceMonitor;
 class Theremin {
  public:
   /**
+   * Smoothing preset levels for unified control
+   */
+  enum SmoothingPreset {
+    SMOOTH_NONE = 0,     // Raw/instant response (testing)
+    SMOOTH_NORMAL = 1,   // Balanced (default)
+    SMOOTH_EXTRA = 2     // Maximum smoothness
+  };
+
+  /**
    * Constructor
    * @param perfMon Pointer to PerformanceMonitor instance (optional)
    */
@@ -51,6 +60,18 @@ class Theremin {
    * @return Pointer to SensorManager
    */
   SensorManager* getSensorManager() { return &sensors; }
+
+  /**
+   * Set pitch smoothing preset (coordinates both sensor and audio levels)
+   * @param preset Smoothing preset level
+   */
+  void setPitchSmoothingPreset(SmoothingPreset preset);
+
+  /**
+   * Set volume smoothing preset (coordinates both sensor and audio levels)
+   * @param preset Smoothing preset level
+   */
+  void setVolumeSmoothingPreset(SmoothingPreset preset);
 
  private:
   SensorManager sensors;

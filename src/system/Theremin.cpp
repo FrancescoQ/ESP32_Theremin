@@ -10,7 +10,7 @@
 
 // Constructor
 Theremin::Theremin(PerformanceMonitor* perfMon)
-    : audio(perfMon), serialControls(this), gpioControls(this), debugEnabled(false) {}
+    : sensors(), audio(perfMon), serialControls(this), gpioControls(this), debugEnabled(false) {}
 
 // Initialize theremin
 bool Theremin::begin() {
@@ -137,4 +137,66 @@ void Theremin::printDebugInfo(int pitchDist, int volumeDist, int freq, int ampli
   // safely, and in any case at 50Hz it should take something like ~994 days
   // to overflow... that's a long song...
   loopCounter++;
+}
+
+// Set pitch smoothing preset (coordinates both sensor and audio levels)
+void Theremin::setPitchSmoothingPreset(SmoothingPreset preset) {
+  DEBUG_PRINT("[THEREMIN] Setting pitch smoothing preset: ");
+  DEBUG_PRINTLN((int)preset);
+
+  switch (preset) {
+    case SMOOTH_NONE:
+      // Sensor: disabled, Audio: instant
+      sensors.setPitchSmoothingEnabled(false);
+      audio.setPitchSmoothingFactor(1.0f);  // Instant
+      DEBUG_PRINTLN("[THEREMIN] Pitch smoothing: NONE (raw response)");
+      break;
+
+    case SMOOTH_NORMAL:
+      // Sensor: α=0.35, Audio: factor=0.80 (default balanced)
+      sensors.setPitchSmoothingEnabled(true);
+      sensors.setPitchSmoothingAlpha(0.35f);
+      audio.setPitchSmoothingFactor(0.80f);
+      DEBUG_PRINTLN("[THEREMIN] Pitch smoothing: NORMAL (balanced)");
+      break;
+
+    case SMOOTH_EXTRA:
+      // Sensor: α=0.20 (more smooth), Audio: factor=0.50 (more smooth)
+      sensors.setPitchSmoothingEnabled(true);
+      sensors.setPitchSmoothingAlpha(0.20f);
+      audio.setPitchSmoothingFactor(0.50f);
+      DEBUG_PRINTLN("[THEREMIN] Pitch smoothing: EXTRA (maximum smooth)");
+      break;
+  }
+}
+
+// Set volume smoothing preset (coordinates both sensor and audio levels)
+void Theremin::setVolumeSmoothingPreset(SmoothingPreset preset) {
+  DEBUG_PRINT("[THEREMIN] Setting volume smoothing preset: ");
+  DEBUG_PRINTLN((int)preset);
+
+  switch (preset) {
+    case SMOOTH_NONE:
+      // Sensor: disabled, Audio: instant
+      sensors.setVolumeSmoothingEnabled(false);
+      audio.setVolumeSmoothingFactor(1.0f);  // Instant
+      DEBUG_PRINTLN("[THEREMIN] Volume smoothing: NONE (raw response)");
+      break;
+
+    case SMOOTH_NORMAL:
+      // Sensor: α=0.35, Audio: factor=0.80 (default balanced)
+      sensors.setVolumeSmoothingEnabled(true);
+      sensors.setVolumeSmoothingAlpha(0.35f);
+      audio.setVolumeSmoothingFactor(0.80f);
+      DEBUG_PRINTLN("[THEREMIN] Volume smoothing: NORMAL (balanced)");
+      break;
+
+    case SMOOTH_EXTRA:
+      // Sensor: α=0.20 (more smooth), Audio: factor=0.50 (more smooth)
+      sensors.setVolumeSmoothingEnabled(true);
+      sensors.setVolumeSmoothingAlpha(0.20f);
+      audio.setVolumeSmoothingFactor(0.50f);
+      DEBUG_PRINTLN("[THEREMIN] Volume smoothing: EXTRA (maximum smooth)");
+      break;
+  }
 }

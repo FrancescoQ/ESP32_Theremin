@@ -13,6 +13,8 @@ SensorManager::SensorManager()
     : smoothedPitchDistance(0.0f),
       smoothedVolumeDistance(0.0f),
       firstReading(true),
+      pitchSmoothingAlpha(DEFAULT_SMOOTHING_ALPHA),
+      volumeSmoothingAlpha(DEFAULT_SMOOTHING_ALPHA),
       cachedPitchRaw(0),
       cachedVolumeRaw(0),
       pitchEnabled(true),
@@ -23,6 +25,7 @@ SensorManager::SensorManager()
   // Cached raw values initialized to 0, will be updated by updateReadings()
   // Sensors enabled by default
   // Smoothing enabled by default
+  // Alpha values set to default (0.35)
 }
 
 // Initialize sensors
@@ -89,7 +92,7 @@ int SensorManager::getPitchDistance() {
     // Return raw, unsmoothed value for instant response
     return cachedPitchRaw;
   }
-  return applyExponentialSmoothing(smoothedPitchDistance, cachedPitchRaw, firstReading);
+  return applyExponentialSmoothing(smoothedPitchDistance, cachedPitchRaw, firstReading, pitchSmoothingAlpha);
 }
 
 // Get smoothed volume distance (uses cached raw value)
@@ -100,7 +103,7 @@ int SensorManager::getVolumeDistance() {
     // Return raw, unsmoothed value for instant response
     result = cachedVolumeRaw;
   } else {
-    result = applyExponentialSmoothing(smoothedVolumeDistance, cachedVolumeRaw, firstReading);
+    result = applyExponentialSmoothing(smoothedVolumeDistance, cachedVolumeRaw, firstReading, volumeSmoothingAlpha);
   }
 
   // After first reading of both sensors, clear the flag
@@ -112,13 +115,13 @@ int SensorManager::getVolumeDistance() {
 }
 
 // Apply exponential weighted moving average (EWMA) smoothing
-int SensorManager::applyExponentialSmoothing(float& smoothedValue, int newReading, bool isFirstReading) {
+int SensorManager::applyExponentialSmoothing(float& smoothedValue, int newReading, bool isFirstReading, float alpha) {
   if (isFirstReading) {
     // On first reading, initialize the smoothed value
     smoothedValue = (float)newReading;
   } else {
     // Apply EWMA formula: smoothed = alpha * new + (1 - alpha) * previous
-    smoothedValue = (SMOOTHING_ALPHA * newReading) + ((1.0f - SMOOTHING_ALPHA) * smoothedValue);
+    smoothedValue = (alpha * newReading) + ((1.0f - alpha) * smoothedValue);
   }
 
   return (int)smoothedValue;
@@ -158,4 +161,16 @@ void SensorManager::setVolumeSmoothingEnabled(bool enabled) {
   volumeSmoothingEnabled = enabled;
   DEBUG_PRINT("[SENSOR] Volume smoothing ");
   DEBUG_PRINTLN(enabled ? "enabled (smooth transitions)" : "disabled (instant response)");
+}
+
+void SensorManager::setPitchSmoothingAlpha(float alpha) {
+  pitchSmoothingAlpha = constrain(alpha, 0.0f, 1.0f);
+  DEBUG_PRINT("[SENSOR] Pitch smoothing alpha set to ");
+  DEBUG_PRINTLN(pitchSmoothingAlpha);
+}
+
+void SensorManager::setVolumeSmoothingAlpha(float alpha) {
+  volumeSmoothingAlpha = constrain(alpha, 0.0f, 1.0f);
+  DEBUG_PRINT("[SENSOR] Volume smoothing alpha set to ");
+  DEBUG_PRINTLN(volumeSmoothingAlpha);
 }

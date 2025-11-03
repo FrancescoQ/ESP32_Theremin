@@ -195,6 +195,13 @@ void SerialControls::printHelp() {
   DEBUG_PRINTLN("  sensors:volume:smooth:off  - Instant response (for testing reverb)");
   DEBUG_PRINTLN("  sensors:pitch:smooth:on    - Enable pitch smoothing (default)");
   DEBUG_PRINTLN("  sensors:pitch:smooth:off   - Instant response");
+  DEBUG_PRINTLN("\nSmoothing Presets (Coordinated Sensor + Audio Levels):");
+  DEBUG_PRINTLN("  smooth:pitch:none          - Raw/instant response (no smoothing)");
+  DEBUG_PRINTLN("  smooth:pitch:normal        - Balanced (default: sensor α=0.35, audio=0.80)");
+  DEBUG_PRINTLN("  smooth:pitch:extra         - Maximum smoothness (sensor α=0.20, audio=0.50)");
+  DEBUG_PRINTLN("  smooth:volume:none         - Raw/instant response (no smoothing)");
+  DEBUG_PRINTLN("  smooth:volume:normal       - Balanced (default: sensor α=0.35, audio=0.80)");
+  DEBUG_PRINTLN("  smooth:volume:extra        - Maximum smoothness (sensor α=0.20, audio=0.50)");
   DEBUG_PRINTLN("\nAudio Control:");
   DEBUG_PRINTLN("  audio:freq:440       - Set frequency to 440 Hz");
   DEBUG_PRINTLN("  audio:amp:75         - Set amplitude to 75%");
@@ -350,6 +357,43 @@ void SerialControls::executeCommand(String cmd) {
   if (cmd == "sensors:pitch:smooth:off") {
     theremin->getSensorManager()->setPitchSmoothingEnabled(false);
     DEBUG_PRINTLN("[CTRL] Pitch smoothing disabled - instant response");
+    return;
+  }
+
+  // Smoothing preset commands
+  if (cmd == "smooth:pitch:none") {
+    theremin->setPitchSmoothingPreset(Theremin::SMOOTH_NONE);
+    DEBUG_PRINTLN("[CTRL] Pitch smoothing preset: NONE (raw/instant response)");
+    return;
+  }
+
+  if (cmd == "smooth:pitch:normal") {
+    theremin->setPitchSmoothingPreset(Theremin::SMOOTH_NORMAL);
+    DEBUG_PRINTLN("[CTRL] Pitch smoothing preset: NORMAL (balanced)");
+    return;
+  }
+
+  if (cmd == "smooth:pitch:extra") {
+    theremin->setPitchSmoothingPreset(Theremin::SMOOTH_EXTRA);
+    DEBUG_PRINTLN("[CTRL] Pitch smoothing preset: EXTRA (maximum smoothness)");
+    return;
+  }
+
+  if (cmd == "smooth:volume:none") {
+    theremin->setVolumeSmoothingPreset(Theremin::SMOOTH_NONE);
+    DEBUG_PRINTLN("[CTRL] Volume smoothing preset: NONE (raw/instant response)");
+    return;
+  }
+
+  if (cmd == "smooth:volume:normal") {
+    theremin->setVolumeSmoothingPreset(Theremin::SMOOTH_NORMAL);
+    DEBUG_PRINTLN("[CTRL] Volume smoothing preset: NORMAL (balanced)");
+    return;
+  }
+
+  if (cmd == "smooth:volume:extra") {
+    theremin->setVolumeSmoothingPreset(Theremin::SMOOTH_EXTRA);
+    DEBUG_PRINTLN("[CTRL] Volume smoothing preset: EXTRA (maximum smoothness)");
     return;
   }
 
