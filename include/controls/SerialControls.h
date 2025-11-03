@@ -66,6 +66,11 @@ private:
   void printStatus();
 
   /**
+   * Print the status of the sensors
+   */
+  void printSensorsStatus();
+
+  /**
    * Print status of specific oscillator
    */
   void printOscillatorStatus(int oscNum);

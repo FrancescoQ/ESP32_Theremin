@@ -61,6 +61,19 @@ void SerialControls::printStatus() {
   DEBUG_PRINTLN("=======================================\n");
 }
 
+void SerialControls::printSensorsStatus() {
+  DEBUG_PRINTLN("\n========== SENSOR STATUS ==========");
+  DEBUG_PRINT("Pitch sensor:  ");
+  DEBUG_PRINTLN(theremin->getSensorManager()->isPitchEnabled() ? "ENABLED" : "DISABLED");
+  DEBUG_PRINT("Volume sensor: ");
+  DEBUG_PRINTLN(theremin->getSensorManager()->isVolumeEnabled() ? "ENABLED" : "DISABLED");
+  DEBUG_PRINT("\nPitch smoothing:  ");
+  DEBUG_PRINTLN(theremin->getSensorManager()->isPitchSmoothingEnabled() ? "ENABLED" : "DISABLED");
+  DEBUG_PRINT("Volume smoothing: ");
+  DEBUG_PRINTLN(theremin->getSensorManager()->isVolumeSmoothingEnabled() ? "ENABLED" : "DISABLED");
+  DEBUG_PRINTLN("===================================\n");
+}
+
 void SerialControls::printOscillatorStatus(int oscNum) {
   DEBUG_PRINT("Oscillator ");
   DEBUG_PRINT(oscNum);
@@ -247,6 +260,8 @@ void SerialControls::executeCommand(String cmd) {
   // Handle global and oscillator status.
   if (cmd == "status" || cmd == "system:status") {
     printStatus();
+    printSensorsStatus();
+    printEffectsStatus();
     return;
   }
 
@@ -305,16 +320,7 @@ void SerialControls::executeCommand(String cmd) {
 
   // Sensor status
   if (cmd == "sensors:status") {
-    DEBUG_PRINTLN("\n========== SENSOR STATUS ==========");
-    DEBUG_PRINT("Pitch sensor:  ");
-    DEBUG_PRINTLN(theremin->getSensorManager()->isPitchEnabled() ? "ENABLED" : "DISABLED");
-    DEBUG_PRINT("Volume sensor: ");
-    DEBUG_PRINTLN(theremin->getSensorManager()->isVolumeEnabled() ? "ENABLED" : "DISABLED");
-    DEBUG_PRINT("\nPitch smoothing:  ");
-    DEBUG_PRINTLN(theremin->getSensorManager()->isPitchSmoothingEnabled() ? "ENABLED" : "DISABLED");
-    DEBUG_PRINT("Volume smoothing: ");
-    DEBUG_PRINTLN(theremin->getSensorManager()->isVolumeSmoothingEnabled() ? "ENABLED" : "DISABLED");
-    DEBUG_PRINTLN("===================================\n");
+    printSensorsStatus();
     return;
   }
 
