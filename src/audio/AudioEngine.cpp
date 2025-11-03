@@ -21,6 +21,7 @@ AudioEngine::AudioEngine(PerformanceMonitor* perfMon)
       smoothedFrequency((float)MIN_FREQUENCY),
       pitchSmoothingFactor(DEFAULT_PITCH_SMOOTHING),
       volumeSmoothingFactor(DEFAULT_VOLUME_SMOOTHING),
+      currentChannelMode(STEREO_BOTH),
       audioTaskHandle(NULL),
       paramMutex(NULL),
       taskRunning(false),
@@ -65,7 +66,7 @@ void AudioEngine::begin() {
   // Delay to ensure Serial is fully initialized
   delay(100);
 
-  DEBUG_PRINTLN("[AUDIO] Initializing I2S DAC...");
+  DEBUG_PRINTLN("[AUDIO] Initializing PCM5102 I2S DAC...");
   delay(50);  // Let Serial transmit before continuing
 
   if (!setupI2S()) {
@@ -73,7 +74,7 @@ void AudioEngine::begin() {
     return;  // Don't start audio task if I2S failed
   }
 
-  DEBUG_PRINTLN("[AUDIO] I2S DAC initialized on GPIO25 @ 22050 Hz");
+  DEBUG_PRINTLN("[AUDIO] PCM5102 initialized (BCK:GPIO26, WS:GPIO27, DIN:GPIO25) @ 22050 Hz stereo");
   delay(50);  // Let Serial transmit before continuing
 
   // Initialize oscillators with default settings.
@@ -260,6 +261,33 @@ void AudioEngine::setVolumeSmoothingFactor(float factor) {
     DEBUG_PRINTLN(volumeSmoothingFactor);
     xSemaphoreGive(paramMutex);
   }
+}
+
+// Set stereo channel routing mode (thread-safe)
+void AudioEngine::setChannelMode(ChannelMode mode) {
+  if (paramMutex != NULL && xSemaphoreTake(paramMutex, portMAX_DELAY) == pdTRUE) {
+    currentChannelMode = mode;
+
+    DEBUG_PRINT("[AUDIO] Channel mode set to ");
+    switch (mode) {
+      case STEREO_BOTH:
+        DEBUG_PRINTLN("STEREO_BOTH (L+R)");
+        break;
+      case LEFT_ONLY:
+        DEBUG_PRINTLN("LEFT_ONLY");
+        break;
+      case RIGHT_ONLY:
+        DEBUG_PRINTLN("RIGHT_ONLY");
+        break;
+    }
+
+    xSemaphoreGive(paramMutex);
+  }
+}
+
+// Get stereo channel routing mode (thread-safe)
+AudioEngine::ChannelMode AudioEngine::getChannelMode() const {
+  return currentChannelMode;
 }
 
 // ============================================================================
@@ -641,15 +669,15 @@ void AudioEngine::audioTaskLoop() {
 // SECTION 7: PRIVATE/INTERNAL IMPLEMENTATION
 // ============================================================================
 
-// Initialize I2S in built-in DAC mode
+// Initialize I2S for external PCM5102 DAC
 bool AudioEngine::setupI2S() {
-  // I2S configuration for built-in DAC
+  // I2S configuration for PCM5102 external DAC (stereo 16-bit)
   i2s_config_t i2s_config = {
-      .mode = (i2s_mode_t)(I2S_MODE_MASTER | I2S_MODE_TX | I2S_MODE_DAC_BUILT_IN),
+      .mode = (i2s_mode_t)(I2S_MODE_MASTER | I2S_MODE_TX),  // Standard I2S mode (no built-in DAC)
       .sample_rate = Audio::SAMPLE_RATE,
       .bits_per_sample = I2S_BITS_PER_SAMPLE_16BIT,
-      .channel_format = I2S_CHANNEL_FMT_ONLY_RIGHT,  // Mono output on DAC1 (GPIO25)
-      .communication_format = I2S_COMM_FORMAT_STAND_MSB,
+      .channel_format = I2S_CHANNEL_FMT_RIGHT_LEFT,  // Stereo output (L+R channels)
+      .communication_format = I2S_COMM_FORMAT_STAND_I2S,
       .intr_alloc_flags = ESP_INTR_FLAG_LEVEL1,
       .dma_buf_count = DMA_BUFFER_COUNT,
       .dma_buf_len = BUFFER_SIZE,
@@ -666,10 +694,17 @@ bool AudioEngine::setupI2S() {
     return false;
   }
 
-  // Set I2S pins for built-in DAC mode (GPIO25 = DAC1)
-  err = i2s_set_dac_mode(I2S_DAC_CHANNEL_RIGHT_EN);
+  // Configure I2S pins for PCM5102
+  i2s_pin_config_t pin_config = {
+      .bck_io_num = PIN_I2S_BCK,        // Bit clock (GPIO26)
+      .ws_io_num = PIN_I2S_WS,          // Word select / LRCK (GPIO27)
+      .data_out_num = PIN_I2S_DOUT,     // Data output (GPIO25)
+      .data_in_num = I2S_PIN_NO_CHANGE  // No data input needed
+  };
+
+  err = i2s_set_pin((i2s_port_t)I2S_NUM, &pin_config);
   if (err != ESP_OK) {
-    DEBUG_PRINT("[AUDIO] ERROR: I2S DAC mode setup failed with error code: ");
+    DEBUG_PRINT("[AUDIO] ERROR: I2S pin configuration failed with error code: ");
     DEBUG_PRINTLN(err);
     return false;
   }
@@ -683,10 +718,10 @@ void AudioEngine::generateAudioBuffer() {
   // Eliminates cumulative quantization noise from stacked effects
   static constexpr int16_t MASTER_NOISE_GATE_THRESHOLD = 150;
 
-  // ESP32 built-in DAC expects unsigned 8-bit samples (0-255)
-  // We use uint16_t buffer for proper I2S DMA alignment (2 bytes per sample)
-  // Only the upper byte is used by the DAC
-  uint16_t buffer[BUFFER_SIZE];
+  // PCM5102 accepts signed 16-bit stereo samples directly
+  // Buffer holds stereo frames: [L0, R0, L1, R1, L2, R2, ...]
+  // BUFFER_SIZE = 256 frames = 512 individual samples (L+R)
+  int16_t buffer[BUFFER_SIZE * 2];
 
   // Start CPU measurement (only measure actual computation, not blocking I/O)
   uint32_t computeStart = micros();
@@ -748,27 +783,38 @@ void AudioEngine::generateAudioBuffer() {
       scaledSample = 0;
     }
 
-    // Convert signed 16-bit to unsigned 8-bit for DAC:
-    // 1. Take upper 8 bits (>> DAC_BIT_SHIFT): -32768..32767 → -128..127
-    // 2. Add DAC_ZERO_OFFSET for DC offset: -128..127 → 0..255
-    // 3. Store in upper byte of 16-bit word (DAC reads upper byte)
-    uint8_t dacSample = (uint8_t)((scaledSample >> DAC_BIT_SHIFT) + DAC_ZERO_OFFSET);
-    buffer[i] = ((uint16_t)dacSample) << DAC_BIT_SHIFT;  // Put 8-bit sample in upper byte
+    // PCM5102 accepts signed 16-bit samples directly - no conversion needed!
+    // Route to channels based on current mode
+    switch (currentChannelMode) {
+      case LEFT_ONLY:
+        buffer[i * 2] = scaledSample;   // Left channel
+        buffer[i * 2 + 1] = 0;          // Right channel muted
+        break;
+      case RIGHT_ONLY:
+        buffer[i * 2] = 0;              // Left channel muted
+        buffer[i * 2 + 1] = scaledSample; // Right channel
+        break;
+      case STEREO_BOTH:
+      default:
+        buffer[i * 2] = scaledSample;     // Left channel
+        buffer[i * 2 + 1] = scaledSample; // Right channel (duplicate)
+        break;
+    }
   }
 
   // Stop CPU measurement (sample calculation done)
   uint32_t computeTime = micros() - computeStart;
 
-  // Write buffer to I2S (blocks until DMA buffer available ~11ms)
+  // Write stereo buffer to I2S (blocks until DMA buffer available ~11ms)
   // Why this blocks for ~11ms:
   // - ESP32 I2S hardware consumes samples at exactly SAMPLE_RATE (22050 Hz)
-  // - 256 samples / 22050 Hz = 11.6ms to consume one buffer
+  // - 256 stereo frames / 22050 Hz = 11.6ms to consume one buffer
   // - i2s_write() blocks until DMA has space (natural flow control)
   // - This is GOOD: prevents buffer overruns, perfectly paced audio output
   // - This blocking is I/O waiting, NOT CPU work (CPU is free for other tasks)
   // - Audio task sleeps here, wakes up when hardware needs next buffer
   size_t bytes_written = 0;
-  i2s_write((i2s_port_t)I2S_NUM, buffer, BUFFER_SIZE * sizeof(uint16_t), &bytes_written, portMAX_DELAY);
+  i2s_write((i2s_port_t)I2S_NUM, buffer, BUFFER_SIZE * 2 * sizeof(int16_t), &bytes_written, portMAX_DELAY);
 
   // Report only the actual CPU work time (not the blocking time)
   if (performanceMonitor != nullptr) {

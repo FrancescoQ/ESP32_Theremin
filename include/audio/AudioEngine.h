@@ -68,6 +68,16 @@ class PerformanceMonitor;
 class AudioEngine {
  public:
   /**
+   * Stereo channel routing modes for PCM5102 DAC
+   * Allows independent control of left/right channels for dual-output setups
+   */
+  enum ChannelMode {
+    STEREO_BOTH,   // Same signal on L+R channels (default)
+    LEFT_ONLY,     // Signal only on left channel, right muted
+    RIGHT_ONLY     // Signal only on right channel, left muted
+  };
+
+  /**
    * Constructor
    * @param perfMon Pointer to PerformanceMonitor instance (optional)
    */
@@ -244,6 +254,18 @@ class AudioEngine {
    */
   void setVolumeSmoothingFactor(float factor);
 
+  /**
+   * Set stereo channel routing mode
+   * @param mode Channel routing (STEREO_BOTH, LEFT_ONLY, or RIGHT_ONLY)
+   */
+  void setChannelMode(ChannelMode mode);
+
+  /**
+   * Get current stereo channel routing mode
+   * @return Current channel mode
+   */
+  ChannelMode getChannelMode() const;
+
   // Audio range constants (A3 to A5, 2 octaves)
   static const int MIN_FREQUENCY = 220;  // A3
   static const int MAX_FREQUENCY = 880;  // A5
@@ -288,6 +310,9 @@ class AudioEngine {
   // Runtime-configurable smoothing factors
   float pitchSmoothingFactor;   // Pitch audio-level smoothing (0.0-1.0)
   float volumeSmoothingFactor;  // Volume audio-level smoothing (0.0-1.0)
+
+  // Stereo channel routing
+  ChannelMode currentChannelMode;  // Current channel output mode
 
   // Oscillator instance
   Oscillator oscillator1;

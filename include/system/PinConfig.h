@@ -23,13 +23,23 @@
 #define I2C_ADDR_SENSOR_VOLUME    0x29  // Volume sensor (default)
 
 //=============================================================================
-// AUDIO PINS - I2S DAC Output
+// AUDIO PINS - I2S PCM5102 DAC Output
 //=============================================================================
-#define PIN_AUDIO_OUTPUT          25  // DAC1 output via I2S (built-in DAC mode)
+// PCM5102 I2S connections
+#define PIN_I2S_BCK               26  // Bit Clock (BCK)
+#define PIN_I2S_WS                27  // Word Select / LRCK (Left-Right Clock)
+#define PIN_I2S_DOUT              25  // Data Output (DIN on PCM5102)
 
-// Future v2.0 pins (uncomment when implementing Phase 2)
-// #define PIN_AUDIO_AMP_ENABLE      26  // PAM8403 amplifier enable/disable
-// #define PIN_AUDIO_LINE_OUT        25  // 6.35mm jack (same as DAC output)
+// PCM5102 hardware notes:
+// - SCK: Leave unconnected (uses internal PLL)
+// - VIN: 3.3V or 5V (check your module specs)
+// - GND: Connect to ESP32 GND
+// - XMT: Typically has default pull-up/down on breakout board
+// - FLT: Typically has default pull-up/down on breakout board
+// - FMT: Typically has default pull-up/down on breakout board
+
+// Future v2.0 pins
+// #define PIN_AUDIO_AMP_ENABLE      TBD  // PAM8403 amplifier enable/disable (if needed)
 
 //=============================================================================
 // OTA PINS - Over-The-Air Update Control

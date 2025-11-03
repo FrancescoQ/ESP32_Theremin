@@ -206,6 +206,12 @@ void SerialControls::printHelp() {
   DEBUG_PRINTLN("  audio:freq:440       - Set frequency to 440 Hz");
   DEBUG_PRINTLN("  audio:amp:75         - Set amplitude to 75%");
   DEBUG_PRINTLN("  audio:status         - Show current audio values");
+  DEBUG_PRINTLN("\nAudio Channel Routing (PCM5102 Stereo Output):");
+  DEBUG_PRINTLN("  audio:channel:stereo   - Both channels (L+R, default)");
+  DEBUG_PRINTLN("  audio:channel:left     - Left channel only (right muted)");
+  DEBUG_PRINTLN("  audio:channel:right    - Right channel only (left muted)");
+  DEBUG_PRINTLN("  audio:channel:status   - Show current channel mode");
+  DEBUG_PRINTLN("  Note: Use for dual-output setup (e.g., L=internal speaker, R=line out)");
   DEBUG_PRINTLN("\nAudio Smoothing (Second-Level):");
   DEBUG_PRINTLN("  audio:pitch:smooth:0.80   - Set pitch smoothing (0.0=very smooth, 1.0=instant)");
   DEBUG_PRINTLN("  audio:volume:smooth:0.80  - Set volume smoothing (0.0=very smooth, 1.0=instant)");
@@ -447,6 +453,44 @@ void SerialControls::executeCommand(String cmd) {
     DEBUG_PRINTLN("  Volume: 0.80 (default)");
     DEBUG_PRINTLN("  Note: Lower = smoother, Higher = more responsive");
     DEBUG_PRINTLN("==================================\n");
+    return;
+  }
+
+  // Channel routing control
+  if (cmd == "audio:channel:stereo") {
+    theremin->getAudioEngine()->setChannelMode(AudioEngine::STEREO_BOTH);
+    DEBUG_PRINTLN("[CTRL] Channel mode: STEREO (L+R)");
+    return;
+  }
+
+  if (cmd == "audio:channel:left") {
+    theremin->getAudioEngine()->setChannelMode(AudioEngine::LEFT_ONLY);
+    DEBUG_PRINTLN("[CTRL] Channel mode: LEFT ONLY");
+    return;
+  }
+
+  if (cmd == "audio:channel:right") {
+    theremin->getAudioEngine()->setChannelMode(AudioEngine::RIGHT_ONLY);
+    DEBUG_PRINTLN("[CTRL] Channel mode: RIGHT ONLY");
+    return;
+  }
+
+  // Channel status
+  if (cmd == "audio:channel:status") {
+    DEBUG_PRINTLN("\n========== CHANNEL STATUS ==========");
+    DEBUG_PRINT("Channel Mode: ");
+    switch (theremin->getAudioEngine()->getChannelMode()) {
+      case AudioEngine::STEREO_BOTH:
+        DEBUG_PRINTLN("STEREO (L+R)");
+        break;
+      case AudioEngine::LEFT_ONLY:
+        DEBUG_PRINTLN("LEFT ONLY");
+        break;
+      case AudioEngine::RIGHT_ONLY:
+        DEBUG_PRINTLN("RIGHT ONLY");
+        break;
+    }
+    DEBUG_PRINTLN("====================================\n");
     return;
   }
 
