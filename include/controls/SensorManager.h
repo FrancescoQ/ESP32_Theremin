@@ -98,9 +98,9 @@ class SensorManager {
 
   // Distance ranges (same for both modes)
   static const int PITCH_MIN_DIST = 50;
-  static const int PITCH_MAX_DIST = 500;
+  static const int PITCH_MAX_DIST = 400;
   static const int VOLUME_MIN_DIST = 50;
-  static const int VOLUME_MAX_DIST = 300;
+  static const int VOLUME_MAX_DIST = 400;
 
  private:
   // Exponential smoothing filter parameters
