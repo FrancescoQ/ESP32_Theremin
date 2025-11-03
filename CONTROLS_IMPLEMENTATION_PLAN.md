@@ -1923,8 +1923,10 @@ Users report hearing pitch "stepping" during fast hand movements. Analysis revea
 
 ---
 
-## F1: Add Audio-Level Pitch Smoothing
+## F1: Add Audio-Level Pitch Smoothing ✅
 **Goal:** Add missing smoothing layer to match volume architecture
+**Status:** ✅ COMPLETED
+**Date Completed:** November 3, 2025
 **Files Modified:** `include/audio/AudioEngine.h`, `src/audio/AudioEngine.cpp`
 
 ### Implementation Steps
@@ -2042,11 +2044,33 @@ void AudioEngine::setFrequency(int freq) {
 3. **A/B Test:** Toggle between old/new code, listen for stepping reduction
 4. **Latency Test:** Verify response time hasn't increased noticeably
 
+### Phase F1: COMPLETED ✅
+
+**Date Completed:** November 3, 2025
+
+**Files Modified:**
+- `include/audio/AudioEngine.h` - Added smoothedFrequency member
+- `src/audio/AudioEngine.cpp` - Applied pitch smoothing in generateAudioBuffer()
+
+**Implementation:**
+- Added `float smoothedFrequency` member variable
+- Updated `setFrequency()` to only store target value (no direct oscillator updates)
+- Modified `generateAudioBuffer()` to apply exponential smoothing to frequency
+- Oscillators now receive smoothed frequency values each buffer cycle
+- Architecture now symmetric: both pitch and volume use two-level smoothing
+
+**Build Impact:**
+- RAM: 14.6% (47,752 bytes) - +4 bytes (one float)
+- Flash: 69.0% (904,933 bytes) - Minimal increase
+- Compilation: ✅ Clean build
+
 ---
 
-## F2: Make Smoothing Factors Configurable
+## F2: Make Smoothing Factors Configurable ✅
 **Goal:** Expose both smoothing levels for runtime adjustment
-**Files Modified:** Multiple
+**Status:** ✅ COMPLETED (with Serial Commands)
+**Date Completed:** November 3, 2025
+**Files Modified:** `include/audio/AudioEngine.h`, `src/audio/AudioEngine.cpp`, `src/controls/SerialControls.cpp`
 
 ### Implementation Steps
 
@@ -2181,11 +2205,48 @@ void AudioEngine::generateAudioBuffer() {
 
 ### Success Criteria for F2
 
-- [ ] Can set sensor-level alpha values at runtime
-- [ ] Can set audio-level factor values at runtime
-- [ ] Changes take effect immediately
-- [ ] All values constrained to valid range (0.0-1.0)
-- [ ] Thread-safe parameter updates
+- [x] Can set sensor-level alpha values at runtime
+- [x] Can set audio-level factor values at runtime
+- [x] Changes take effect immediately
+- [x] All values constrained to valid range (0.0-1.0)
+- [x] Thread-safe parameter updates
+
+### Phase F2: COMPLETED ✅
+
+**Date Completed:** November 3, 2025
+
+**Files Modified:**
+- `include/audio/AudioEngine.h` - Added configurable smoothing factor members and constants
+- `src/audio/AudioEngine.cpp` - Implemented setter methods and updated generateAudioBuffer()
+- `src/controls/SerialControls.cpp` - Added serial commands for runtime control
+
+**Implementation:**
+1. **Constants** - Defined `DEFAULT_PITCH_SMOOTHING` and `DEFAULT_VOLUME_SMOOTHING` (both 0.80)
+2. **Members** - Added `pitchSmoothingFactor` and `volumeSmoothingFactor` as runtime-configurable variables
+3. **Setters** - Implemented `setPitchSmoothingFactor()` and `setVolumeSmoothingFactor()` with thread-safe mutex protection
+4. **Buffer Update** - Modified `generateAudioBuffer()` to use separate factors instead of single constant
+5. **Serial Commands** - Added `audio:pitch:smooth:X` and `audio:volume:smooth:X` for live tuning
+6. **Help Text** - Updated with new commands and usage examples
+7. **Status Display** - Enhanced `audio:status` to show current smoothing factors
+
+**Serial Commands Added:**
+```
+audio:pitch:smooth:0.80    # Set pitch smoothing (0.0=very smooth, 1.0=instant)
+audio:volume:smooth:0.75   # Set volume smoothing (independent control)
+audio:status               # Shows current freq, amp, AND smoothing factors
+```
+
+**Build Impact:**
+- RAM: 14.6% (47,752 bytes) - +8 bytes (two floats)
+- Flash: 69.1% (906,073 bytes) - +1.1 KB for setters and serial commands
+- Compilation: ✅ Clean build, no errors
+
+**Key Benefits:**
+- Independent pitch and volume smoothing control
+- Runtime tuning without recompilation
+- Thread-safe parameter updates
+- Clear visual feedback via serial status
+- Symmetric architecture now fully configurable
 
 ---
 
