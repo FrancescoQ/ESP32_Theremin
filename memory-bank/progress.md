@@ -6,29 +6,42 @@
 
 ## Current Status
 
-**Project Phase:** Phase 4 (Effects) ✅ **COMPLETE!** Phase G (Optional Polish) Next
-**Overall Completion:** ~60% (Phases 0, 1, 2, 4 complete + Phase 3 hardware pending)
-**Last Updated:** November 1, 2025
+**Project Phase:** Phase 3 & 4 ✅ **COMPLETE!** Phase 5 or Optional Enhancements Next
+**Overall Completion:** ~70% (Phases 0, 1, 2, 3, 4 complete + Optional phases remaining)
+**Last Updated:** November 3, 2025
 
 ### Status Summary
-**🎉 MAJOR MILESTONE: THREE-EFFECT AUDIO ENGINE COMPLETE! 🎉**
+**🎉 DOUBLE MILESTONE: COMPLETE MULTI-OSCILLATOR SYNTHESIZER WITH FULL CONTROL & EFFECTS! 🎉**
 
-Successfully implemented professional-grade **audio effects system** with **ALL THREE EFFECTS** on **real hardware**:
-- **Effects System**: DelayEffect + ChorusEffect + ReverbEffect + EffectsChain coordinator fully implemented
-- **Performance**: 14.5% CPU usage with 3 oscillators + delay + chorus + reverb (85% headroom!)
+Successfully completed **BOTH Phase 3 (Controls) AND Phase 4 (Effects)** on **real hardware**:
+
+**Phase 3 - Runtime Controls:**
+- **GPIO Hardware**: MCP23017 I2C GPIO expander fully operational
+- **Physical Switches**: 3 oscillators × (3-pin waveform + 2-pin octave) = 15 GPIO pins
+- **GPIOControls Class**: Complete with 50ms debouncing, startup sync, enable/disable
+- **SerialControls Class**: Refactored from ControlHandler, full command system
+- **Architecture**: Clean sibling design (GPIO + Serial controls separate from Theremin)
+- **User Confirmed**: "everything works like a charm!"
+
+**Phase 4 - Effects System:**
+- **Effects Implemented**: DelayEffect + ChorusEffect + ReverbEffect + EffectsChain coordinator
+- **Performance**: 14.5% CPU usage with 3 oscillators + all effects (85% headroom!)
 - **Architecture**: Stack allocation (RAII), Oscillator-based LFO (100x faster than sin() calls), noise gates for clean reverb
-- **Hardware Deployed**: ESP32 + 2x VL53L0X sensors + I2S DAC - all effects working on physical device
-- **I2S DAC Output**: ESP32 built-in DAC on GPIO25 @ 22050 Hz producing clean, distortion-free sound
-- **Oscillator Class**: Digital oscillator with phase accumulator supporting 4 waveform types
-- **Waveforms Available**: Square, Sine (LUT), Triangle (math), Sawtooth (math) - all sound distinct and clean
+- **Serial Commands**: Complete control over all effects via SerialControls
+- **Audio Quality**: Professional-grade effects, musical sound, no glitches
+
+**Complete System Features:**
+- **Hardware Deployed**: ESP32 + 2x VL53L0X sensors + MCP23017 GPIO + I2S DAC
+- **I2S DAC Output**: ESP32 built-in DAC on GPIO25 @ 22050 Hz producing clean sound
+- **3 Oscillators**: Digital oscillators with 4 waveform types (Square, Sine, Triangle, Sawtooth)
+- **Runtime Control**: Physical switches + serial commands for all parameters
 - **Continuous Audio**: FreeRTOS task on Core 1 generates buffers continuously
 - **Thread-Safe**: Mutex-protected parameter updates between sensor and audio tasks
-- **Professional Quality**: Zero gaps, zero distortion - proper DAC format conversion implemented
-- **Volume Control**: Traditional theremin behavior (near sensor = quiet, far = loud)
-- **Sensor Optimizations**: High-speed timing + optimized reading architecture
-- **Both Sensors**: Pitch and volume control functioning perfectly on real device
+- **Professional Quality**: Zero gaps, zero distortion, proper DAC format conversion
+- **Traditional Theremin**: Near sensor = quiet, far = loud volume control
+- **Optimized Sensors**: High-speed timing + EWMA smoothing architecture
 
-**Current State (Phase 4 Partial):** Effects core implementation complete! DelayEffect and ChorusEffect working beautifully with excellent performance (9% CPU). Outstanding: ControlHandler serial command integration, comprehensive testing/benchmarking. Ready for Phase 3 hardware expansion (controls + display) when parts arrive.
+**Current State:** Core synthesizer complete and fully functional! Phase 3 and Phase 4 both deployed on hardware with excellent performance. Optional enhancements available: Display (OLED), LED meters, Phase 5 polish, or PCM5102 external DAC upgrade.
 
 **Build Status:**
 - RAM: 47,560 bytes (14.5%) - stable and optimized!
