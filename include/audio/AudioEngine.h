@@ -232,6 +232,18 @@ class AudioEngine {
    */
   EffectsChain* getEffectsChain() { return effectsChain; }
 
+  /**
+   * Set pitch audio-level smoothing factor
+   * @param factor Smoothing factor (0.0 = very smooth, 1.0 = instant)
+   */
+  void setPitchSmoothingFactor(float factor);
+
+  /**
+   * Set volume audio-level smoothing factor
+   * @param factor Smoothing factor (0.0 = very smooth, 1.0 = instant)
+   */
+  void setVolumeSmoothingFactor(float factor);
+
   // Audio range constants (A3 to A5, 2 octaves)
   static const int MIN_FREQUENCY = 220;  // A3
   static const int MAX_FREQUENCY = 880;  // A5
@@ -250,7 +262,7 @@ class AudioEngine {
   // - Why sensor speed (main loop) doesn't affect audio quality
   // - Why reducing main loop delay improves vibrato response without affecting audio
 
-  // Amplitude smoothing (prevents sudden volume jumps)
+  // Audio-level smoothing (prevents sudden parameter jumps)
   // Tuning guide - adjust to taste:
   //   0.05 = ~2.0s fade time (very smooth, laggy)
   //   0.10 = ~1.2s fade time (smooth, professional)
@@ -258,7 +270,10 @@ class AudioEngine {
   //   0.25 = ~0.5s fade time (responsive, slight smoothing)
   //   0.50 = ~0.2s fade time (minimal smoothing)
   //   1.00 = instant (no smoothing, like before)
-  static constexpr float SMOOTHING_FACTOR = 0.80;  // 0.0-1.0 (lower = smoother)
+
+  // Default smoothing factors (can be adjusted at runtime)
+  static constexpr float DEFAULT_PITCH_SMOOTHING = 0.80;   // Pitch audio-level smoothing
+  static constexpr float DEFAULT_VOLUME_SMOOTHING = 0.80;  // Volume audio-level smoothing
 
   // DAC conversion constants (16-bit signed → 8-bit unsigned)
   static constexpr uint8_t DAC_ZERO_OFFSET = 128;  // DC offset for unsigned conversion
@@ -269,6 +284,10 @@ class AudioEngine {
   int currentAmplitude;     // Target amplitude
   float smoothedAmplitude;  // Actual smoothed amplitude value
   float smoothedFrequency;  // Actual smoothed frequency value
+
+  // Runtime-configurable smoothing factors
+  float pitchSmoothingFactor;   // Pitch audio-level smoothing (0.0-1.0)
+  float volumeSmoothingFactor;  // Volume audio-level smoothing (0.0-1.0)
 
   // Oscillator instance
   Oscillator oscillator1;

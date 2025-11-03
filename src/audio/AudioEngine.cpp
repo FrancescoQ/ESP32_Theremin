@@ -19,6 +19,8 @@ AudioEngine::AudioEngine(PerformanceMonitor* perfMon)
       currentAmplitude(0),
       smoothedAmplitude(0.0),
       smoothedFrequency((float)MIN_FREQUENCY),
+      pitchSmoothingFactor(DEFAULT_PITCH_SMOOTHING),
+      volumeSmoothingFactor(DEFAULT_VOLUME_SMOOTHING),
       audioTaskHandle(NULL),
       paramMutex(NULL),
       taskRunning(false),
@@ -236,6 +238,26 @@ void AudioEngine::setOscillatorVolume(int oscNum, float volume) {
     DEBUG_PRINT(" volume set to ");
     DEBUG_PRINTLN(volume);
 
+    xSemaphoreGive(paramMutex);
+  }
+}
+
+// Set pitch smoothing factor (thread-safe)
+void AudioEngine::setPitchSmoothingFactor(float factor) {
+  if (paramMutex != NULL && xSemaphoreTake(paramMutex, portMAX_DELAY) == pdTRUE) {
+    pitchSmoothingFactor = constrain(factor, 0.0f, 1.0f);
+    DEBUG_PRINT("[AUDIO] Pitch smoothing factor set to ");
+    DEBUG_PRINTLN(pitchSmoothingFactor);
+    xSemaphoreGive(paramMutex);
+  }
+}
+
+// Set volume smoothing factor (thread-safe)
+void AudioEngine::setVolumeSmoothingFactor(float factor) {
+  if (paramMutex != NULL && xSemaphoreTake(paramMutex, portMAX_DELAY) == pdTRUE) {
+    volumeSmoothingFactor = constrain(factor, 0.0f, 1.0f);
+    DEBUG_PRINT("[AUDIO] Volume smoothing factor set to ");
+    DEBUG_PRINTLN(volumeSmoothingFactor);
     xSemaphoreGive(paramMutex);
   }
 }
@@ -671,11 +693,11 @@ void AudioEngine::generateAudioBuffer() {
 
   // Lock mutex to safely read parameters
   if (paramMutex != NULL && xSemaphoreTake(paramMutex, 0) == pdTRUE) {
-    // Apply exponential smoothing to frequency (NEW - matches amplitude pattern)
-    smoothedFrequency += (currentFrequency - smoothedFrequency) * SMOOTHING_FACTOR;
+    // Apply exponential smoothing to frequency (uses separate pitch factor)
+    smoothedFrequency += (currentFrequency - smoothedFrequency) * pitchSmoothingFactor;
 
-    // Apply exponential smoothing to amplitude
-    smoothedAmplitude += (currentAmplitude - smoothedAmplitude) * SMOOTHING_FACTOR;
+    // Apply exponential smoothing to amplitude (uses separate volume factor)
+    smoothedAmplitude += (currentAmplitude - smoothedAmplitude) * volumeSmoothingFactor;
 
     // Update all oscillator frequencies with smoothed value
     oscillator1.setFrequency(smoothedFrequency);

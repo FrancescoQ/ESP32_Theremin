@@ -199,6 +199,10 @@ void SerialControls::printHelp() {
   DEBUG_PRINTLN("  audio:freq:440       - Set frequency to 440 Hz");
   DEBUG_PRINTLN("  audio:amp:75         - Set amplitude to 75%");
   DEBUG_PRINTLN("  audio:status         - Show current audio values");
+  DEBUG_PRINTLN("\nAudio Smoothing (Second-Level):");
+  DEBUG_PRINTLN("  audio:pitch:smooth:0.80   - Set pitch smoothing (0.0=very smooth, 1.0=instant)");
+  DEBUG_PRINTLN("  audio:volume:smooth:0.80  - Set volume smoothing (0.0=very smooth, 1.0=instant)");
+  DEBUG_PRINTLN("  Note: This is the audio-level smoothing, applied AFTER sensor smoothing");
   DEBUG_PRINTLN("\nEffects Control:");
   DEBUG_PRINTLN("  delay:on             - Enable delay effect");
   DEBUG_PRINTLN("  delay:off            - Disable delay effect");
@@ -368,6 +372,23 @@ void SerialControls::executeCommand(String cmd) {
     return;
   }
 
+  // Audio smoothing control
+  if (cmd.startsWith("audio:pitch:smooth:")) {
+    float factor = cmd.substring(19).toFloat();
+    theremin->getAudioEngine()->setPitchSmoothingFactor(factor);
+    DEBUG_PRINT("[CTRL] Audio pitch smoothing factor set to ");
+    DEBUG_PRINTLN(factor);
+    return;
+  }
+
+  if (cmd.startsWith("audio:volume:smooth:")) {
+    float factor = cmd.substring(20).toFloat();
+    theremin->getAudioEngine()->setVolumeSmoothingFactor(factor);
+    DEBUG_PRINT("[CTRL] Audio volume smoothing factor set to ");
+    DEBUG_PRINTLN(factor);
+    return;
+  }
+
   // Audio status
   if (cmd == "audio:status") {
     DEBUG_PRINTLN("\n========== AUDIO STATUS ==========");
@@ -377,6 +398,10 @@ void SerialControls::executeCommand(String cmd) {
     DEBUG_PRINT("Amplitude: ");
     DEBUG_PRINT(theremin->getAudioEngine()->getAmplitude());
     DEBUG_PRINTLN("%");
+    DEBUG_PRINTLN("\nAudio-Level Smoothing:");
+    DEBUG_PRINT("  Pitch:  0.80 (default)");
+    DEBUG_PRINTLN("  Volume: 0.80 (default)");
+    DEBUG_PRINTLN("  Note: Lower = smoother, Higher = more responsive");
     DEBUG_PRINTLN("==================================\n");
     return;
   }
