@@ -1797,6 +1797,1073 @@ After completing all phases, consider:
 
 ---
 
+---
+
+## Phase F: Advanced Smoothing Control & Multi-Function Button
+**Goal:** Add audio-level pitch smoothing + preset-based smoothing control with multi-function button UI
+**Testing:** Phased testing from basic smoothing to full button integration
+**Status:** 🚧 Planned
+**Date Created:** November 3, 2025
+
+### Overview
+
+This phase addresses pitch stepping artifacts during fast hand movements and implements a professional synthesizer-style multi-function button control interface.
+
+**Problem Statement:**
+Users report hearing pitch "stepping" during fast hand movements. Analysis reveals:
+1. Pitch path has only sensor-level smoothing (α=0.35)
+2. Volume path has TWO levels: sensor smoothing + audio-level smoothing (factor=0.80)
+3. This asymmetry causes pitch to exhibit quantization artifacts that volume doesn't
+
+**Solution:**
+- Add audio-level pitch smoothing to match volume architecture
+- Implement preset-based smoothing control (NONE/NORMAL/EXTRA)
+- Create multi-function button UI for easy parameter access
+
+### Current Smoothing Architecture
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│ PITCH PATH (Current - Single Level)                         │
+├─────────────────────────────────────────────────────────────┤
+│                                                              │
+│  Raw Sensor (200 Hz, 5ms main loop)                        │
+│       ↓                                                      │
+│  [Sensor Smoothing] α=0.35 (SensorManager)                 │
+│       ↓                                                      │
+│  AudioEngine.setFrequency()                                 │
+│       ↓                                                      │
+│  [NO SMOOTHING] ← Missing!                                  │
+│       ↓                                                      │
+│  Oscillators                                                │
+│                                                              │
+└─────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────┐
+│ VOLUME PATH (Current - Two Levels)                          │
+├─────────────────────────────────────────────────────────────┤
+│                                                              │
+│  Raw Sensor (200 Hz, 5ms main loop)                        │
+│       ↓                                                      │
+│  [Sensor Smoothing] α=0.35 (SensorManager)                 │
+│       ↓                                                      │
+│  AudioEngine.setAmplitude()                                 │
+│       ↓                                                      │
+│  [Audio Smoothing] factor=0.80 (generateAudioBuffer)        │
+│       ↓                                                      │
+│  Oscillators                                                │
+│                                                              │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### Target Architecture (After Phase F)
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│ BOTH PATHS (Symmetric Two-Level Smoothing)                  │
+├─────────────────────────────────────────────────────────────┤
+│                                                              │
+│  Raw Sensor (200 Hz)                                        │
+│       ↓                                                      │
+│  [Level 1: Sensor Smoothing] - Configurable α              │
+│       ↓                                                      │
+│  AudioEngine.setFrequency/Amplitude()                       │
+│       ↓                                                      │
+│  [Level 2: Audio Smoothing] - Configurable factor          │
+│       ↓                                                      │
+│  Oscillators                                                │
+│                                                              │
+│  Both levels controlled by unified preset system            │
+│                                                              │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### Sub-Phases
+
+#### F1: Add Audio-Level Pitch Smoothing (Foundation)
+- **Goal:** Add missing smoothing layer to match volume
+- **Files:** `include/audio/AudioEngine.h`, `src/audio/AudioEngine.cpp`
+- **Testing:** Does this eliminate stepping artifacts?
+- **Estimate:** ~30 lines, +0.5 KB Flash
+
+#### F2: Make Smoothing Factors Configurable
+- **Goal:** Expose both levels for runtime adjustment
+- **Files:** `include/controls/SensorManager.h`, `src/controls/SensorManager.cpp`, `include/audio/AudioEngine.h`, `src/audio/AudioEngine.cpp`
+- **Testing:** Can we manually adjust smoothing factors?
+- **Estimate:** ~50 lines, +0.8 KB Flash
+
+#### F3: Preset System
+- **Goal:** Define and implement smoothing presets
+- **Files:** `include/audio/AudioEngine.h`, `src/audio/AudioEngine.cpp`
+- **Testing:** Do presets apply correct values to both layers?
+- **Estimate:** ~80 lines, +1.2 KB Flash
+
+#### F4: Button State Detection (GPIO)
+- **Goal:** Detect button tap vs hold
+- **Files:** `include/controls/GPIOControls.h`, `src/controls/GPIOControls.cpp`
+- **Testing:** Can we detect taps and holds reliably?
+- **Estimate:** ~60 lines, +0.8 KB Flash
+
+#### F5: Secondary Function Mapping
+- **Goal:** Map controls to secondary functions when button held
+- **Files:** `include/controls/GPIOControls.h`, `src/controls/GPIOControls.cpp`, `src/controls/SerialControls.cpp`
+- **Testing:** Does button modifier work correctly?
+- **Estimate:** ~100 lines, +1.5 KB Flash
+
+#### F6: Display Page Navigation (Future)
+- **Goal:** Implement page change on button tap
+- **Files:** `include/controls/GPIOControls.h`, `src/controls/GPIOControls.cpp`
+- **Testing:** Does tap trigger page change?
+- **Estimate:** ~40 lines, +0.4 KB Flash
+
+### Total Estimated Impact
+- **Code:** ~360 lines added
+- **Flash:** ~5.2 KB
+- **RAM:** ~12 bytes (smoothing state + button state)
+
+---
+
+## F1: Add Audio-Level Pitch Smoothing
+**Goal:** Add missing smoothing layer to match volume architecture
+**Files Modified:** `include/audio/AudioEngine.h`, `src/audio/AudioEngine.cpp`
+
+### Implementation Steps
+
+#### Step F1.1: Add Smoothed Frequency Member to AudioEngine.h
+
+Add to `AudioEngine.h` private section (near `smoothedAmplitude`):
+
+```cpp
+private:
+  // Current state
+  int currentFrequency;
+  int currentAmplitude;     // Target amplitude
+  float smoothedAmplitude;  // Actual smoothed amplitude value
+  float smoothedFrequency;  // Actual smoothed frequency value (NEW)
+```
+
+#### Step F1.2: Initialize in Constructor
+
+Modify `AudioEngine.cpp` constructor:
+
+```cpp
+AudioEngine::AudioEngine(PerformanceMonitor* perfMon)
+    : currentFrequency(MIN_FREQUENCY),
+      currentAmplitude(0),
+      smoothedAmplitude(0.0),
+      smoothedFrequency((float)MIN_FREQUENCY),  // NEW: Initialize smoothed frequency
+      audioTaskHandle(NULL),
+      // ... rest of initialization ...
+```
+
+#### Step F1.3: Apply Smoothing in generateAudioBuffer()
+
+Modify `generateAudioBuffer()` in `AudioEngine.cpp`:
+
+```cpp
+void AudioEngine::generateAudioBuffer() {
+  // ... existing code ...
+
+  // Lock mutex to safely read parameters
+  if (paramMutex != NULL && xSemaphoreTake(paramMutex, 0) == pdTRUE) {
+    // Apply exponential smoothing to frequency (NEW - matches amplitude pattern)
+    smoothedFrequency += (currentFrequency - smoothedFrequency) * SMOOTHING_FACTOR;
+
+    // Apply exponential smoothing to amplitude (existing)
+    smoothedAmplitude += (currentAmplitude - smoothedAmplitude) * SMOOTHING_FACTOR;
+
+    xSemaphoreGive(paramMutex);
+  }
+
+  // Calculate gain from smoothed amplitude (0-100% → 0.0-1.0)
+  float gain = smoothedAmplitude / 100.0f;
+
+  // Generate audio samples
+  for (int i = 0; i < BUFFER_SIZE; i++) {
+    // Mix multiple oscillators with automatic gain adjustment
+    int activeCount = 0;
+    int32_t mixedSample = 0;
+
+    // Add samples from all active oscillators (use smoothedFrequency - NEW)
+    if (oscillator1.isActive()) {
+      // Update frequency each buffer (not each sample - efficient)
+      oscillator1.setFrequency(smoothedFrequency);  // Changed from currentFrequency
+      mixedSample += oscillator1.getNextSample((float)Audio::SAMPLE_RATE);
+      activeCount++;
+    }
+    if (oscillator2.isActive()) {
+      oscillator2.setFrequency(smoothedFrequency);  // Changed from currentFrequency
+      mixedSample += oscillator2.getNextSample((float)Audio::SAMPLE_RATE);
+      activeCount++;
+    }
+    if (oscillator3.isActive()) {
+      oscillator3.setFrequency(smoothedFrequency);  // Changed from currentFrequency
+      mixedSample += oscillator3.getNextSample((float)Audio::SAMPLE_RATE);
+      activeCount++;
+    }
+
+    // ... rest of generateAudioBuffer() unchanged ...
+  }
+}
+```
+
+**Note:** Current code updates oscillator frequencies in `setFrequency()`. We need to move frequency updates into the audio buffer generation loop to apply smoothing properly.
+
+#### Step F1.4: Update setFrequency() Method
+
+Simplify `setFrequency()` in `AudioEngine.cpp` - just store the value, don't update oscillators:
+
+```cpp
+void AudioEngine::setFrequency(int freq) {
+  if (paramMutex != NULL && xSemaphoreTake(paramMutex, portMAX_DELAY) == pdTRUE) {
+    // Constrain to valid range (A3-A5)
+    currentFrequency = constrain(freq, MIN_FREQUENCY, MAX_FREQUENCY);
+
+    // Don't update oscillators here - let generateAudioBuffer() do it with smoothing
+
+    xSemaphoreGive(paramMutex);
+  }
+}
+```
+
+### Success Criteria for F1
+
+- [ ] Code compiles without errors
+- [ ] Pitch changes are smoother during fast hand movements
+- [ ] No stepping artifacts audible
+- [ ] Pitch and volume now have symmetric smoothing behavior
+- [ ] No audio glitches or dropouts
+- [ ] Latency remains acceptable (<50ms perceived)
+
+### Testing Strategy
+
+1. **Baseline Test:** Record audio with current implementation, moving hand quickly
+2. **After F1:** Record same movement pattern, compare smoothness
+3. **A/B Test:** Toggle between old/new code, listen for stepping reduction
+4. **Latency Test:** Verify response time hasn't increased noticeably
+
+---
+
+## F2: Make Smoothing Factors Configurable
+**Goal:** Expose both smoothing levels for runtime adjustment
+**Files Modified:** Multiple
+
+### Implementation Steps
+
+#### Step F2.1: Add Alpha Setters to SensorManager
+
+Modify `include/controls/SensorManager.h`:
+
+```cpp
+public:
+  /**
+   * Set pitch smoothing alpha value
+   * @param alpha Smoothing factor (0.0 = very smooth/slow, 1.0 = no smoothing/instant)
+   */
+  void setPitchSmoothingAlpha(float alpha);
+
+  /**
+   * Set volume smoothing alpha value
+   * @param alpha Smoothing factor (0.0 = very smooth/slow, 1.0 = no smoothing/instant)
+   */
+  void setVolumeSmoothingAlpha(float alpha);
+
+  /**
+   * Get current pitch smoothing alpha
+   */
+  float getPitchSmoothingAlpha() const { return pitchSmoothingAlpha; }
+
+  /**
+   * Get current volume smoothing alpha
+   */
+  float getVolumeSmoothingAlpha() const { return volumeSmoothingAlpha; }
+
+private:
+  // Smoothing parameters (make non-const to allow runtime changes)
+  float pitchSmoothingAlpha;   // Default: 0.35
+  float volumeSmoothingAlpha;  // Default: 0.35
+```
+
+Implement in `src/controls/SensorManager.cpp`:
+
+```cpp
+// In constructor
+SensorManager::SensorManager()
+    : smoothedPitchDistance(0.0f),
+      smoothedVolumeDistance(0.0f),
+      firstReading(true),
+      pitchSmoothingAlpha(0.35f),  // Default
+      volumeSmoothingAlpha(0.35f), // Default
+      // ... rest of initialization ...
+
+void SensorManager::setPitchSmoothingAlpha(float alpha) {
+  pitchSmoothingAlpha = constrain(alpha, 0.0f, 1.0f);
+  DEBUG_PRINT("[SENSOR] Pitch smoothing alpha set to ");
+  DEBUG_PRINTLN(pitchSmoothingAlpha);
+}
+
+void SensorManager::setVolumeSmoothingAlpha(float alpha) {
+  volumeSmoothingAlpha = constrain(alpha, 0.0f, 1.0f);
+  DEBUG_PRINT("[SENSOR] Volume smoothing alpha set to ");
+  DEBUG_PRINTLN(volumeSmoothingAlpha);
+}
+
+// Update applyExponentialSmoothing() to use stored alpha
+// (Current implementation uses SMOOTHING_ALPHA constant - needs refactor to accept parameter)
+```
+
+#### Step F2.2: Add Audio-Level Factor Setters to AudioEngine
+
+Modify `include/audio/AudioEngine.h`:
+
+```cpp
+public:
+  /**
+   * Set pitch audio-level smoothing factor
+   * @param factor Smoothing factor (0.0 = very smooth, 1.0 = instant)
+   */
+  void setPitchSmoothingFactor(float factor);
+
+  /**
+   * Set volume audio-level smoothing factor
+   * @param factor Smoothing factor (0.0 = very smooth, 1.0 = instant)
+   */
+  void setVolumeSmoothingFactor(float factor);
+
+private:
+  // Smoothing factors (make configurable)
+  float pitchSmoothingFactor;   // Default: 0.80
+  float volumeSmoothingFactor;  // Default: 0.80
+```
+
+Implement in `src/audio/AudioEngine.cpp`:
+
+```cpp
+// In constructor
+AudioEngine::AudioEngine(PerformanceMonitor* perfMon)
+    : currentFrequency(MIN_FREQUENCY),
+      currentAmplitude(0),
+      smoothedAmplitude(0.0),
+      smoothedFrequency((float)MIN_FREQUENCY),
+      pitchSmoothingFactor(0.80f),   // Default
+      volumeSmoothingFactor(0.80f),  // Default
+      // ... rest of initialization ...
+
+void AudioEngine::setPitchSmoothingFactor(float factor) {
+  if (paramMutex != NULL && xSemaphoreTake(paramMutex, portMAX_DELAY) == pdTRUE) {
+    pitchSmoothingFactor = constrain(factor, 0.0f, 1.0f);
+    DEBUG_PRINT("[AUDIO] Pitch smoothing factor set to ");
+    DEBUG_PRINTLN(pitchSmoothingFactor);
+    xSemaphoreGive(paramMutex);
+  }
+}
+
+void AudioEngine::setVolumeSmoothingFactor(float factor) {
+  if (paramMutex != NULL && xSemaphoreTake(paramMutex, portMAX_DELAY) == pdTRUE) {
+    volumeSmoothingFactor = constrain(factor, 0.0f, 1.0f);
+    DEBUG_PRINT("[AUDIO] Volume smoothing factor set to ");
+    DEBUG_PRINTLN(volumeSmoothingFactor);
+    xSemaphoreGive(paramMutex);
+  }
+}
+
+// Update generateAudioBuffer() to use stored factors instead of SMOOTHING_FACTOR constant
+void AudioEngine::generateAudioBuffer() {
+  // ...
+  if (paramMutex != NULL && xSemaphoreTake(paramMutex, 0) == pdTRUE) {
+    smoothedFrequency += (currentFrequency - smoothedFrequency) * pitchSmoothingFactor;
+    smoothedAmplitude += (currentAmplitude - smoothedAmplitude) * volumeSmoothingFactor;
+    xSemaphoreGive(paramMutex);
+  }
+  // ...
+}
+```
+
+### Success Criteria for F2
+
+- [ ] Can set sensor-level alpha values at runtime
+- [ ] Can set audio-level factor values at runtime
+- [ ] Changes take effect immediately
+- [ ] All values constrained to valid range (0.0-1.0)
+- [ ] Thread-safe parameter updates
+
+---
+
+## F3: Preset System
+**Goal:** Define and implement smoothing presets that coordinate both layers
+**Files Modified:** `include/audio/AudioEngine.h`, `src/audio/AudioEngine.cpp`, potentially `include/controls/SerialControls.h`
+
+### Smoothing Preset Design
+
+#### Preset Definitions
+
+| Preset | Sensor Alpha | Audio Factor | Use Case |
+|--------|-------------|--------------|----------|
+| **NONE** | N/A (disabled) | 1.0 (instant) | Raw/instant response, testing |
+| **NORMAL** | 0.35 | 0.80 | Balanced (current default) |
+| **EXTRA** | 0.20 | 0.50 | Maximum smoothness, forgiving |
+
+**Tuning Notes:**
+- **Sensor Alpha:** Lower = smoother but more lag (0.2-0.4 range is musical)
+- **Audio Factor:** Lower = smoother fades (0.5-0.9 range for instrument control)
+- **Combined Effect:** Two stages multiply for overall response curve
+
+### Implementation Steps
+
+#### Step F3.1: Define Preset Enum
+
+Add to `include/audio/AudioEngine.h` public section:
+
+```cpp
+public:
+  /**
+   * Smoothing preset levels for unified control
+   */
+  enum SmoothingPreset {
+    SMOOTH_NONE = 0,     // Raw/instant response (testing)
+    SMOOTH_NORMAL = 1,   // Balanced (default)
+    SMOOTH_EXTRA = 2     // Maximum smoothness
+  };
+```
+
+#### Step F3.2: Add Preset Methods to AudioEngine
+
+Add to `include/audio/AudioEngine.h`:
+
+```cpp
+public:
+  /**
+   * Set pitch smoothing preset (coordinates both sensor and audio levels)
+   * @param preset Smoothing preset level
+   */
+  void setPitchSmoothingPreset(SmoothingPreset preset);
+
+  /**
+   * Set volume smoothing preset (coordinates both sensor and audio levels)
+   * @param preset Smoothing preset level
+   */
+  void setVolumeSmoothingPreset(SmoothingPreset preset);
+
+private:
+  // Store reference to SensorManager for coordinated control
+  SensorManager* sensorManager;  // Added via constructor parameter
+```
+
+#### Step F3.3: Update Constructor to Accept SensorManager
+
+Modify `AudioEngine::AudioEngine()` in both header and cpp:
+
+```cpp
+// In AudioEngine.h
+AudioEngine(PerformanceMonitor* perfMon = nullptr, SensorManager* sensors = nullptr);
+
+// In AudioEngine.cpp
+AudioEngine::AudioEngine(PerformanceMonitor* perfMon, SensorManager* sensors)
+    : currentFrequency(MIN_FREQUENCY),
+      // ... existing initialization ...
+      sensorManager(sensors),
+      performanceMonitor(perfMon) {
+  // ... rest of constructor ...
+}
+```
+
+#### Step F3.4: Implement Preset Methods
+
+Add to `src/audio/AudioEngine.cpp`:
+
+```cpp
+void AudioEngine::setPitchSmoothingPreset(SmoothingPreset preset) {
+  DEBUG_PRINT("[AUDIO] Setting pitch smoothing preset: ");
+  DEBUG_PRINTLN((int)preset);
+
+  switch (preset) {
+    case SMOOTH_NONE:
+      // Sensor: disabled, Audio: instant
+      if (sensorManager != nullptr) {
+        sensorManager->setPitchSmoothingEnabled(false);
+      }
+      setPitchSmoothingFactor(1.0f);  // Instant
+      DEBUG_PRINTLN("[AUDIO] Pitch smoothing: NONE (raw response)");
+      break;
+
+    case SMOOTH_NORMAL:
+      // Sensor: α=0.35, Audio: factor=0.80 (default balanced)
+      if (sensorManager != nullptr) {
+        sensorManager->setPitchSmoothingEnabled(true);
+        sensorManager->setPitchSmoothingAlpha(0.35f);
+      }
+      setPitchSmoothingFactor(0.80f);
+      DEBUG_PRINTLN("[AUDIO] Pitch smoothing: NORMAL (balanced)");
+      break;
+
+    case SMOOTH_EXTRA:
+      // Sensor: α=0.20 (more smooth), Audio: factor=0.50 (more smooth)
+      if (sensorManager != nullptr) {
+        sensorManager->setPitchSmoothingEnabled(true);
+        sensorManager->setPitchSmoothingAlpha(0.20f);
+      }
+      setPitchSmoothingFactor(0.50f);
+      DEBUG_PRINTLN("[AUDIO] Pitch smoothing: EXTRA (maximum smooth)");
+      break;
+  }
+}
+
+void AudioEngine::setVolumeSmoothingPreset(SmoothingPreset preset) {
+  DEBUG_PRINT("[AUDIO] Setting volume smoothing preset: ");
+  DEBUG_PRINTLN((int)preset);
+
+  switch (preset) {
+    case SMOOTH_NONE:
+      // Sensor: disabled, Audio: instant
+      if (sensorManager != nullptr) {
+        sensorManager->setVolumeSmoothingEnabled(false);
+      }
+      setVolumeSmoothingFactor(1.0f);  // Instant
+      DEBUG_PRINTLN("[AUDIO] Volume smoothing: NONE (raw response)");
+      break;
+
+    case SMOOTH_NORMAL:
+      // Sensor: α=0.35, Audio: factor=0.80 (default balanced)
+      if (sensorManager != nullptr) {
+        sensorManager->setVolumeSmoothingEnabled(true);
+        sensorManager->setVolumeSmoothingAlpha(0.35f);
+      }
+      setVolumeSmoothingFactor(0.80f);
+      DEBUG_PRINTLN("[AUDIO] Volume smoothing: NORMAL (balanced)");
+      break;
+
+    case SMOOTH_EXTRA:
+      // Sensor: α=0.20 (more smooth), Audio: factor=0.50 (more smooth)
+      if (sensorManager != nullptr) {
+        sensorManager->setVolumeSmoothingEnabled(true);
+        sensorManager->setVolumeSmoothingAlpha(0.20f);
+      }
+      setVolumeSmoothingFactor(0.50f);
+      DEBUG_PRINTLN("[AUDIO] Volume smoothing: EXTRA (maximum smooth)");
+      break;
+  }
+}
+```
+
+#### Step F3.5: Update Theremin Constructor
+
+Modify `src/system/Theremin.cpp` to pass SensorManager to AudioEngine:
+
+```cpp
+// In Theremin.h constructor initialization list
+Theremin::Theremin(PerformanceMonitor* perfMon)
+    : sensors(),
+      audio(perfMon, &sensors),  // Pass sensors reference
+      serialControls(this) {
+}
+```
+
+#### Step F3.6: Add Serial Commands for Testing
+
+Add to `SerialControls::executeCommand()` in `src/controls/SerialControls.cpp`:
+
+```cpp
+// Smoothing preset commands
+if (cmd == "smooth:pitch:none") {
+  theremin->getAudioEngine()->setPitchSmoothingPreset(AudioEngine::SMOOTH_NONE);
+  return;
+}
+
+if (cmd == "smooth:pitch:normal") {
+  theremin->getAudioEngine()->setPitchSmoothingPreset(AudioEngine::SMOOTH_NORMAL);
+  return;
+}
+
+if (cmd == "smooth:pitch:extra") {
+  theremin->getAudioEngine()->setPitchSmoothingPreset(AudioEngine::SMOOTH_EXTRA);
+  return;
+}
+
+if (cmd == "smooth:volume:none") {
+  theremin->getAudioEngine()->setVolumeSmoothingPreset(AudioEngine::SMOOTH_NONE);
+  return;
+}
+
+if (cmd == "smooth:volume:normal") {
+  theremin->getAudioEngine()->setVolumeSmoothingPreset(AudioEngine::SMOOTH_NORMAL);
+  return;
+}
+
+if (cmd == "smooth:volume:extra") {
+  theremin->getAudioEngine()->setVolumeSmoothingPreset(AudioEngine::SMOOTH_EXTRA);
+  return;
+}
+```
+
+Update help text accordingly.
+
+### Success Criteria for F3
+
+- [ ] Can set pitch smoothing presets via serial commands
+- [ ] Can set volume smoothing presets via serial commands
+- [ ] Presets correctly coordinate both sensor and audio levels
+- [ ] NONE preset provides raw, instant response
+- [ ] NORMAL preset matches current default behavior
+- [ ] EXTRA preset provides noticeably smoother response
+- [ ] Debug output confirms both layers configured correctly
+
+### Testing Strategy
+
+1. **Test NONE:** `smooth:pitch:none` → Should feel very responsive, possibly jittery
+2. **Test NORMAL:** `smooth:pitch:normal` → Should match current behavior
+3. **Test EXTRA:** `smooth:pitch:extra` → Should feel very smooth, slightly laggy
+4. **A/B Compare:** Toggle between presets during play, note differences
+5. **Tune Values:** Adjust preset constants based on feel
+
+---
+
+## F4: Button State Detection
+**Goal:** Detect button tap vs hold for multi-function UI
+**Files Modified:** `include/controls/GPIOControls.h`, `src/controls/GPIOControls.cpp`, `include/system/PinConfig.h`
+
+### Button Behavior Specification
+
+| Action | Detection | Result |
+|--------|-----------|--------|
+| **Hold** | Press + hold >200ms | Enter SECONDARY mode (while held) |
+| **Tap** | Press + release <200ms | Page navigation (future: OLED) |
+| **Release** | After hold | Exit SECONDARY mode, return to NORMAL |
+
+### Implementation Steps
+
+#### Step F4.1: Define Button Pin
+
+Add to `include/system/PinConfig.h`:
+
+```cpp
+//=============================================================================
+// MULTI-FUNCTION BUTTON
+//=============================================================================
+#define PIN_MULTIFUNCTION_BUTTON  8   // MCP23017 pin 8
+#define BUTTON_TAP_THRESHOLD_MS   200 // Tap if released < 200ms
+```
+
+#### Step F4.2: Add Button State to GPIOControls
+
+Modify `include/controls/GPIOControls.h`:
+
+```cpp
+public:
+  /**
+   * Button state for multi-function control
+   */
+  enum ButtonState {
+    NORMAL_MODE = 0,      // Normal operation
+    SECONDARY_MODE = 1    // Button held - secondary functions active
+  };
+
+  /**
+   * Get current button state
+   */
+  ButtonState getButtonState() const { return buttonState; }
+
+private:
+  // Button state tracking
+  ButtonState buttonState;
+  bool buttonPressed;
+  unsigned long buttonPressTime;
+  unsigned long buttonReleaseTime;
+  bool buttonTapDetected;  // Flag for page navigation
+
+  /**
+   * Update button state
+   */
+  void updateButton();
+```
+
+#### Step F4.3: Initialize Button State
+
+Modify `GPIOControls::GPIOControls()` constructor:
+
+```cpp
+GPIOControls::GPIOControls(Theremin* thereminPtr)
+    : theremin(thereminPtr),
+      mcpFound(false),
+      // ... existing initialization ...
+      buttonState(NORMAL_MODE),
+      buttonPressed(false),
+      buttonPressTime(0),
+      buttonReleaseTime(0),
+      buttonTapDetected(false) {
+}
+```
+
+#### Step F4.4: Implement Button Update Logic
+
+Add to `src/controls/GPIOControls.cpp`:
+
+```cpp
+void GPIOControls::update() {
+  if (!mcpFound) {
+    return;  // Skip if MCP23017 not available
+  }
+
+  // Update button state first
+  updateButton();
+
+  // Then update controls (behavior depends on button state)
+  updateOscillator1();
+  updateOscillator2();
+  updateOscillator3();
+}
+
+void GPIOControls::updateButton() {
+  // Read button pin (active LOW)
+  bool currentPressed = (mcp.digitalRead(PIN_MULTIFUNCTION_BUTTON) == LOW);
+  unsigned long now = millis();
+
+  // Detect press
+  if (currentPressed && !buttonPressed) {
+    // Button just pressed
+    buttonPressed = true;
+    buttonPressTime = now;
+    DEBUG_PRINTLN("[BTN] Button pressed");
+  }
+
+  // Detect release
+  else if (!currentPressed && buttonPressed) {
+    // Button just released
+    buttonPressed = false;
+    buttonReleaseTime = now;
+    unsigned long pressDuration = now - buttonPressTime;
+
+    // Check if tap (short press)
+    if (pressDuration < BUTTON_TAP_THRESHOLD_MS) {
+      buttonTapDetected = true;
+      DEBUG_PRINTLN("[BTN] Button tapped (page change)");
+      // TODO F6: Trigger page navigation
+    }
+
+    // Exit secondary mode
+    if (buttonState == SECONDARY_MODE) {
+      buttonState = NORMAL_MODE;
+      DEBUG_PRINTLN("[BTN] Exiting secondary mode");
+    }
+  }
+
+  // Check for hold (enter secondary mode)
+  else if (currentPressed && buttonPressed) {
+    unsigned long pressDuration = now - buttonPressTime;
+
+    if (pressDuration >= BUTTON_TAP_THRESHOLD_MS && buttonState == NORMAL_MODE) {
+      buttonState = SECONDARY_MODE;
+      DEBUG_PRINTLN("[BTN] Entering secondary mode");
+    }
+  }
+}
+```
+
+### Success Criteria for F4
+
+- [ ] Button press/release detected correctly
+- [ ] Tap (<200ms) triggers tap event
+- [ ] Hold (>200ms) enters SECONDARY_MODE
+- [ ] Release exits SECONDARY_MODE
+- [ ] Debug output shows state transitions clearly
+- [ ] No false triggers from bounce (MCP23017 has built-in debounce)
+
+---
+
+## F5: Secondary Function Mapping
+**Goal:** Map controls to secondary functions when button held
+**Files Modified:** `include/controls/GPIOControls.h`, `src/controls/GPIOControls.cpp`
+
+### Control Mapping Design
+
+| Control | Normal Mode | Secondary Mode (Button Held) |
+|---------|-------------|-------------------------------|
+| **Osc1 Waveform Knob** | Waveform (OFF/SINE/TRI/SQ) | Delay preset (OFF/1/2/3) |
+| **Osc2 Waveform Knob** | Waveform | Chorus preset (OFF/1/2/3) |
+| **Osc3 Waveform Knob** | Waveform | Reverb preset (OFF/1/2/3) |
+| **Osc1 Octave Switch** | Octave shift (-1/0/+1) | **Pitch** smoothing preset |
+| **Osc2 Octave Switch** | Octave shift | **Volume** smoothing preset |
+| **Osc3 Octave Switch** | Octave shift | (Reserved for future) |
+
+### Implementation Steps
+
+#### Step F5.1: Modify updateOscillator Methods
+
+Update `src/controls/GPIOControls.cpp` to check button state:
+
+```cpp
+void GPIOControls::updateOscillator1() {
+  unsigned long now = millis();
+
+  // Read current switch positions
+  int waveformPins = readWaveformSwitch(1);
+  int octavePos = readOctaveSwitch(1);
+
+  // --- WAVEFORM / DELAY CONTROL ---
+  if (waveformPins != osc1State.lastWaveformPins) {
+    if (now - osc1State.lastChangeTime > DEBOUNCE_MS) {
+      osc1State.lastWaveformPins = waveformPins;
+      osc1State.lastChangeTime = now;
+
+      if (buttonState == NORMAL_MODE) {
+        // Normal mode: Set waveform
+        Oscillator::Waveform wf = mapPinsToWaveform(waveformPins);
+        theremin->getAudioEngine()->setOscillatorWaveform(1, wf);
+        DEBUG_PRINT("[GPIO] OSC1 waveform: ");
+        DEBUG_PRINTLN((int)wf);
+      } else {
+        // Secondary mode: Set delay preset
+        int delayPreset = mapPinsToPreset(waveformPins);
+        setDelayPreset(delayPreset);
+        DEBUG_PRINT("[GPIO] Delay preset: ");
+        DEBUG_PRINTLN(delayPreset);
+      }
+    }
+  }
+
+  // --- OCTAVE / PITCH SMOOTHING CONTROL ---
+  if (octavePos != osc1State.lastOctavePos) {
+    if (now - osc1State.lastChangeTime > DEBOUNCE_MS) {
+      osc1State.lastOctavePos = octavePos;
+      osc1State.lastChangeTime = now;
+
+      if (buttonState == NORMAL_MODE) {
+        // Normal mode: Set octave shift
+        int octave = mapPositionToOctave(octavePos);
+        theremin->getAudioEngine()->setOscillatorOctave(1, octave);
+        DEBUG_PRINT("[GPIO] OSC1 octave: ");
+        DEBUG_PRINTLN(octave);
+      } else {
+        // Secondary mode: Set pitch smoothing preset
+        AudioEngine::SmoothingPreset preset = mapOctaveToSmoothingPreset(octavePos);
+        theremin->getAudioEngine()->setPitchSmoothingPreset(preset);
+        DEBUG_PRINT("[GPIO] Pitch smoothing preset: ");
+        DEBUG_PRINTLN((int)preset);
+      }
+    }
+  }
+}
+
+// Similar updates for updateOscillator2() and updateOscillator3()
+```
+
+#### Step F5.2: Add Helper Methods
+
+Add mapping functions to `GPIOControls.cpp`:
+
+```cpp
+// Map waveform pins to preset number (0-3)
+int GPIOControls::mapPinsToPreset(int pins) {
+  // OFF=0, Preset1=1, Preset2=2, Preset3=3
+  // Maps same as waveform positions
+  if (pins == 0b000) return 0;  // All HIGH = OFF
+  if (pins == 0b100) return 1;  // Pin 0 LOW = Preset 1
+  if (pins == 0b010) return 2;  // Pin 1 LOW = Preset 2
+  if (pins == 0b001) return 3;  // Pin 2 LOW = Preset 3
+  return 0;  // Default: OFF
+}
+
+// Map octave position to smoothing preset
+AudioEngine::SmoothingPreset GPIOControls::mapOctaveToSmoothingPreset(int octavePos) {
+  // -1 = NONE, 0 = NORMAL, +1 = EXTRA
+  if (octavePos == -1) return AudioEngine::SMOOTH_NONE;
+  if (octavePos == 0)  return AudioEngine::SMOOTH_NORMAL;
+  if (octavePos == 1)  return AudioEngine::SMOOTH_EXTRA;
+  return AudioEngine::SMOOTH_NORMAL;  // Default
+}
+
+// Apply delay preset
+void GPIOControls::setDelayPreset(int preset) {
+  EffectsChain* effects = theremin->getAudioEngine()->getEffectsChain();
+  if (effects == nullptr) return;
+
+  switch (preset) {
+    case 0:  // OFF
+      effects->setDelayEnabled(false);
+      break;
+    case 1:  // Preset 1: Short delay
+      effects->setDelayEnabled(true);
+      effects->setDelayTime(150);  // 150ms
+      effects->setDelayFeedback(0.3f);
+      break;
+    case 2:  // Preset 2: Medium delay
+      effects->setDelayEnabled(true);
+      effects->setDelayTime(300);  // 300ms
+      effects->setDelayFeedback(0.5f);
+      break;
+    case 3:  // Preset 3: Long delay
+      effects->setDelayEnabled(true);
+      effects->setDelayTime(500);  // 500ms
+      effects->setDelayFeedback(0.7f);
+      break;
+  }
+}
+
+// Similar for setChorusPreset() and setReverbPreset()
+```
+
+### Success Criteria for F5
+
+- [ ] Normal mode: Controls work as before (waveform, octave)
+- [ ] Hold button + move osc1 knob → Delay presets change
+- [ ] Hold button + move osc2 knob → Chorus presets change
+- [ ] Hold button + move osc3 knob → Reverb presets change
+- [ ] Hold button + osc1 octave switch → Pitch smoothing changes
+- [ ] Hold button + osc2 octave switch → Volume smoothing changes
+- [ ] Release button → Return to normal mode
+- [ ] No cross-talk or accidental triggers
+
+---
+
+## F6: Display Page Navigation (Future)
+**Goal:** Implement page change on button tap (placeholder for OLED integration)
+**Files Modified:** `src/controls/GPIOControls.cpp`
+
+### Implementation (Stub for Future OLED)
+
+```cpp
+void GPIOControls::updateButton() {
+  // ... existing button detection code ...
+
+  // Check if tap detected
+  if (buttonTapDetected) {
+    buttonTapDetected = false;  // Clear flag
+
+    // TODO: Integrate with OLED display when available
+    // For now: Just log to serial
+    static int currentPage = 0;
+    currentPage = (currentPage + 1) % 4;  // 4 pages example
+
+    DEBUG_PRINT("[BTN] Display page changed to: ");
+    DEBUG_PRINTLN(currentPage);
+
+    // Future: displayManager->setPage(currentPage);
+  }
+}
+```
+
+### Success Criteria for F6
+
+- [ ] Button tap increments page counter
+- [ ] Debug output shows page changes
+- [ ] Ready for OLED integration in future phase
+
+---
+
+## Testing Checklist for Phase F
+
+### After F1 (Audio-Level Pitch Smoothing)
+- [ ] Compile without errors
+- [ ] Pitch stepping reduced/eliminated during fast movements
+- [ ] No audio glitches
+- [ ] Latency acceptable
+
+### After F2 (Configurable Smoothing)
+- [ ] Can adjust sensor alpha values
+- [ ] Can adjust audio factor values
+- [ ] Changes apply immediately
+- [ ] Thread-safe
+
+### After F3 (Preset System)
+- [ ] Serial commands work: `smooth:pitch:none/normal/extra`
+- [ ] Serial commands work: `smooth:volume:none/normal/extra`
+- [ ] Presets coordinate both smoothing levels correctly
+- [ ] NONE = instant, NORMAL = balanced, EXTRA = very smooth
+
+### After F4 (Button Detection)
+- [ ] Button press/release detected
+- [ ] Tap vs hold distinction works
+- [ ] State transitions logged correctly
+
+### After F5 (Secondary Functions)
+- [ ] Normal mode: All controls work as before
+- [ ] Secondary mode: Knobs control effects presets
+- [ ] Secondary mode: Octave switches control smoothing
+- [ ] Smooth transitions between modes
+
+### After F6 (Page Navigation)
+- [ ] Button tap increments page counter
+- [ ] Ready for OLED integration
+
+### Integration Test
+- [ ] All normal theremin functions still work
+- [ ] Serial commands work alongside GPIO controls
+- [ ] No RAM/Flash overflow
+- [ ] System stable and responsive
+
+---
+
+## Architecture Notes
+
+### Dependency Injection Pattern
+
+To allow AudioEngine to call SensorManager methods (for preset coordination), we use **dependency injection**:
+
+```cpp
+// In Theremin constructor
+audio(perfMon, &sensors)  // Pass sensors pointer to audio
+```
+
+This avoids circular dependencies while enabling coordinated control.
+
+### State Machine: Button Modes
+
+```
+┌─────────────────────────────────────────────────────────┐
+│                    NORMAL_MODE                          │
+│  (Controls function normally)                           │
+│                                                          │
+│  Button Press (Hold >200ms)                            │
+│          ↓                                               │
+│  ┌─────────────────────────────────┐                   │
+│  │     SECONDARY_MODE              │                   │
+│  │  (Effects & smoothing control)  │                   │
+│  └─────────────────────────────────┘                   │
+│          ↓                                               │
+│  Button Release                                         │
+│          ↓                                               │
+│  Return to NORMAL_MODE                                  │
+│                                                          │
+│  Button Tap (<200ms): Page navigation (any mode)       │
+└─────────────────────────────────────────────────────────┘
+```
+
+### Preset Value Tuning
+
+These values are starting points and should be adjusted based on user feedback:
+
+```cpp
+// Sensor smoothing (α)
+NONE:   Disabled
+NORMAL: 0.35  // Current default
+EXTRA:  0.20  // More lag, but very smooth
+
+// Audio smoothing (factor)
+NONE:   1.0   // Instant
+NORMAL: 0.80  // Current default
+EXTRA:  0.50  // Very smooth fades
+```
+
+**Tuning tip:** Start conservative (current values), then experiment. Musicians may prefer different settings for different playing styles.
+
+---
+
+## Build Impact Estimate
+
+| Sub-Phase | Lines Added | Flash Impact | RAM Impact |
+|-----------|-------------|--------------|------------|
+| F1 | ~30 | +0.5 KB | +4 bytes (float) |
+| F2 | ~50 | +0.8 KB | +8 bytes (4 floats) |
+| F3 | ~80 | +1.2 KB | 0 (pointer reuse) |
+| F4 | ~60 | +0.8 KB | +12 bytes (button state) |
+| F5 | ~100 | +1.5 KB | 0 (reuse state) |
+| F6 | ~40 | +0.4 KB | +4 bytes (page) |
+| **Total** | **~360** | **~5.2 KB** | **~28 bytes** |
+
+**Current baseline:** Flash 29.3%, RAM 7.4%
+**After Phase F:** Flash ~29.7%, RAM ~7.4% (minimal impact)
+
+---
+
 ## Notes
 
 - Delete this file after implementation is complete
@@ -1805,4 +2872,5 @@ After completing all phases, consider:
 - Add control system to `docs/architecture/ARCHITECTURE.md`
 
 **Implementation Date:** October 29, 2025
-**Target Completion:** Incrementally, one phase at a time
+**Phase F Created:** November 3, 2025
+**Target Completion:** Incrementally, one sub-phase at a time
