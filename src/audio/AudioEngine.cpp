@@ -340,12 +340,37 @@ float AudioEngine::getOscillatorVolume(int oscNum) {
 // Special states check.
 bool AudioEngine::getSpecialState(int state) {
   int currentState = 0;
+  Oscillator::Waveform osc1waveform = oscillator1.getWaveform();
+  Oscillator::Waveform osc2waveform = oscillator2.getWaveform();
+  Oscillator::Waveform osc3waveform = oscillator3.getWaveform();
+  int osc1octave = oscillator1.getOctaveShift();
+  int osc2octave = oscillator2.getOctaveShift();
+  int osc3octave = oscillator3.getOctaveShift();
+
   // Special state 1: all oscillators OFF and all octave switches at -1
-  if (oscillator1.getWaveform() == Oscillator::OFF && oscillator2.getWaveform() == Oscillator::OFF && oscillator3.getWaveform() == Oscillator::OFF && oscillator1.getOctaveShift() == Oscillator::OCTAVE_DOWN && oscillator2.getOctaveShift() == Oscillator::OCTAVE_DOWN && oscillator3.getOctaveShift() == Oscillator::OCTAVE_DOWN) {
-    currentState = 1;
+  if (state == 1 && osc1waveform == Oscillator::OFF && osc2waveform == Oscillator::OFF && osc3waveform == Oscillator::OFF &&
+      osc1octave == Oscillator::OCTAVE_DOWN && osc2octave == Oscillator::OCTAVE_DOWN && osc3octave == Oscillator::OCTAVE_DOWN) {
+    return true;
   }
 
-  return currentState == state;
+  // Special state 2, 3, 4: only one oscillator ON (triangle), others OFF, with
+  // that oscillator at +1 octave: used to turn on effects during startup.
+  if (osc1waveform == Oscillator::OFF &&
+      osc2waveform == Oscillator::OFF &&
+      osc3waveform == Oscillator::TRIANGLE) {
+
+    if (state == 2 && osc1octave == Oscillator::OCTAVE_UP) {
+      return true;
+    }
+    if (state == 3 && osc2octave == Oscillator::OCTAVE_UP) {
+      return true;
+    }
+    if (state == 4 && osc3octave == Oscillator::OCTAVE_UP) {
+      return true;
+    }
+  }
+
+  return false;
 }
 
 // ============================================================================
@@ -361,8 +386,8 @@ void AudioEngine::playStartupSound() {
       NOTE_GS4, NOTE_AS4,  NOTE_C5, NOTE_REST, NOTE_AS4, NOTE_C5
   };
   const int ff7_durations[] = {
-      150, 150, 150, 450, // Quick notes then hold
-      450, 450, 150, 150, 150, 600   // Final ascending phrase with long ending
+      150, 150, 150, 450,
+      450, 450, 150, 150, 150, 600
   };
   constexpr int ff7_length = sizeof(ff7_melody) / sizeof(ff7_melody[0]);
   playMelody(ff7_melody, ff7_durations, ff7_length, 1, Oscillator::SQUARE);
@@ -370,8 +395,7 @@ void AudioEngine::playStartupSound() {
 }
 
 // Play a melody sequence
-void AudioEngine::playMelody(const int notes[], const int durations[], int length,
-                             int oscNum, Oscillator::Waveform waveform, float staccato, int amplitude) {
+void AudioEngine::playMelody(const int notes[], const int durations[], int length, int oscNum, Oscillator::Waveform waveform, float staccato, int amplitude) {
   DEBUG_PRINTLN("[AUDIO] Playing melody...");
 
   // Save current state to restore later

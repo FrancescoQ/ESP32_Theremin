@@ -239,15 +239,20 @@ void SerialControls::executeCommand(String cmd) {
   }
 
   // Handle help.
-  if (cmd == "help" || cmd == "?") {
+  if (cmd == "help" || cmd == "?" || cmd == "system:help") {
     printHelp();
     return;
   }
 
   // Handle global and oscillator status.
-  if (cmd == "status") {
+  if (cmd == "status" || cmd == "system:status") {
     printStatus();
     return;
+  }
+
+  if (cmd == "system:reset") {
+    DEBUG_PRINTLN("[CTRL] System reset command received. Restarting...");
+    ESP.restart();
   }
 
   if (cmd.startsWith("status:osc")) {

@@ -58,7 +58,7 @@ class OTAManager {
    * @param otaPass Password for OTA page authentication
    * @return true if initialization successful, false otherwise
    */
-  bool begin(const char* otaUser = "", const char* otaPass = "", OTAForceState forceState = AUTO);
+  bool begin(const char* otaUser = "", const char* otaPass = "", OTAForceState forceState = OTAForceState::AUTO);
 
   /**
    * Handle incoming OTA requests (call in loop())

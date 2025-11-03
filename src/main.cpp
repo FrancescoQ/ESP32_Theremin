@@ -107,7 +107,7 @@ void setup() {
   #if ENABLE_OTA
     // Initialize OTA manager
     // If we start the system with 3 oscillators OFF and all octave switch -1 enable OTA:
-    OTAManager::OTAForceState otaForcedState = OTAManager::AUTO;
+    OTAManager::OTAForceState otaForcedState = OTAManager::ALWAYS_DISABLE;
     if (theremin.getAudioEngine()->getSpecialState(1)) {
       otaForcedState = OTAManager::ALWAYS_ENABLE;
     }
@@ -118,6 +118,20 @@ void setup() {
       DEBUG_PRINTLN("[OTA] Failed to start OTA manager");
     }
   #endif
+
+  // Turn on effects.
+  if (theremin.getAudioEngine()->getSpecialState(2)) {
+    theremin.getAudioEngine()->getEffectsChain()->setDelayEnabled(true);
+    DEBUG_PRINTLN("[STARTUP] Delay enabled");
+  }
+  if (theremin.getAudioEngine()->getSpecialState(3)) {
+    theremin.getAudioEngine()->getEffectsChain()->setChorusEnabled(true);
+    DEBUG_PRINTLN("[STARTUP] Chorus enabled");
+  }
+  if (theremin.getAudioEngine()->getSpecialState(4)) {
+    theremin.getAudioEngine()->getEffectsChain()->setReverbEnabled(true);
+    DEBUG_PRINTLN("[STARTUP] Reverb enabled");
+  }
 }
 
 void loop() {

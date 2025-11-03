@@ -26,7 +26,8 @@ bool OTAManager::begin(const char* otaUser, const char* otaPass, OTAForceState f
   }
 
   // Check enable pin if configured and if we don't want to always force enable.
-  if (forceState != OTAForceState::ALWAYS_ENABLE && enablePin >= 0) {
+  if (forceState == OTAForceState::AUTO && enablePin >= 0) {
+    DEBUG_PRINTLN("[OTA] ENABLED BY AUTO CHECK.");
     pinMode(enablePin, INPUT_PULLUP);
     if (digitalRead(enablePin) != LOW) {
       // Button not pressed during boot
