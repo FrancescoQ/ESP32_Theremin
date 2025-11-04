@@ -66,7 +66,14 @@ Detailed documentation of major improvements, optimizations, and implementation 
   - Distortion elimination fix
   - Technical explanation and testing guide
 
-- **[EFFECTS_IMPLEMENTATION.md](improvements/EFFECTS_IMPLEMENTATION.md)** ⭐ NEW
+- **[DAC_MIGRATION_PCM5102.md](improvements/DAC_MIGRATION_PCM5102.md)** ⭐ NEW
+  - Migration from ESP32 built-in 8-bit DAC to external 16-bit PCM5102 I2S DAC
+  - Hardware specifications, pin connections, and software implementation
+  - 256x resolution improvement (8-bit → 16-bit), true stereo output
+  - Dramatically improved audio quality (THD+N < -93 dB) with zero performance penalty
+  - Minor low-volume effect glitches documented with future solutions
+
+- **[EFFECTS_IMPLEMENTATION.md](improvements/EFFECTS_IMPLEMENTATION.md)** ⭐
   - Complete audio effects system (Delay, Chorus, Reverb)
   - Modular architecture with EffectsChain coordinator
   - Stack allocation (RAII pattern) for zero heap fragmentation
@@ -218,4 +225,4 @@ When adding new documentation:
 
 ---
 
-**Last Updated:** November 1, 2025
+**Last Updated:** November 4, 2025

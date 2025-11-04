@@ -16,8 +16,8 @@
 - Clean: `/Users/fquagliati/.platformio/penv/bin/pio run -t clean`
 
 ### Project Status
-**Phase:** Phase 3 & 4 ✅ **COMPLETE!** Optional Enhancements Next
-**Date:** November 3, 2025
+**Phase:** Phase 3 & 4 ✅ **COMPLETE!** + PCM5102 DAC Upgrade Complete
+**Date:** November 4, 2025
 **v2.0 Vision:** Multi-oscillator synthesizer with effects, professional I/O, and visual feedback
 
 **🎉 DOUBLE MILESTONE: COMPLETE MULTI-OSCILLATOR SYNTHESIZER WITH FULL CONTROL & EFFECTS! 🎉**
@@ -62,6 +62,38 @@ Successfully completed **BOTH Phase 3 (Controls) AND Phase 4 (Effects)** on **re
 - 🔮 **Phase H (PCM5102):** Optional external DAC upgrade (waiting for hardware)
 
 ## Recent Changes
+
+**PCM5102 External DAC Migration (November 4, 2025 - COMPLETE):**
+- **Achievement:** Migrated from ESP32 built-in DAC to external PCM5102 I2S DAC!
+- **Hardware Upgrade:**
+  - 8-bit → 16-bit resolution (256x improvement)
+  - Mono software duplication → True stereo hardware output
+  - ~48 dB → 112 dB dynamic range
+  - Unsigned 8-bit format → Signed 16-bit format (standard)
+- **Pin Changes:**
+  - GPIO25: Built-in DAC → I2S DOUT (Data Output)
+  - GPIO26: New - I2S BCK (Bit Clock)
+  - GPIO27: New - I2S WS (Word Select/LRCK)
+- **Software Changes:**
+  - setupI2S(): Standard I2S mode (removed `I2S_MODE_DAC_BUILT_IN`)
+  - generateAudioBuffer(): Direct signed 16-bit output (removed `(sample >> 8) + 128` conversion)
+  - Added stereo channel routing (LEFT_ONLY, RIGHT_ONLY, STEREO_BOTH)
+  - Changed buffer from `uint8_t[256]` to `int16_t[512]` (stereo frames)
+- **Results:**
+  - ✅ **Audio quality nettamente migliorata** - much cleaner sound
+  - ✅ THD+N < -93 dB (professional grade)
+  - ✅ Zero performance penalty (still 14.5% CPU)
+  - ✅ Minimal RAM impact (+512 bytes for stereo buffer)
+  - ⚠️ Minor issue: Reverb/delay show slight glitch/grainy at very low volumes
+    - Cause: Quantization noise in int16_t feedback loops
+    - Current mitigation: Noise gates help but may need tuning
+    - Future solution: Phase G int32_t precision upgrade available
+- **Files Modified:**
+  - include/system/PinConfig.h: Updated pin definitions and comments
+  - src/audio/AudioEngine.cpp: Modified setupI2S() and generateAudioBuffer()
+  - include/audio/AudioEngine.h: Added ChannelMode enum and methods
+- **Documentation:** Created comprehensive DAC_MIGRATION_PCM5102.md
+- **Build Status:** ✅ Compiles cleanly, tested on hardware with excellent results
 
 **GPIO Controls + Architecture Refactor (November 2, 2025 - COMPLETE):**
 - **Achievement:** Implemented complete physical control system with MCP23017!
