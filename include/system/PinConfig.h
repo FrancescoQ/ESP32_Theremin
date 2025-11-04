@@ -26,9 +26,9 @@
 // AUDIO PINS - I2S PCM5102 DAC Output
 //=============================================================================
 // PCM5102 I2S connections
-#define PIN_I2S_BCK               26  // Bit Clock (BCK)
+#define PIN_I2S_BCK               25  // Bit Clock (BCK)
 #define PIN_I2S_WS                27  // Word Select / LRCK (Left-Right Clock)
-#define PIN_I2S_DOUT              25  // Data Output (DIN on PCM5102)
+#define PIN_I2S_DOUT              26  // Data Output (DIN on PCM5102)
 
 // PCM5102 hardware notes:
 // - SCK: Leave unconnected (uses internal PLL)
