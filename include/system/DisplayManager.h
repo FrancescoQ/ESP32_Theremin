@@ -46,6 +46,12 @@ public:
     void registerPage(String name, PageDrawCallback drawFunc, String title = "");
 
     /**
+     * Register a global overlay (appears on all pages)
+     * @param overlayFunc Callback function that draws overlay content
+     */
+    void registerOverlay(PageDrawCallback overlayFunc);
+
+    /**
      * Update display - renders current page
      * Call this in main loop
      */
@@ -89,6 +95,7 @@ public:
 private:
     Adafruit_SSD1306 display;
     std::vector<DisplayPage> pages;
+    std::vector<PageDrawCallback> overlays;
     uint8_t currentPageIndex;
     bool initialized;
 

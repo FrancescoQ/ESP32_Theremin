@@ -42,6 +42,11 @@ void DisplayManager::registerPage(String name, PageDrawCallback drawFunc, String
                  name.c_str(), pages.size());
 }
 
+void DisplayManager::registerOverlay(PageDrawCallback overlayFunc) {
+    overlays.push_back(overlayFunc);
+    DEBUG_PRINTF("DisplayManager: Registered overlay (total: %d)\n", overlays.size());
+}
+
 String DisplayManager::getCurrentPageName() const {
     if (pages.empty() || currentPageIndex >= pages.size()) {
         return "";
@@ -80,6 +85,11 @@ void DisplayManager::update() {
 
     // Draw current page content
     pages[currentPageIndex].drawFunction(display);
+
+    // Draw all overlays on top
+    for (auto& overlay : overlays) {
+        overlay(display);
+    }
 
     // Draw page indicator (top-right corner) if multiple pages exist
     if (pages.size() > 1) {

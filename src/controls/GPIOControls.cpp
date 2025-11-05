@@ -26,6 +26,16 @@ GPIOControls::GPIOControls(Theremin* thereminPtr, DisplayManager* displayMgr)
   osc3State.waveform = Oscillator::OFF;
   osc3State.octave = 0;
   osc3State.lastChangeTime = 0;
+
+  // Register modifier button indicator overlay
+  if (displayManager) {
+    displayManager->registerOverlay([this](Adafruit_SSD1306& oled) {
+      if (this->modifierActive) {
+        // Draw filled circle in top-right area (before page indicator)
+        oled.fillCircle(DisplayManager::SCREEN_WIDTH - 30, 3, 3, SSD1306_WHITE);
+      }
+    });
+  }
 }
 
 bool GPIOControls::begin() {

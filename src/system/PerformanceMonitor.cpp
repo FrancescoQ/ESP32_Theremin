@@ -30,6 +30,19 @@ void PerformanceMonitor::setDisplay(DisplayManager* displayMgr) {
     display->registerPage("Performance", [this](Adafruit_SSD1306& oled) {
       this->drawPerformancePage(oled);
     }, "SYSTEM");  // Add title
+
+    // Register performance warning overlay (appears on all pages)
+    display->registerOverlay([this](Adafruit_SSD1306& oled) {
+      if (!this->isSystemOK()) {
+        // Draw warning indicator in top-left corner
+        // Triangle warning icon
+        oled.fillRect(0, 0, 16, 16, SSD1306_BLACK);
+        oled.drawRect(0, 0, 14, 12, SSD1306_WHITE);
+        oled.fillTriangle(3, 9, 7, 2, 11, 9, SSD1306_WHITE);
+        oled.drawPixel(7, 6, SSD1306_BLACK);  // Exclamation mark dot
+        oled.drawLine(7, 4, 7, 4, SSD1306_BLACK);  // Exclamation mark line
+      }
+    });
   }
 }
 
