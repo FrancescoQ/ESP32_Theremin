@@ -51,8 +51,9 @@
 //=============================================================================
 // DISPLAY PINS
 //=============================================================================
-// #define PIN_DISPLAY_I2C_ADDR      0x3C  // SSD1306 OLED (shares I2C bus)
+#define PIN_DISPLAY_I2C_ADDR      0x3C  // SSD1306 OLED I2C address (shares I2C bus)
 // Note: Display uses same SDA/SCL as sensors (GPIO 21/22)
+// Common addresses: 0x3C or 0x3D (depending on hardware jumper)
 
 //=============================================================================
 // OSCILLATOR CONTROL PINS
@@ -86,11 +87,17 @@
 #define PIN_OSC3_OCT_DOWN 10
 
 //=============================================================================
-// EFFECTS CONTROL PINS
+// CONTROL BUTTONS & JACKS
+//=============================================================================
+#define PIN_OUTPUT_JACK           14  // Output jack with switching detection (ESP32 GPIO)
+#define PIN_MULTI_BUTTON          8   // Multi-function button (MCP23017 pin 8)
+
+//=============================================================================
+// EFFECTS CONTROL PINS (Future)
 //=============================================================================
 // #define PIN_EFFECT_DELAY_EN       12  // Delay effect enable switch
 // #define PIN_EFFECT_CHORUS_EN      13  // Chorus effect enable switch
-// #define PIN_EFFECT_REVERB_EN      14  // Reverb effect enable switch (optional)
+// Note: Effects switches may use remaining MCP23017 pins or ESP32 GPIOs
 
 //=============================================================================
 // LED METER PINS

@@ -43,6 +43,9 @@ bool GPIOControls::begin() {
   DEBUG_PRINTLN("[GPIO]   OSC2: Waveform pins 4,11,3 | Octave pins 12,13");
   DEBUG_PRINTLN("[GPIO]   OSC3: Waveform pins 1,9,0  | Octave pins 10,2");
 
+  // Pin for jack detection: LOW when jack inserted.
+  pinMode(PIN_OUTPUT_JACK, INPUT_PULLUP);
+
   initialized = true;
 
   // Read initial positions and apply

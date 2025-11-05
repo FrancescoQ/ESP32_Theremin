@@ -13,6 +13,7 @@
 #include "system/Theremin.h"
 #include "system/PinConfig.h"
 #include "system/PerformanceMonitor.h"
+#include "system/DisplayManager.h"
 
 #if ENABLE_OTA
 #include "system/OTAManager.h"
@@ -27,6 +28,9 @@ static const int UPDATE_INTERVAL_MS = 5; // ms update interval in the main loop
 
 // Create performance monitor instance (must be created before Theremin)
 PerformanceMonitor performanceMonitor;
+
+// Create display manager instance
+DisplayManager display;
 
 // Create theremin instance (pass performance monitor for CPU tracking)
 // Used as "dependency injection" to allow monitoring also things that don't
@@ -59,10 +63,24 @@ void setup() {
   DEBUG_FLUSH();  // Ensure banner is sent before continuing
   delay(100);
 
-  // Initialize I2C bus (shared by sensors, MCP23017, and future OLED)
+  // Initialize I2C bus (shared by sensors, MCP23017, and display)
   Wire.begin(PIN_SENSOR_I2C_SDA, PIN_SENSOR_I2C_SCL);
   DEBUG_PRINTLN("[I2C] Bus initialized on SDA=21, SCL=22");
   delay(50);
+
+  // Initialize display
+  if (display.begin()) {
+    DEBUG_PRINTLN("[Display] SSD1306 initialized successfully");
+    // Show test message
+    display.clear();
+    display.showCenteredText("TheremAIn 1.0");
+    display.update();
+    DEBUG_PRINTLN("[Display] Test message displayed");
+  } else {
+    DEBUG_PRINTLN("[Display] WARNING: Failed to initialize");
+    DEBUG_PRINTLN("[Display] Check wiring and I2C address (0x3C or 0x3D)");
+  }
+  delay(100);
 
   #if ENABLE_GPIO_MONITOR
     // Initialize GPIO monitor for MCP23017 debugging
