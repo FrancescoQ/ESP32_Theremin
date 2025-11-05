@@ -141,17 +141,27 @@ int16_t ReverbEffect::processComb(CombFilter& comb, int16_t input) {
 }
 
 int16_t ReverbEffect::processAllpass(AllpassFilter& allpass, int16_t input) {
-    // Read from buffer
+    // Read from buffer at int16_t scale
     int16_t bufferOut = allpass.buffer[allpass.bufferIndex];
 
-    // Allpass calculation: output = -input + bufferOut
-    // Store: input + (bufferOut * 0.5)
-    int32_t output = -input + bufferOut;
-    int32_t store = input + (bufferOut >> 1);  // Divide by 2 (0.5 feedback)
+    // Phase B: Scale UP to int32_t with precision bits for smoother diffusion
+    int32_t input32 = (int32_t)input << PRECISION_SHIFT;
+    int32_t bufferOut32 = (int32_t)bufferOut << PRECISION_SHIFT;
 
-    // Clamp store value
-    store = constrain(store, Audio::SAMPLE_MIN, Audio::SAMPLE_MAX);
-    allpass.buffer[allpass.bufferIndex] = (int16_t)store;
+    // Allpass calculation at high precision
+    // output = -input + bufferOut
+    int32_t output32 = -input32 + bufferOut32;
+
+    // store = input + (bufferOut * 0.5)
+    int32_t store32 = input32 + (bufferOut32 >> 1);
+
+    // Clamp at scaled range
+    int32_t maxVal = (int32_t)Audio::SAMPLE_MAX << PRECISION_SHIFT;
+    int32_t minVal = (int32_t)Audio::SAMPLE_MIN << PRECISION_SHIFT;
+    store32 = constrain(store32, minVal, maxVal);
+
+    // Scale DOWN and store as int16_t
+    allpass.buffer[allpass.bufferIndex] = (int16_t)(store32 >> PRECISION_SHIFT);
 
     // Advance buffer index
     allpass.bufferIndex++;
@@ -159,10 +169,10 @@ int16_t ReverbEffect::processAllpass(AllpassFilter& allpass, int16_t input) {
         allpass.bufferIndex = 0;
     }
 
-    // Clamp output
-    output = constrain(output, Audio::SAMPLE_MIN, Audio::SAMPLE_MAX);
+    // Clamp output and scale DOWN
+    output32 = constrain(output32, minVal, maxVal);
 
-    return (int16_t)output;
+    return (int16_t)(output32 >> PRECISION_SHIFT);
 }
 
 int16_t ReverbEffect::process(int16_t input) {

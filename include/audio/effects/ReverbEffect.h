@@ -105,13 +105,13 @@ private:
     static constexpr float SCALE_WET = 3.0f;         // Wet signal scaling
     static constexpr float SCALE_DAMPING = 0.4f;     // Damping scaling
 
-    // Noise gate thresholds (2x increase for balance between tail length and noise control)
-    static constexpr int16_t NOISE_GATE_THRESHOLD = 100;       // Input/output noise gate
-    static constexpr float FILTER_NOISE_GATE_THRESHOLD = 1.0f; // Comb filter noise gate
+    // Noise gate thresholds (Phase A: Reduced for smoother decay on 16-bit DAC)
+    static constexpr int16_t NOISE_GATE_THRESHOLD = 30;        // Input/output noise gate (was 100)
+    static constexpr float FILTER_NOISE_GATE_THRESHOLD = 0.3f; // Comb filter noise gate (was 1.0)
 
     // Precision enhancement: Use int32_t intermediate math for smoother reverb tail
-    // Shift left 8 bits = 256x precision (24-bit effective: 16-bit + 8-bit fractional)
-    static constexpr int PRECISION_SHIFT = 8;
+    // Phase A: Shift left 10 bits = 1024x precision (26-bit effective: 16-bit + 10-bit fractional)
+    static constexpr int PRECISION_SHIFT = 10;  // Increased from 8 for smoother decay
 
     uint32_t sampleRate;
     float roomSize;

@@ -548,22 +548,22 @@ All phases: **No additional RAM** (no new buffers, just calculation changes)
 ## Implementation Log
 
 **Phase A1 (Noise Gate Reduction):**
-- [ ] Status: Not started
-- [ ] Date:
-- [ ] Result:
-- [ ] CPU impact:
+- [x] Status: Complete
+- [x] Date: November 5, 2025
+- [x] Result: Reduced thresholds from 100→30 (samples) and 1.0→0.3 (filter)
+- [x] CPU impact: None (constant change only)
 
 **Phase A2 (PRECISION_SHIFT Increase):**
-- [ ] Status: Not started
-- [ ] Date:
-- [ ] Result:
-- [ ] CPU impact:
+- [x] Status: Complete
+- [x] Date: November 5, 2025
+- [x] Result: Increased PRECISION_SHIFT from 8→10 (256x to 1024x precision)
+- [x] CPU impact: None (same operations, different shift amount)
 
 **Phase B1 (Allpass Precision):**
-- [ ] Status: Not started
-- [ ] Date:
-- [ ] Result:
-- [ ] CPU impact:
+- [x] Status: Complete
+- [x] Date: November 5, 2025
+- [x] Result: Applied PRECISION_SHIFT scaling to all 4 allpass filters for smoother diffusion
+- [x] CPU impact: Minimal - only +12 bytes Flash, RAM unchanged at 14.6%
 
 **Phase C1 (Full int32 Damping):**
 - [ ] Status: Not started
