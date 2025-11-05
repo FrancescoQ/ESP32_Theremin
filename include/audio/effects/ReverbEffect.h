@@ -75,9 +75,9 @@ private:
         size_t bufferSize;
         size_t bufferIndex;
         float feedback;
-        float filterStore;  // For damping filter
-        float damp1;        // Damping coefficient 1
-        float damp2;        // Damping coefficient 2
+        int32_t filterStore;  // Phase C: Full int32_t precision (scaled by PRECISION_SHIFT)
+        float damp1;          // Damping coefficient 1
+        float damp2;          // Damping coefficient 2
     };
 
     // Allpass filter structure

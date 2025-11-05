@@ -68,7 +68,7 @@ void ReverbEffect::initCombFilter(CombFilter& comb, float delayMs) {
     comb.buffer = new int16_t[comb.bufferSize];
     memset(comb.buffer, 0, comb.bufferSize * sizeof(int16_t));
     comb.bufferIndex = 0;
-    comb.filterStore = 0;
+    comb.filterStore = 0;  // Phase C: int32_t (was 0.0f for float)
     comb.feedback = 0.5f;  // Will be updated by updateCombs()
     comb.damp1 = 0.5f;
     comb.damp2 = 0.5f;
@@ -105,21 +105,27 @@ int16_t ReverbEffect::processComb(CombFilter& comb, int16_t input) {
     // Read from circular buffer at normal scale
     int16_t output = comb.buffer[comb.bufferIndex];
 
-    // Apply damping filter (one-pole lowpass) at NORMAL scale
-    // This prevents filterStore from accumulating huge values
-    comb.filterStore = (output * comb.damp2) + (comb.filterStore * comb.damp1);
+    // Phase C: Scale output UP to int32_t precision for damping filter
+    int32_t output32 = (int32_t)output << PRECISION_SHIFT;
 
-    // Noise gate: Prevent very small float values from accumulating as noise
-    // This eliminates buzzing when the reverb tail decays to silence
-    if (comb.filterStore > -FILTER_NOISE_GATE_THRESHOLD && comb.filterStore < FILTER_NOISE_GATE_THRESHOLD) {
-        comb.filterStore = 0.0f;
+    // Apply damping filter (one-pole lowpass) at full int32_t precision
+    // filterStore = (output * damp2) + (filterStore * damp1)
+    int32_t dampedOutput = (int32_t)(output32 * comb.damp2);
+    int32_t dampedStore = (int32_t)(comb.filterStore * comb.damp1);
+    comb.filterStore = dampedOutput + dampedStore;
+
+    // Noise gate: Prevent very small int32_t values from accumulating as noise
+    // Threshold is scaled to match int32_t precision
+    int32_t gateThreshold = (int32_t)(FILTER_NOISE_GATE_THRESHOLD * (1 << PRECISION_SHIFT));
+    if (comb.filterStore > -gateThreshold && comb.filterStore < gateThreshold) {
+        comb.filterStore = 0;
     }
 
     // Scale input UP to int32_t precision for high-precision feedback calculation
     int32_t input32 = (int32_t)input << PRECISION_SHIFT;
 
-    // Compute feedback: scale filterStore UP when multiplying for precision
-    int32_t feedback32 = (int32_t)(comb.filterStore * comb.feedback * (1 << PRECISION_SHIFT));
+    // Compute feedback: filterStore is already scaled, just multiply by feedback
+    int32_t feedback32 = (int32_t)(comb.filterStore * comb.feedback);
     int32_t newValue32 = input32 + feedback32;
 
     // Clamp at 32-bit scaled range

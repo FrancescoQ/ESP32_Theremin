@@ -566,10 +566,10 @@ All phases: **No additional RAM** (no new buffers, just calculation changes)
 - [x] CPU impact: Minimal - only +12 bytes Flash, RAM unchanged at 14.6%
 
 **Phase C1 (Full int32 Damping):**
-- [ ] Status: Not started
-- [ ] Date:
-- [ ] Result:
-- [ ] CPU impact:
+- [x] Status: Complete
+- [x] Date: November 5, 2025
+- [x] Result: Converted damping filter from float to full int32_t precision (scaled by PRECISION_SHIFT)
+- [x] CPU impact: Likely faster (eliminated float math) - RAM unchanged at 14.6%, Flash -40 bytes (951,425)
 
 **Final Outcome:**
 - [ ] Graininess eliminated: Yes / No / Improved
