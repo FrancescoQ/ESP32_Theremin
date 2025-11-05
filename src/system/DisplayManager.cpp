@@ -67,8 +67,24 @@ void DisplayManager::update() {
     // Clear display
     display.clearDisplay();
 
-    // Draw current page (for now, always page 0)
+    // Draw current page
     pages[currentPageIndex].drawFunction(display);
+
+    // Draw page indicator (top-right corner) if multiple pages exist
+    if (pages.size() > 1) {
+        char indicator[8];
+        snprintf(indicator, sizeof(indicator), "%d/%d", currentPageIndex + 1, (int)pages.size());
+
+        display.setTextSize(1);
+        display.setTextColor(SSD1306_WHITE);
+
+        // Calculate position (right-aligned, 2px from edges)
+        int16_t x1, y1;
+        uint16_t w, h;
+        display.getTextBounds(indicator, 0, 0, &x1, &y1, &w, &h);
+        display.setCursor(SCREEN_WIDTH - w - 2, 2);
+        display.print(indicator);
+    }
 
     // Push to display
     display.display();
