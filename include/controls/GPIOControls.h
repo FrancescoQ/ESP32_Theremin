@@ -54,6 +54,19 @@ public:
    */
   bool isEnabled() const { return controlsEnabled; }
 
+  /**
+   * Check if modifier button is currently held (long press active)
+   * @return true if modifier mode is active
+   */
+  bool isModifierActive() const { return modifierActive; }
+
+  /**
+   * Check if button was short-pressed since last check
+   * Consumes the flag (returns true only once per press)
+   * @return true if short press occurred
+   */
+  bool wasShortPressed();
+
 private:
   Theremin* theremin;
   Adafruit_MCP23X17 mcp;
@@ -72,8 +85,46 @@ private:
   OscillatorState osc2State;
   OscillatorState osc3State;
 
+  // Secondary control state tracking
+  int8_t lastSmoothingPreset;        // Track last smoothing preset to avoid redundant calls
+  unsigned long lastSmoothingChangeTime;
+
+  // Mode transition tracking - "ignore initial position" approach
+  bool modeJustChanged;              // Set when entering/exiting modifier mode
+  int8_t entryOsc1Octave;            // Switch positions captured on mode entry
+  int8_t entryOsc2Octave;
+  int8_t entryOsc3Octave;
+  int8_t entrySmoothingValue;        // For secondary controls
+
   // Debounce timing
   static constexpr unsigned long DEBOUNCE_MS = 50;
+
+  // Multi-function button state machine
+  enum ButtonState {
+    IDLE,                // Button not pressed
+    PRESSED,             // Button just pressed (debouncing)
+    LONG_PRESS_ACTIVE,   // Long press threshold reached (modifier active)
+    RELEASED             // Button released (process action)
+  };
+
+  ButtonState buttonState;
+  unsigned long buttonPressTime;
+  bool modifierActive;      // True while long press is active
+  bool shortPressFlag;      // Set on short press, cleared by wasShortPressed()
+
+  static constexpr unsigned long LONG_PRESS_THRESHOLD_MS = 500;
+
+  /**
+   * Update multi-function button state machine
+   * Handles debouncing and long/short press detection
+   */
+  void updateButton();
+
+  /**
+   * Handle secondary controls (effects, smoothing, etc.)
+   * Called when modifier button is held and switches are used
+   */
+  void updateSecondaryControls();
 
   /**
    * Read waveform from 3-pin switch
