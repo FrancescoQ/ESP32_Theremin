@@ -10,7 +10,14 @@
 
 // Constructor
 Theremin::Theremin(PerformanceMonitor* perfMon, DisplayManager* displayMgr)
-    : sensors(), audio(perfMon), serialControls(this), gpioControls(this, displayMgr), debugEnabled(false) {}
+    : sensors(), audio(perfMon), serialControls(this), gpioControls(this, displayMgr), display(displayMgr), debugEnabled(false) {
+  // Register splash page if display is available
+  if (display) {
+    display->registerPage("Splash", [this](Adafruit_SSD1306& oled) {
+      this->drawSplashPage(oled);
+    });
+  }
+}
 
 // Initialize theremin
 bool Theremin::begin() {
@@ -199,4 +206,23 @@ void Theremin::setVolumeSmoothingPreset(SmoothingPreset preset) {
       DEBUG_PRINTLN("[THEREMIN] Volume smoothing: EXTRA (maximum smooth)");
       break;
   }
+}
+
+// Draw splash page for display
+void Theremin::drawSplashPage(Adafruit_SSD1306& oled) {
+  // Use default font for splash (larger, more readable)
+  oled.setTextSize(1);
+  oled.setTextColor(SSD1306_WHITE);
+
+  // Calculate centered position for "TheremAIn 1.0"
+  const char* text = "TheremAIn 0.1";
+  int16_t x1, y1;
+  uint16_t w, h;
+  oled.getTextBounds(text, 0, 0, &x1, &y1, &w, &h);
+
+  int x = (DisplayManager::SCREEN_WIDTH - w) / 2;
+  int y = (DisplayManager::SCREEN_HEIGHT - h) / 2;
+
+  oled.setCursor(x, y);
+  oled.print(text);
 }

@@ -231,9 +231,7 @@ void GPIOControls::updateButton() {
           // Long press threshold reached - entering modifier mode
           buttonState = LONG_PRESS_ACTIVE;
           modifierActive = true;
-          displayManager->getDisplay().fillCircle(DisplayManager::SCREEN_WIDTH - 6, 6, 5, SSD1306_WHITE);
-          displayManager->showText("2", DisplayManager::SCREEN_WIDTH - 7, 9, 1, SSD1306_BLACK, DisplayManager::SMALL_FONT);
-          displayManager->update();
+          // Note: Button indicator drawing will be handled by overlay system in future
           DEBUG_PRINTLN("[GPIO] Long press active - modifier mode ON");
         } else {
           // Still pressed, waiting for threshold
@@ -247,8 +245,7 @@ void GPIOControls::updateButton() {
         // Long press released - exiting modifier mode
         buttonState = IDLE;
         modifierActive = false;
-        displayManager->getDisplay().fillCircle(DisplayManager::SCREEN_WIDTH - 6, 6, 5, SSD1306_BLACK);
-        displayManager->update();
+        // Note: Button indicator clearing will be handled by overlay system in future
         DEBUG_PRINTLN("[GPIO] Long press released - modifier mode OFF");
       }
       // While held, stay in this state

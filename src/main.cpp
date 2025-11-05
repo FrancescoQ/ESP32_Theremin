@@ -71,11 +71,6 @@ void setup() {
   // Initialize display
   if (display.begin()) {
     DEBUG_PRINTLN("[Display] SSD1306 initialized successfully");
-    // Show test message
-    display.clear();
-    display.showCenteredText("TheremAIn 1.0");
-    display.update();
-    DEBUG_PRINTLN("[Display] Test message displayed");
   } else {
     DEBUG_PRINTLN("[Display] WARNING: Failed to initialize");
     DEBUG_PRINTLN("[Display] Check wiring and I2C address (0x3C or 0x3D)");
@@ -155,6 +150,9 @@ void setup() {
 void loop() {
   // Update theremin (handles controls, sensors, and audio)
   theremin.update();
+
+  // Update display (render current page)
+  display.update();
 
   #if ENABLE_GPIO_MONITOR
     // Poll GPIO monitor for pin changes (non-blocking)

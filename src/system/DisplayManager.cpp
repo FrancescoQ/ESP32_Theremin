@@ -1,7 +1,7 @@
 /*
  * DisplayManager.cpp
  *
- * Implementation of DisplayManager for SSD1306 OLED display.
+ * Implementation of page-based DisplayManager for SSD1306 OLED display.
  */
 
 #include "system/DisplayManager.h"
@@ -11,6 +11,7 @@ const GFXfont* DisplayManager::SMALL_FONT = &TomThumb;
 
 DisplayManager::DisplayManager()
     : display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET),
+      currentPageIndex(0),
       initialized(false) {
 }
 
@@ -30,45 +31,35 @@ bool DisplayManager::begin() {
     // Clear display
     display.clearDisplay();
     display.display();
-    //display.setFont(&TomThumb);
 
     initialized = true;
     return true;
 }
 
-void DisplayManager::clear() {
-    if (!initialized) {
-        return;
+void DisplayManager::registerPage(String name, PageDrawCallback drawFunc) {
+    pages.emplace_back(name, drawFunc);
+    DEBUG_PRINTF("DisplayManager: Registered page '%s' (total: %d)\n",
+                 name.c_str(), pages.size());
+}
+
+String DisplayManager::getCurrentPageName() const {
+    if (pages.empty() || currentPageIndex >= pages.size()) {
+        return "";
     }
-    display.clearDisplay();
-}
-
-void DisplayManager::showText(const char* text, int x, int y, int size, uint16_t color, const GFXfont* font) {
-  if (!initialized) {
-    return;
-  }
-
-  if (font) {
-    display.setFont(font);
-  }
-  display.setTextSize(size);
-  display.setTextColor(color);
-  display.setCursor(x, y);
-  display.print(text);
-}
-
-void DisplayManager::showCenteredText(const char* text, int size) {
-  int16_t x1, y1;
-  uint16_t w, h;
-  display.getTextBounds(text, 0, 0, &x1, &y1, &w, &h);
-  int x = (SCREEN_WIDTH - w) / 2;
-  int y = (SCREEN_HEIGHT - h) / 2;
-  showText(text, x, y, size);
+    return pages[currentPageIndex].name;
 }
 
 void DisplayManager::update() {
-    if (!initialized) {
+    if (!initialized || pages.empty()) {
         return;
     }
+
+    // Clear display
+    display.clearDisplay();
+
+    // Draw current page (for now, always page 0)
+    pages[currentPageIndex].drawFunction(display);
+
+    // Push to display
     display.display();
 }

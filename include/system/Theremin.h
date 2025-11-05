@@ -79,7 +79,13 @@ class Theremin {
   AudioEngine audio;
   SerialControls serialControls;
   GPIOControls gpioControls;
+  DisplayManager* display;
   bool debugEnabled;
+
+  /**
+   * Draw splash page for display
+   */
+  void drawSplashPage(Adafruit_SSD1306& oled);
 
   // Amplitude range constants (internal use only)
   static const int MIN_AMPLITUDE_PERCENT = 0;
