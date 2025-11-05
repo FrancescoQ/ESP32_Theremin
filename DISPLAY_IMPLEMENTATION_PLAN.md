@@ -1,10 +1,47 @@
 # Display Integration Plan - ESP32 Theremin
 
+## Implementation Status
+
+**Status:** ✅ **CORE SYSTEM COMPLETE** (November 5, 2025)
+
+### What Got Built
+- ✅ Page registration system with callback-based rendering
+- ✅ Automatic title rendering (optional per page)
+- ✅ Page navigation with button integration
+- ✅ Page indicator (e.g., "1/2", "2/2")
+- ✅ Real-time updates (performance page live at ~200 FPS)
+- ✅ Build timestamp display (YYYYMMDD.HHMMSS format)
+- ✅ Two functional pages: Splash + Performance
+
+### Implementation Differences from Plan
+- **Simplified approach:** No overlay system yet (deferred for future)
+- **Title abstraction:** Added automatic title+separator rendering (not in original plan)
+- **Page order fix:** Registration order mattered - fixed with setDisplay() pattern
+- **Button state machine:** Short press detection required logic fix
+- **Build timestamp:** Static function in Theremin.cpp (not separate BuildInfo.h)
+
+### Current Pages
+1. **Splash Page** (1/2): "TheremAIn 0.1" centered + build timestamp bottom-right
+2. **Performance Page** (2/2): Title "SYSTEM" + Status/Audio/RAM metrics (live updates)
+
+### Files Created
+- `include/system/DisplayPage.h` - Page structure with optional title
+- `include/system/DisplayManager.h/cpp` - Page manager with auto-title rendering
+- Build timestamp formatter in `src/system/Theremin.cpp`
+
+### Future Enhancements (Deferred)
+- Overlay system for global indicators
+- Additional pages (oscillators, sensors, effects)
+- Text alignment helper methods
+- Advanced page navigation features
+
+---
+
 ## Overview
 This document outlines the implementation plan for a flexible display system featuring:
-- **Page Registration System**: Hook-based architecture where components register their info pages
-- **Overlay System**: Global indicators that appear on top of any page
-- **Text Alignment Helpers**: Simplified methods for common text positioning
+- **Page Registration System**: Hook-based architecture where components register their info pages ✅ **IMPLEMENTED**
+- **Overlay System**: Global indicators that appear on top of any page ⏳ **DEFERRED**
+- **Text Alignment Helpers**: Simplified methods for common text positioning ⏳ **DEFERRED**
 
 ## Architecture
 
