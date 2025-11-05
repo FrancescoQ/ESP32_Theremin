@@ -36,8 +36,8 @@ bool DisplayManager::begin() {
     return true;
 }
 
-void DisplayManager::registerPage(String name, PageDrawCallback drawFunc) {
-    pages.emplace_back(name, drawFunc);
+void DisplayManager::registerPage(String name, PageDrawCallback drawFunc, String title) {
+    pages.emplace_back(name, drawFunc, title);
     DEBUG_PRINTF("DisplayManager: Registered page '%s' (total: %d)\n",
                  name.c_str(), pages.size());
 }
@@ -67,7 +67,18 @@ void DisplayManager::update() {
     // Clear display
     display.clearDisplay();
 
-    // Draw current page
+    // Auto-draw title if provided
+    if (!pages[currentPageIndex].title.isEmpty()) {
+        display.setTextSize(1);
+        display.setTextColor(SSD1306_WHITE);
+        display.setCursor(0, 0);
+        display.print(pages[currentPageIndex].title);
+
+        // Draw separator line below title
+        display.drawLine(0, 9, SCREEN_WIDTH - 1, 9, SSD1306_WHITE);
+    }
+
+    // Draw current page content
     pages[currentPageIndex].drawFunction(display);
 
     // Draw page indicator (top-right corner) if multiple pages exist
@@ -82,8 +93,10 @@ void DisplayManager::update() {
         int16_t x1, y1;
         uint16_t w, h;
         display.getTextBounds(indicator, 0, 0, &x1, &y1, &w, &h);
-        display.setCursor(SCREEN_WIDTH - w - 2, 2);
+        display.setCursor(SCREEN_WIDTH - w - 1, 1);
+        display.setFont(DisplayManager::SMALL_FONT);
         display.print(indicator);
+        display.setFont();  // Reset to default font
     }
 
     // Push to display

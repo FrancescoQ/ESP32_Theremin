@@ -29,8 +29,8 @@ static const int UPDATE_INTERVAL_MS = 5; // ms update interval in the main loop
 // Create display manager instance (must be created before others)
 DisplayManager display;
 
-// Create performance monitor instance (must be created before Theremin)
-PerformanceMonitor performanceMonitor(&display);
+// Create performance monitor instance (pass nullptr for display initially)
+PerformanceMonitor performanceMonitor(nullptr);
 
 // Create theremin instance (pass performance monitor for CPU tracking)
 // Used as "dependency injection" to allow monitoring also things that don't
@@ -103,7 +103,8 @@ void setup() {
   DEBUG_FLUSH();  // Ensure initialization messages are sent
   delay(100);
 
-  // Initialize performance monitoring
+  // Initialize performance monitoring and register display page
+  performanceMonitor.setDisplay(&display);
   performanceMonitor.begin();
 
   // Run system test (if enabled)

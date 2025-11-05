@@ -41,8 +41,9 @@ public:
      * Register a new page with name and drawing callback
      * @param name Page name (for debugging/navigation)
      * @param drawFunc Callback function that draws page content
+     * @param title Optional title to auto-draw at top (empty = no title)
      */
-    void registerPage(String name, PageDrawCallback drawFunc);
+    void registerPage(String name, PageDrawCallback drawFunc, String title = "");
 
     /**
      * Update display - renders current page

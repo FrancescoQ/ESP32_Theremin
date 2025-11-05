@@ -208,13 +208,48 @@ void Theremin::setVolumeSmoothingPreset(SmoothingPreset preset) {
   }
 }
 
+// Helper function to format build timestamp from compiler macros
+static const char* formatBuildTimestamp() {
+  static char timestamp[20];  // "YYYYMMDD.HHMMSS\0"
+  static bool formatted = false;
+
+  if (!formatted) {
+    // Parse __DATE__ (e.g., "Nov  5 2025")
+    const char* months[] = {"Jan", "Feb", "Mar", "Apr", "May", "Jun",
+                            "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"};
+    char month_str[4];
+    int day, year;
+    sscanf(__DATE__, "%s %d %d", month_str, &day, &year);
+
+    int month = 1;
+    for (int i = 0; i < 12; i++) {
+      if (strcmp(month_str, months[i]) == 0) {
+        month = i + 1;
+        break;
+      }
+    }
+
+    // Parse __TIME__ (e.g., "14:15:23")
+    int hour, minute, second;
+    sscanf(__TIME__, "%d:%d:%d", &hour, &minute, &second);
+
+    // Format as YYYYMMDD.HHMMSS
+    snprintf(timestamp, sizeof(timestamp), "%04d%02d%02d.%02d%02d%02d",
+             year, month, day, hour, minute, second);
+
+    formatted = true;
+  }
+
+  return timestamp;
+}
+
 // Draw splash page for display
 void Theremin::drawSplashPage(Adafruit_SSD1306& oled) {
   // Use default font for splash (larger, more readable)
   oled.setTextSize(1);
   oled.setTextColor(SSD1306_WHITE);
 
-  // Calculate centered position for "TheremAIn 1.0"
+  // Calculate centered position for "TheremAIn 0.1"
   const char* text = "TheremAIn 0.1";
   int16_t x1, y1;
   uint16_t w, h;
@@ -225,4 +260,12 @@ void Theremin::drawSplashPage(Adafruit_SSD1306& oled) {
 
   oled.setCursor(x, y);
   oled.print(text);
+
+  // Add build timestamp at bottom right in small font
+  oled.setFont(DisplayManager::SMALL_FONT);
+  const char* buildTime = formatBuildTimestamp();
+  oled.getTextBounds(buildTime, 0, 0, &x1, &y1, &w, &h);
+  oled.setCursor(DisplayManager::SCREEN_WIDTH - w - 2, DisplayManager::SCREEN_HEIGHT - 8);
+  oled.print(buildTime);
+  oled.setFont();  // Reset to default font
 }

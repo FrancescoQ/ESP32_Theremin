@@ -15,17 +15,22 @@ PerformanceMonitor::PerformanceMonitor(DisplayManager* displayMgr)
       lastRamWarn(0),
       latestAudioWorkTimeUs(0),
       lastStatusReport(0) {
-  // Register performance page if display is available
-  if (display) {
-    display->registerPage("Performance", [this](Adafruit_SSD1306& oled) {
-      this->drawPerformancePage(oled);
-    });
-  }
 }
 
 void PerformanceMonitor::begin() {
   DEBUG_PRINTLN("[PERF] Watchdog monitoring active");
   lastStatusReport = millis();
+}
+
+void PerformanceMonitor::setDisplay(DisplayManager* displayMgr) {
+  display = displayMgr;
+
+  // Register performance page if display is available
+  if (display) {
+    display->registerPage("Performance", [this](Adafruit_SSD1306& oled) {
+      this->drawPerformancePage(oled);
+    }, "SYSTEM");  // Add title
+  }
 }
 
 void PerformanceMonitor::update() {
@@ -111,17 +116,11 @@ void PerformanceMonitor::printStatus() {
 }
 
 void PerformanceMonitor::drawPerformancePage(Adafruit_SSD1306& oled) {
+  // Title and separator are auto-drawn by DisplayManager
   oled.setTextSize(1);
   oled.setTextColor(SSD1306_WHITE);
 
-  // Draw title
-  oled.setCursor(0, 0);
-  oled.print("SYSTEM");
-
-  // Draw separator line
-  oled.drawLine(0, 9, DisplayManager::SCREEN_WIDTH - 1, 9, SSD1306_WHITE);
-
-  // Status line
+  // Status line (starts at y=14 after title+separator)
   oled.setCursor(0, 14);
   oled.print("Status: ");
   oled.print(isSystemOK() ? "OK" : "WARN");

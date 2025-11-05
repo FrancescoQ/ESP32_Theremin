@@ -228,21 +228,23 @@ void GPIOControls::updateButton() {
 
     case PRESSED:
       if (!buttonPressed) {
-        // Released before debounce - ignore
-        buttonState = IDLE;
-      } else if (now - buttonPressTime > DEBOUNCE_MS) {
-        // Debounced, check for long press threshold
-        if (now - buttonPressTime >= LONG_PRESS_THRESHOLD_MS) {
-          // Long press threshold reached - entering modifier mode
-          buttonState = LONG_PRESS_ACTIVE;
-          modifierActive = true;
-          // Note: Button indicator drawing will be handled by overlay system in future
-          DEBUG_PRINTLN("[GPIO] Long press active - modifier mode ON");
+        // Button released - check if it was held long enough for debounce
+        if (now - buttonPressTime > DEBOUNCE_MS) {
+          // Valid short press (released after debounce but before long press threshold)
+          shortPressFlag = true;
+          buttonState = IDLE;
+          DEBUG_PRINTLN("[GPIO] Short press detected");
         } else {
-          // Still pressed, waiting for threshold
-          // Stay in PRESSED state
+          // Released too quickly - ignore (bounce)
+          buttonState = IDLE;
         }
+      } else if (now - buttonPressTime >= LONG_PRESS_THRESHOLD_MS) {
+        // Long press threshold reached - entering modifier mode
+        buttonState = LONG_PRESS_ACTIVE;
+        modifierActive = true;
+        DEBUG_PRINTLN("[GPIO] Long press active - modifier mode ON");
       }
+      // Otherwise stay in PRESSED state, waiting
       break;
 
     case LONG_PRESS_ACTIVE:
@@ -250,7 +252,6 @@ void GPIOControls::updateButton() {
         // Long press released - exiting modifier mode
         buttonState = IDLE;
         modifierActive = false;
-        // Note: Button indicator clearing will be handled by overlay system in future
         DEBUG_PRINTLN("[GPIO] Long press released - modifier mode OFF");
       }
       // While held, stay in this state
@@ -260,14 +261,6 @@ void GPIOControls::updateButton() {
       // This state is only briefly used, should transition to IDLE
       buttonState = IDLE;
       break;
-  }
-
-  // Check for short press (button released before long press threshold)
-  if (buttonState == PRESSED && !buttonPressed && (now - buttonPressTime > DEBOUNCE_MS)) {
-    // Valid short press
-    shortPressFlag = true;
-    buttonState = IDLE;
-    DEBUG_PRINTLN("[GPIO] Short press detected");
   }
 }
 

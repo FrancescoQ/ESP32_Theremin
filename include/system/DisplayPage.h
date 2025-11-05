@@ -20,8 +20,9 @@ using PageDrawCallback = std::function<void(Adafruit_SSD1306&)>;
  */
 struct DisplayPage {
     String name;
+    String title;  // Optional title - if provided, auto-drawn by DisplayManager
     PageDrawCallback drawFunction;
 
-    DisplayPage(String n, PageDrawCallback func)
-        : name(n), drawFunction(func) {}
+    DisplayPage(String n, PageDrawCallback func, String t = "")
+        : name(n), title(t), drawFunction(func) {}
 };

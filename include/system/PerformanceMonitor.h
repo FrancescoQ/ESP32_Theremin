@@ -28,6 +28,12 @@ class PerformanceMonitor {
   void begin();
 
   /**
+   * Set display manager and register performance page
+   * Call after display is initialized
+   */
+  void setDisplay(DisplayManager* displayMgr);
+
+  /**
    * Update monitoring (checks RAM, prints periodic status)
    * Call frequently in loop()
    */
