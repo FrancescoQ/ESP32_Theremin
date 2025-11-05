@@ -66,6 +66,11 @@ void GPIOControls::update() {
   // Always update button state first
   updateButton();
 
+  // Check for short press (page navigation)
+  if (wasShortPressed() && displayManager) {
+    displayManager->nextPage();
+  }
+
   // Branch based on modifier button state
   if (isModifierActive()) {
     // Modifier held: switches control secondary functions (effects, smoothing, etc.)

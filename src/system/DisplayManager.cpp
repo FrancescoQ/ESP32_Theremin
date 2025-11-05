@@ -49,6 +49,16 @@ String DisplayManager::getCurrentPageName() const {
     return pages[currentPageIndex].name;
 }
 
+void DisplayManager::nextPage() {
+    if (pages.empty()) {
+        return;
+    }
+
+    currentPageIndex = (currentPageIndex + 1) % pages.size();
+    DEBUG_PRINTF("DisplayManager: Switched to page '%s' (%d/%d)\n",
+                 getCurrentPageName().c_str(), currentPageIndex + 1, pages.size());
+}
+
 void DisplayManager::update() {
     if (!initialized || pages.empty()) {
         return;

@@ -51,6 +51,11 @@ public:
     void update();
 
     /**
+     * Navigate to next page (wraps around to first page)
+     */
+    void nextPage();
+
+    /**
      * Get current page index
      * @return Index of currently displayed page
      */
