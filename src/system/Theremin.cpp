@@ -265,7 +265,7 @@ void Theremin::drawSplashPage(Adafruit_SSD1306& oled) {
   oled.setFont(DisplayManager::SMALL_FONT);
   const char* buildTime = formatBuildTimestamp();
   oled.getTextBounds(buildTime, 0, 0, &x1, &y1, &w, &h);
-  oled.setCursor(DisplayManager::SCREEN_WIDTH - w - 2, DisplayManager::SCREEN_HEIGHT - 8);
+  oled.setCursor(DisplayManager::SCREEN_WIDTH - w - 2, DisplayManager::SCREEN_HEIGHT - 5);
   oled.print(buildTime);
   oled.setFont();  // Reset to default font
 }
