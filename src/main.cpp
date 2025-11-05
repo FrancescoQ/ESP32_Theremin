@@ -26,11 +26,11 @@
 // Main loop timing
 static const int UPDATE_INTERVAL_MS = 5; // ms update interval in the main loop
 
-// Create performance monitor instance (must be created before Theremin)
-PerformanceMonitor performanceMonitor;
-
-// Create display manager instance
+// Create display manager instance (must be created before others)
 DisplayManager display;
+
+// Create performance monitor instance (must be created before Theremin)
+PerformanceMonitor performanceMonitor(&display);
 
 // Create theremin instance (pass performance monitor for CPU tracking)
 // Used as "dependency injection" to allow monitoring also things that don't

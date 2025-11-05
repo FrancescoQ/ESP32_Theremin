@@ -6,13 +6,21 @@
  */
 
 #include "system/PerformanceMonitor.h"
+#include "system/DisplayManager.h"
 #include "system/Debug.h"
 
-PerformanceMonitor::PerformanceMonitor()
-    : lastAudioWarn(0),
+PerformanceMonitor::PerformanceMonitor(DisplayManager* displayMgr)
+    : display(displayMgr),
+      lastAudioWarn(0),
       lastRamWarn(0),
       latestAudioWorkTimeUs(0),
       lastStatusReport(0) {
+  // Register performance page if display is available
+  if (display) {
+    display->registerPage("Performance", [this](Adafruit_SSD1306& oled) {
+      this->drawPerformancePage(oled);
+    });
+  }
 }
 
 void PerformanceMonitor::begin() {
@@ -100,4 +108,34 @@ void PerformanceMonitor::printStatus() {
 
     lastStatusReport = now;
   }
+}
+
+void PerformanceMonitor::drawPerformancePage(Adafruit_SSD1306& oled) {
+  oled.setTextSize(1);
+  oled.setTextColor(SSD1306_WHITE);
+
+  // Draw title
+  oled.setCursor(0, 0);
+  oled.print("SYSTEM");
+
+  // Draw separator line
+  oled.drawLine(0, 9, DisplayManager::SCREEN_WIDTH - 1, 9, SSD1306_WHITE);
+
+  // Status line
+  oled.setCursor(0, 14);
+  oled.print("Status: ");
+  oled.print(isSystemOK() ? "OK" : "WARN");
+
+  // Audio timing line
+  oled.setCursor(0, 24);
+  oled.print("Audio:  ");
+  float audioMs = getAudioTimeMs();
+  oled.print(audioMs, 1);  // 1 decimal place
+  oled.print("ms/11ms");
+
+  // RAM line
+  oled.setCursor(0, 34);
+  oled.print("RAM:    ");
+  oled.print(getFreeRAMKB());
+  oled.print(" KB free");
 }

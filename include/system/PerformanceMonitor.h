@@ -9,12 +9,17 @@
 #pragma once
 #include <Arduino.h>
 
+// Forward declarations
+class DisplayManager;
+class Adafruit_SSD1306;
+
 class PerformanceMonitor {
  public:
   /**
    * Constructor
+   * @param displayMgr Pointer to DisplayManager for page registration (optional)
    */
-  PerformanceMonitor();
+  PerformanceMonitor(DisplayManager* displayMgr = nullptr);
 
   /**
    * Initialize performance monitoring
@@ -40,7 +45,34 @@ class PerformanceMonitor {
    */
   void recordAudioWork(uint32_t workTimeUs);
 
+  /**
+   * Get audio work time in milliseconds (for display)
+   * @return Audio work time in ms
+   */
+  float getAudioTimeMs() const { return latestAudioWorkTimeUs / 1000.0f; }
+
+  /**
+   * Get free RAM in kilobytes (for display)
+   * @return Free heap memory in KB
+   */
+  uint32_t getFreeRAMKB() const { return ESP.getFreeHeap() / 1024; }
+
+  /**
+   * Check if system is within performance thresholds
+   * @return true if system is OK, false if warnings present
+   */
+  bool isSystemOK() const {
+    return (latestAudioWorkTimeUs < AUDIO_WARN_US) &&
+           (ESP.getFreeHeap() > RAM_WARN_BYTES);
+  }
+
  private:
+  DisplayManager* display;
+
+  /**
+   * Draw performance page for display
+   */
+  void drawPerformancePage(Adafruit_SSD1306& oled);
   // Performance thresholds (when to warn)
   static const uint32_t AUDIO_WARN_US = 8000;      // 8ms (70% of 11ms buffer period)
   static const uint32_t RAM_WARN_BYTES = 50000;    // 50KB minimum free
