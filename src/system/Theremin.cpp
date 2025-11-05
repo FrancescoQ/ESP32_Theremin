@@ -9,8 +9,8 @@
 #include "system/Debug.h"
 
 // Constructor
-Theremin::Theremin(PerformanceMonitor* perfMon)
-    : sensors(), audio(perfMon), serialControls(this), gpioControls(this), debugEnabled(false) {}
+Theremin::Theremin(PerformanceMonitor* perfMon, DisplayManager* displayMgr)
+    : sensors(), audio(perfMon), serialControls(this), gpioControls(this, displayMgr), debugEnabled(false) {}
 
 // Initialize theremin
 bool Theremin::begin() {

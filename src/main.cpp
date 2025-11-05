@@ -35,7 +35,7 @@ DisplayManager display;
 // Create theremin instance (pass performance monitor for CPU tracking)
 // Used as "dependency injection" to allow monitoring also things that don't
 // belong to the Theremin.
-Theremin theremin(&performanceMonitor);
+Theremin theremin(&performanceMonitor, &display);
 
 #if ENABLE_OTA
 // Create OTA manager instance

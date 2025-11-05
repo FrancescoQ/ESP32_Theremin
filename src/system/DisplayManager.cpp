@@ -7,6 +7,8 @@
 #include "system/DisplayManager.h"
 #include "system/Debug.h"
 
+const GFXfont* DisplayManager::SMALL_FONT = &TomThumb;
+
 DisplayManager::DisplayManager()
     : display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET),
       initialized(false) {
@@ -41,15 +43,18 @@ void DisplayManager::clear() {
     display.clearDisplay();
 }
 
-void DisplayManager::showText(const char* text, int x, int y, int size) {
-    if (!initialized) {
-        return;
-    }
+void DisplayManager::showText(const char* text, int x, int y, int size, uint16_t color, const GFXfont* font) {
+  if (!initialized) {
+    return;
+  }
 
-    display.setTextSize(size);
-    display.setTextColor(SSD1306_WHITE);
-    display.setCursor(x, y);
-    display.print(text);
+  if (font) {
+    display.setFont(font);
+  }
+  display.setTextSize(size);
+  display.setTextColor(color);
+  display.setCursor(x, y);
+  display.print(text);
 }
 
 void DisplayManager::showCenteredText(const char* text, int size) {

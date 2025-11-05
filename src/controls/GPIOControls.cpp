@@ -9,11 +9,11 @@
 #include "system/PinConfig.h"
 #include "system/Debug.h"
 
-GPIOControls::GPIOControls(Theremin* thereminPtr)
+GPIOControls::GPIOControls(Theremin* thereminPtr, DisplayManager* displayMgr)
     : theremin(thereminPtr), initialized(false), controlsEnabled(true), firstUpdate(true),
+      displayManager(displayMgr),
       buttonState(IDLE), buttonPressTime(0), modifierActive(false), shortPressFlag(false),
-      lastSmoothingPreset(0), lastSmoothingChangeTime(0),
-      modeJustChanged(false), entryOsc1Octave(0), entryOsc2Octave(0), entryOsc3Octave(0), entrySmoothingValue(0) {
+      lastSmoothingPreset(0), lastSmoothingChangeTime(0) {
   // Initialize state tracking
   osc1State.waveform = Oscillator::OFF;
   osc1State.octave = 0;
@@ -66,23 +66,6 @@ void GPIOControls::update() {
   // Always update button state first
   updateButton();
 
-  // Mode transition: capture current switch positions, don't apply them
-  if (modeJustChanged) {
-    // Read all oscillator switch positions at mode entry
-    entryOsc1Octave = readOctave(PIN_OSC1_OCT_UP, PIN_OSC1_OCT_DOWN);
-    entryOsc2Octave = readOctave(PIN_OSC2_OCT_UP, PIN_OSC2_OCT_DOWN);
-    entryOsc3Octave = readOctave(PIN_OSC3_OCT_UP, PIN_OSC3_OCT_DOWN);
-
-    // Also capture for secondary controls (smoothing uses OSC1 octave)
-    entrySmoothingValue = entryOsc1Octave;
-
-    // Clear flag after capture
-    modeJustChanged = false;
-
-    DEBUG_PRINTLN("[GPIO] Mode changed - switch positions captured");
-    return;  // Don't apply anything this cycle
-  }
-
   // Branch based on modifier button state
   if (isModifierActive()) {
     // Modifier held: switches control secondary functions (effects, smoothing, etc.)
@@ -117,14 +100,6 @@ void GPIOControls::updateOscillator(int oscNum, OscillatorState& state,
   Oscillator::Waveform currentWaveform = readWaveform(pinA, pinB, pinC);
   int8_t currentOctave = readOctave(pinUp, pinDown);
 
-  // Get entry octave value for this oscillator
-  int8_t entryOctave = 0;
-  switch (oscNum) {
-    case 1: entryOctave = entryOsc1Octave; break;
-    case 2: entryOctave = entryOsc2Octave; break;
-    case 3: entryOctave = entryOsc3Octave; break;
-  }
-
   // Check for waveform change (force update on first call)
   if (firstUpdate || currentWaveform != state.waveform) {
     if (firstUpdate || (now - state.lastChangeTime > DEBOUNCE_MS)) {
@@ -140,25 +115,21 @@ void GPIOControls::updateOscillator(int oscNum, OscillatorState& state,
     }
   }
 
-  // Check for octave change - only apply if different from entry position
-  // (unless firstUpdate, which forces initial sync)
-  if (currentOctave != state.octave) {
-    // Only apply if: first update OR switch moved from entry position
-    if (firstUpdate || currentOctave != entryOctave) {
-      if (firstUpdate || (now - state.lastChangeTime > DEBOUNCE_MS)) {
-        state.octave = currentOctave;
-        state.lastChangeTime = now;
+  // Check for octave change
+  if (firstUpdate || currentOctave != state.octave) {
+    if (firstUpdate || (now - state.lastChangeTime > DEBOUNCE_MS)) {
+      state.octave = currentOctave;
+      state.lastChangeTime = now;
 
-        theremin->getAudioEngine()->setOscillatorOctave(oscNum, currentOctave);
+      theremin->getAudioEngine()->setOscillatorOctave(oscNum, currentOctave);
 
-        DEBUG_PRINT("[GPIO] OSC");
-        DEBUG_PRINT(oscNum);
-        DEBUG_PRINT(" octave: ");
-        if (currentOctave > 0) {
-          DEBUG_PRINT("+");
-        }
-        DEBUG_PRINTLN(currentOctave);
+      DEBUG_PRINT("[GPIO] OSC");
+      DEBUG_PRINT(oscNum);
+      DEBUG_PRINT(" octave: ");
+      if (currentOctave > 0) {
+        DEBUG_PRINT("+");
       }
+      DEBUG_PRINTLN(currentOctave);
     }
   }
 }
@@ -260,7 +231,9 @@ void GPIOControls::updateButton() {
           // Long press threshold reached - entering modifier mode
           buttonState = LONG_PRESS_ACTIVE;
           modifierActive = true;
-          modeJustChanged = true;  // Flag for mode entry capture
+          displayManager->getDisplay().fillCircle(DisplayManager::SCREEN_WIDTH - 6, 6, 5, SSD1306_WHITE);
+          displayManager->showText("2", DisplayManager::SCREEN_WIDTH - 7, 9, 1, SSD1306_BLACK, DisplayManager::SMALL_FONT);
+          displayManager->update();
           DEBUG_PRINTLN("[GPIO] Long press active - modifier mode ON");
         } else {
           // Still pressed, waiting for threshold
@@ -274,7 +247,8 @@ void GPIOControls::updateButton() {
         // Long press released - exiting modifier mode
         buttonState = IDLE;
         modifierActive = false;
-        modeJustChanged = true;  // Flag for mode exit capture
+        displayManager->getDisplay().fillCircle(DisplayManager::SCREEN_WIDTH - 6, 6, 5, SSD1306_BLACK);
+        displayManager->update();
         DEBUG_PRINTLN("[GPIO] Long press released - modifier mode OFF");
       }
       // While held, stay in this state
@@ -310,44 +284,41 @@ void GPIOControls::updateSecondaryControls() {
   // Read OSC1 octave switch position (-1, 0, +1)
   int8_t octaveValue = readOctave(PIN_OSC1_OCT_UP, PIN_OSC1_OCT_DOWN);
 
-  // Check if smoothing preset changed - only apply if different from entry position
+  // Check if smoothing preset changed
   if (octaveValue != lastSmoothingPreset) {
-    // Only apply if switch moved from entry position
-    if (octaveValue != entrySmoothingValue) {
-      if (now - lastSmoothingChangeTime > DEBOUNCE_MS) {
-        lastSmoothingPreset = octaveValue;
-        lastSmoothingChangeTime = now;
+    if (now - lastSmoothingChangeTime > DEBOUNCE_MS) {
+      lastSmoothingPreset = octaveValue;
+      lastSmoothingChangeTime = now;
 
-        // Map octave position to smoothing preset
-        // -1 (down) → SMOOTH_NONE (0)
-        //  0 (center) → SMOOTH_NORMAL (1)
-        // +1 (up) → SMOOTH_EXTRA (2)
-        Theremin::SmoothingPreset preset = static_cast<Theremin::SmoothingPreset>(octaveValue + 1);
+      // Map octave position to smoothing preset
+      // -1 (down) → SMOOTH_NONE (0)
+      //  0 (center) → SMOOTH_NORMAL (1)
+      // +1 (up) → SMOOTH_EXTRA (2)
+      Theremin::SmoothingPreset preset = static_cast<Theremin::SmoothingPreset>(octaveValue + 1);
 
-        // Apply to both pitch and volume
-        theremin->setPitchSmoothingPreset(preset);
-        theremin->setVolumeSmoothingPreset(preset);
+      // Apply to both pitch and volume
+      theremin->setPitchSmoothingPreset(preset);
+      theremin->setVolumeSmoothingPreset(preset);
 
-        // Debug output
-        const char* presetName;
-        switch (preset) {
-          case Theremin::SMOOTH_NONE:
-            presetName = "NONE (instant response)";
-            break;
-          case Theremin::SMOOTH_NORMAL:
-            presetName = "NORMAL (balanced)";
-            break;
-          case Theremin::SMOOTH_EXTRA:
-            presetName = "EXTRA (maximum smoothness)";
-            break;
-          default:
-            presetName = "UNKNOWN";
-            break;
-        }
-
-        DEBUG_PRINT("[GPIO] Smoothing preset changed: ");
-        DEBUG_PRINTLN(presetName);
+      // Debug output
+      const char* presetName;
+      switch (preset) {
+        case Theremin::SMOOTH_NONE:
+          presetName = "NONE (instant response)";
+          break;
+        case Theremin::SMOOTH_NORMAL:
+          presetName = "NORMAL (balanced)";
+          break;
+        case Theremin::SMOOTH_EXTRA:
+          presetName = "EXTRA (maximum smoothness)";
+          break;
+        default:
+          presetName = "UNKNOWN";
+          break;
       }
+
+      DEBUG_PRINT("[GPIO] Smoothing preset changed: ");
+      DEBUG_PRINTLN(presetName);
     }
   }
 

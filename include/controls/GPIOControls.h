@@ -8,6 +8,7 @@
 #pragma once
 #include <Adafruit_MCP23X17.h>
 #include "audio/Oscillator.h"
+#include "system/DisplayManager.h"
 
 // Forward declaration to avoid circular dependency:
 // Theremin.h includes ControlHandler.h which includes GPIOControls.h
@@ -21,7 +22,7 @@ public:
    * Constructor
    * @param theremin Pointer to Theremin instance (for oscillator control)
    */
-  GPIOControls(Theremin* theremin);
+  GPIOControls(Theremin* theremin, DisplayManager* displayMgr = nullptr);
 
   /**
    * Initialize MCP23017 and configure all pins as inputs
@@ -69,6 +70,7 @@ public:
 
 private:
   Theremin* theremin;
+  DisplayManager* displayManager;
   Adafruit_MCP23X17 mcp;
   bool initialized;
   bool controlsEnabled;  // Master enable/disable for web interface override
@@ -89,13 +91,6 @@ private:
   int8_t lastSmoothingPreset;        // Track last smoothing preset to avoid redundant calls
   unsigned long lastSmoothingChangeTime;
 
-  // Mode transition tracking - "ignore initial position" approach
-  bool modeJustChanged;              // Set when entering/exiting modifier mode
-  int8_t entryOsc1Octave;            // Switch positions captured on mode entry
-  int8_t entryOsc2Octave;
-  int8_t entryOsc3Octave;
-  int8_t entrySmoothingValue;        // For secondary controls
-
   // Debounce timing
   static constexpr unsigned long DEBOUNCE_MS = 50;
 
@@ -112,7 +107,7 @@ private:
   bool modifierActive;      // True while long press is active
   bool shortPressFlag;      // Set on short press, cleared by wasShortPressed()
 
-  static constexpr unsigned long LONG_PRESS_THRESHOLD_MS = 500;
+  static constexpr unsigned long LONG_PRESS_THRESHOLD_MS = 600;
 
   /**
    * Update multi-function button state machine

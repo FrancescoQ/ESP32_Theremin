@@ -10,6 +10,7 @@
 #include "audio/AudioEngine.h"
 #include "controls/SerialControls.h"
 #include "controls/GPIOControls.h"
+#include "system/DisplayManager.h"
 
 // Forward declaration
 class PerformanceMonitor;
@@ -29,7 +30,7 @@ class Theremin {
    * Constructor
    * @param perfMon Pointer to PerformanceMonitor instance (optional)
    */
-  Theremin(PerformanceMonitor* perfMon = nullptr);
+  Theremin(PerformanceMonitor* perfMon = nullptr, DisplayManager* displayMgr = nullptr);
 
   /**
    * Initialize theremin (sensors and audio)

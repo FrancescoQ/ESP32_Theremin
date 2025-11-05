@@ -12,7 +12,7 @@
 #include <Adafruit_SSD1306.h>
 
 // Smallest fonts
-//#include <Fonts/TomThumb.h>       // 3x5 px - Small but readable
+#include <Fonts/TomThumb.h>       // 3x5 px - Small but readable
 //#include <Fonts/Tiny3x3a2pt7b.h>  // 3x3 px - Almost unreadable but really compact
 
 // Small fonts
@@ -34,6 +34,7 @@ public:
     static constexpr int LINE_HEIGHT = 10;
     static constexpr int SCREEN_WIDTH = 128;
     static constexpr int SCREEN_HEIGHT = 64;
+    static const GFXfont* SMALL_FONT;
 
     // Initialize the display
     bool begin();
@@ -42,7 +43,7 @@ public:
     void clear();
 
     // Display text at position
-    void showText(const char* text, int x = 0, int y = 0, int size = 1);
+    void showText(const char* text, int x = 0, int y = 0, int size = 1, uint16_t color = SSD1306_WHITE, const GFXfont* font = nullptr);
 
     // Display centered text
     void showCenteredText(const char* text, int size = 1);
@@ -52,6 +53,8 @@ public:
 
     // Check if display is initialized
     bool isInitialized() const { return initialized; }
+
+    Adafruit_SSD1306& getDisplay() { return display; }
 
    private:
     Adafruit_SSD1306 display;
