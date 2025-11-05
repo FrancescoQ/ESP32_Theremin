@@ -86,7 +86,7 @@ void ReverbEffect::updateCombs() {
     // Larger rooms = more feedback = longer reverb tail
     // Limited to 0.94 max (balanced between tail length and noise control)
     float feedback = 0.28f + (roomSize * 0.66f);  // Max = 0.28 + 0.66 = 0.94
-    if (feedback > 0.94f) feedback = 0.94f;  // Prevent infinite noise circulation
+    feedback = constrain(feedback, 0.0f, 0.94f);  // Prevent infinite noise circulation
 
     // Calculate damping coefficients
     float damp = damping * SCALE_DAMPING;
@@ -219,8 +219,7 @@ void ReverbEffect::setEnabled(bool en) {
 
 void ReverbEffect::setRoomSize(float size) {
     // Constrain to valid range
-    if (size < 0.0f) size = 0.0f;
-    if (size > 1.0f) size = 1.0f;
+    size = constrain(size, 0.0f, 1.0f);
 
     roomSize = size;
     updateCombs();
@@ -231,8 +230,7 @@ void ReverbEffect::setRoomSize(float size) {
 
 void ReverbEffect::setDamping(float damp) {
     // Constrain to valid range
-    if (damp < 0.0f) damp = 0.0f;
-    if (damp > 1.0f) damp = 1.0f;
+    damp = constrain(damp, 0.0f, 1.0f);
 
     damping = damp;
     updateCombs();
@@ -243,8 +241,7 @@ void ReverbEffect::setDamping(float damp) {
 
 void ReverbEffect::setMix(float mix) {
     // Constrain to valid range
-    if (mix < 0.0f) mix = 0.0f;
-    if (mix > 1.0f) mix = 1.0f;
+    mix = constrain(mix, 0.0f, 1.0f);
 
     wetDryMix = mix;
 
