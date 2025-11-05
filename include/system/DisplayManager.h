@@ -63,6 +63,11 @@ public:
     void nextPage();
 
     /**
+     * Navigate to previous page (wraps around to last page)
+     */
+    void previousPage();
+
+    /**
      * Get current page index
      * @return Index of currently displayed page
      */

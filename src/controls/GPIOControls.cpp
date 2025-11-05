@@ -13,6 +13,7 @@ GPIOControls::GPIOControls(Theremin* thereminPtr, DisplayManager* displayMgr)
     : theremin(thereminPtr), initialized(false), controlsEnabled(true), firstUpdate(true),
       displayManager(displayMgr),
       buttonState(IDLE), buttonPressTime(0), modifierActive(false), shortPressFlag(false),
+      firstPressReleaseTime(0), waitingForSecondClick(false), doubleClickFlag(false),
       lastSmoothingPreset(0), lastSmoothingChangeTime(0) {
   // Initialize state tracking
   osc1State.waveform = Oscillator::OFF;
@@ -76,9 +77,15 @@ void GPIOControls::update() {
   // Always update button state first
   updateButton();
 
-  // Check for short press (page navigation)
-  if (wasShortPressed() && displayManager) {
-    displayManager->nextPage();
+  // Check for button actions (page navigation)
+  if (displayManager) {
+    if (wasDoubleClicked()) {
+      // Double-click = previous page
+      displayManager->previousPage();
+    } else if (wasShortPressed()) {
+      // Single click = next page
+      displayManager->nextPage();
+    }
   }
 
   // Branch based on modifier button state
@@ -226,6 +233,14 @@ void GPIOControls::updateButton() {
   bool buttonPressed = (mcp.digitalRead(PIN_MULTI_BUTTON) == LOW);
   unsigned long now = millis();
 
+  // Check for double-click timeout while waiting for second click
+  if (waitingForSecondClick && (now - firstPressReleaseTime > DOUBLE_CLICK_WINDOW_MS)) {
+    // Timeout expired - convert to single click
+    waitingForSecondClick = false;
+    shortPressFlag = true;
+    DEBUG_PRINTLN("[GPIO] Double-click timeout - processing as single click");
+  }
+
   switch (buttonState) {
     case IDLE:
       if (buttonPressed) {
@@ -240,16 +255,29 @@ void GPIOControls::updateButton() {
       if (!buttonPressed) {
         // Button released - check if it was held long enough for debounce
         if (now - buttonPressTime > DEBOUNCE_MS) {
-          // Valid short press (released after debounce but before long press threshold)
-          shortPressFlag = true;
-          buttonState = IDLE;
-          DEBUG_PRINTLN("[GPIO] Short press detected");
+          // Valid short press detected
+
+          if (waitingForSecondClick) {
+            // Second click within window - it's a double-click!
+            doubleClickFlag = true;
+            waitingForSecondClick = false;
+            buttonState = IDLE;
+            DEBUG_PRINTLN("[GPIO] Double-click detected");
+          } else {
+            // First click - start waiting for second click
+            waitingForSecondClick = true;
+            firstPressReleaseTime = now;
+            buttonState = IDLE;
+            DEBUG_PRINTLN("[GPIO] First click - waiting for second");
+          }
         } else {
           // Released too quickly - ignore (bounce)
           buttonState = IDLE;
         }
       } else if (now - buttonPressTime >= LONG_PRESS_THRESHOLD_MS) {
         // Long press threshold reached - entering modifier mode
+        // Cancel any waiting double-click
+        waitingForSecondClick = false;
         buttonState = LONG_PRESS_ACTIVE;
         modifierActive = true;
         DEBUG_PRINTLN("[GPIO] Long press active - modifier mode ON");
@@ -277,6 +305,14 @@ void GPIOControls::updateButton() {
 bool GPIOControls::wasShortPressed() {
   if (shortPressFlag) {
     shortPressFlag = false;  // Consume the flag
+    return true;
+  }
+  return false;
+}
+
+bool GPIOControls::wasDoubleClicked() {
+  if (doubleClickFlag) {
+    doubleClickFlag = false;  // Consume the flag
     return true;
   }
   return false;

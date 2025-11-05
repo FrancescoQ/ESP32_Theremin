@@ -68,6 +68,13 @@ public:
    */
   bool wasShortPressed();
 
+  /**
+   * Check if button was double-clicked since last check
+   * Consumes the flag (returns true only once per double-click)
+   * @return true if double-click occurred
+   */
+  bool wasDoubleClicked();
+
 private:
   Theremin* theremin;
   DisplayManager* displayManager;
@@ -107,7 +114,13 @@ private:
   bool modifierActive;      // True while long press is active
   bool shortPressFlag;      // Set on short press, cleared by wasShortPressed()
 
+  // Double-click detection
+  unsigned long firstPressReleaseTime;
+  bool waitingForSecondClick;
+  bool doubleClickFlag;
+
   static constexpr unsigned long LONG_PRESS_THRESHOLD_MS = 600;
+  static constexpr unsigned long DOUBLE_CLICK_WINDOW_MS = 400;
 
   /**
    * Update multi-function button state machine

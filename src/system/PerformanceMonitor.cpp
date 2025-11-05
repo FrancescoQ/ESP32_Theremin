@@ -29,7 +29,7 @@ void PerformanceMonitor::setDisplay(DisplayManager* displayMgr) {
   if (display) {
     display->registerPage("Performance", [this](Adafruit_SSD1306& oled) {
       this->drawPerformancePage(oled);
-    }, "SYSTEM");  // Add title
+    }, "SYSTEM");
 
     // Register performance warning overlay (appears on all pages)
     display->registerOverlay([this](Adafruit_SSD1306& oled) {

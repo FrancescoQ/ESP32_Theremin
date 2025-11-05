@@ -64,6 +64,17 @@ void DisplayManager::nextPage() {
                  getCurrentPageName().c_str(), currentPageIndex + 1, pages.size());
 }
 
+void DisplayManager::previousPage() {
+    if (pages.empty()) {
+        return;
+    }
+
+    // Wrap backwards (if at 0, go to last page)
+    currentPageIndex = (currentPageIndex == 0) ? pages.size() - 1 : currentPageIndex - 1;
+    DEBUG_PRINTF("DisplayManager: Switched to page '%s' (%d/%d)\n",
+                 getCurrentPageName().c_str(), currentPageIndex + 1, pages.size());
+}
+
 void DisplayManager::update() {
     if (!initialized || pages.empty()) {
         return;
