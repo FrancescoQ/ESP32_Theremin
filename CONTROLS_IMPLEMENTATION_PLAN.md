@@ -2478,8 +2478,9 @@ Update help text accordingly.
 
 ---
 
-## F4: Button State Detection
+## F4: Button State Detection ✅
 **Goal:** Detect button tap vs hold for multi-function UI
+**Status:** ✅ COMPLETED (November 5, 2025)
 **Files Modified:** `include/controls/GPIOControls.h`, `src/controls/GPIOControls.cpp`, `include/system/PinConfig.h`
 
 ### Button Behavior Specification
@@ -2621,17 +2622,35 @@ void GPIOControls::updateButton() {
 
 ### Success Criteria for F4
 
-- [ ] Button press/release detected correctly
-- [ ] Tap (<200ms) triggers tap event
-- [ ] Hold (>200ms) enters SECONDARY_MODE
-- [ ] Release exits SECONDARY_MODE
-- [ ] Debug output shows state transitions clearly
-- [ ] No false triggers from bounce (MCP23017 has built-in debounce)
+- [x] Button press/release detected correctly
+- [x] Tap (<600ms) triggers tap event (short press flag)
+- [x] Hold (>600ms) enters LONG_PRESS_ACTIVE (modifier mode)
+- [x] Release exits modifier mode
+- [x] Debug output shows state transitions clearly
+- [x] No false triggers from bounce (50ms debounce implemented)
+- [x] Visual feedback on display (circle with "2" indicator)
+
+### Phase F4: COMPLETED ✅
+
+**Date Completed:** November 5, 2025
+
+**Implementation Details:**
+- Button pin: MCP23017 pin 8
+- Long press threshold: 600ms (not 200ms as initially planned)
+- State machine: IDLE → PRESSED → LONG_PRESS_ACTIVE → RELEASED
+- Visual feedback: Circle with "2" displayed on OLED when modifier active
+- API: `isModifierActive()` and `wasShortPressed()` methods
+
+**Files Modified:**
+- `include/controls/GPIOControls.h` - Added button state tracking and methods
+- `src/controls/GPIOControls.cpp` - Implemented `updateButton()` state machine
+- `include/system/PinConfig.h` - Defined `PIN_MULTI_BUTTON` (MCP23017 pin 8)
 
 ---
 
-## F5: Secondary Function Mapping
+## F5: Secondary Function Mapping 🚧
 **Goal:** Map controls to secondary functions when button held
+**Status:** 🚧 PARTIALLY COMPLETED (November 5, 2025)
 **Files Modified:** `include/controls/GPIOControls.h`, `src/controls/GPIOControls.cpp`
 
 ### Control Mapping Design
@@ -2764,14 +2783,37 @@ void GPIOControls::setDelayPreset(int preset) {
 
 ### Success Criteria for F5
 
-- [ ] Normal mode: Controls work as before (waveform, octave)
-- [ ] Hold button + move osc1 knob → Delay presets change
-- [ ] Hold button + move osc2 knob → Chorus presets change
-- [ ] Hold button + move osc3 knob → Reverb presets change
-- [ ] Hold button + osc1 octave switch → Pitch smoothing changes
-- [ ] Hold button + osc2 octave switch → Volume smoothing changes
-- [ ] Release button → Return to normal mode
-- [ ] No cross-talk or accidental triggers
+- [x] Normal mode: Controls work as before (waveform, octave)
+- [ ] Hold button + move osc1 knob → Delay presets change (not implemented)
+- [ ] Hold button + move osc2 knob → Chorus presets change (not implemented)
+- [ ] Hold button + move osc3 knob → Reverb presets change (not implemented)
+- [x] Hold button + osc1 octave switch → Smoothing presets (WORKING!)
+- [ ] Hold button + osc2 octave switch → Volume smoothing (not implemented)
+- [x] Release button → Return to normal mode
+- [x] No cross-talk or accidental triggers
+
+### Phase F5: PARTIALLY COMPLETED 🚧
+
+**Date Completed:** November 5, 2025 (OSC1 octave → smoothing presets only)
+
+**Implementation Details:**
+- Secondary control function `updateSecondaryControls()` implemented
+- OSC1 octave switch mapped to pitch smoothing presets when button held
+- Preset mapping: Down (-1) = SMOOTH_NONE, Center (0) = SMOOTH_NORMAL, Up (+1) = SMOOTH_EXTRA
+- Debouncing applied (50ms threshold)
+- State tracking with `lastSmoothingPreset` to avoid redundant calls
+
+**Working:**
+- ✅ Modifier mode detection via `isModifierActive()`
+- ✅ OSC1 octave switch → Pitch smoothing preset control
+- ✅ Smooth transitions between normal and secondary modes
+
+**Not Yet Implemented:**
+- Waveform knobs → Effects presets (Delay, Chorus, Reverb)
+- OSC2/OSC3 octave switches → Volume smoothing and other controls
+- See Phase F5 plan in CONTROLS_IMPLEMENTATION_PLAN.md for complete mapping design
+
+**Note:** Current implementation demonstrates the pattern successfully. Remaining mappings can be added incrementally as needed.
 
 ---
 

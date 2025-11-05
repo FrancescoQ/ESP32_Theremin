@@ -6,9 +6,9 @@
 
 ## Current Status
 
-**Project Phase:** Phase 3 & 4 ✅ **COMPLETE!** Phase 5 or Optional Enhancements Next
-**Overall Completion:** ~70% (Phases 0, 1, 2, 3, 4 complete + Optional phases remaining)
-**Last Updated:** November 3, 2025
+**Project Phase:** Phase 3 ✅ **COMPLETE!** (Display + Button Added) | Phase 4 ✅ **COMPLETE!** | PCM5102 ✅ **COMPLETE!**
+**Overall Completion:** ~75% (Phases 0, 1, 2, 3, 4 complete + PCM5102 DAC upgrade complete)
+**Last Updated:** November 5, 2025
 
 ### Status Summary
 **🎉 DOUBLE MILESTONE: COMPLETE MULTI-OSCILLATOR SYNTHESIZER WITH FULL CONTROL & EFFECTS! 🎉**
@@ -242,7 +242,7 @@ Successfully completed **BOTH Phase 3 (Controls) AND Phase 4 (Effects)** on **re
 
 **Goal:** Add runtime control hardware (MCP23017 + switches) and optional display
 
-**Status:** ✅ **COMPLETE!** All hardware operational (November 2, 2025)
+**Status:** ✅ **COMPLETE!** (November 5, 2025 - Display and multi-function button added)
 
 **Software Foundation ✅ COMPLETE:**
 - ✅ 3 oscillators implemented in AudioEngine with mixing capability
@@ -271,15 +271,29 @@ Successfully completed **BOTH Phase 3 (Controls) AND Phase 4 (Effects)** on **re
   - [x] Connect switches to read user input in real-time
   - [x] Startup sync - oscillators match switch positions at boot
   - [x] Architecture refactor - controls as siblings of Theremin
+  - [x] **Multi-function button** (MCP23017 pin 8) ✅ (November 5, 2025)
+    - [x] Button state machine (600ms long press threshold)
+    - [x] Modifier mode: Hold button to access secondary functions
+    - [x] Visual feedback on display (circle with "2" when active)
+    - [x] Secondary control: OSC1 octave switch → Smoothing presets
+    - [x] Short press detection for future page navigation
+  - [x] **Output jack detection** (GPIO 14, hardware only) ✅
+    - [x] Pin configured as INPUT_PULLUP (LOW when jack inserted)
+    - [x] Software integration pending (future enhancement)
   - [x] User confirmation: "everything works like a charm!"
 
-- [ ] **Display Integration** (Deferred - Lower Priority)
-  - [ ] Connect SSD1306 OLED (I2C address 0x3C)
-  - [ ] Create DisplayManager class
-  - [ ] Show real-time CPU usage and free RAM
-  - [ ] Show current oscillator states (waveform, octave, volume)
-  - [ ] Show frequency and sensor distances
-  - [ ] Refresh rate: 20-30Hz
+- [x] **Display Integration** ✅ (November 5, 2025 - Complete)
+  - [x] Connect SSD1306 OLED (I2C address 0x3C)
+  - [x] Create DisplayManager class with basic text rendering
+  - [x] TomThumb font support (3x5px - very compact)
+  - [x] Helper methods: `showText()`, `showCenteredText()`, `clear()`, `update()`
+  - [x] Visual feedback for modifier button (circle with "2" indicator)
+  - [x] Files created: include/system/DisplayManager.h, src/system/DisplayManager.cpp
+  - [x] Integration with GPIOControls for button feedback
+  - [ ] Show real-time CPU usage and free RAM (future enhancement)
+  - [ ] Show current oscillator states (future enhancement)
+  - [ ] Show frequency and sensor distances (future enhancement)
+  - [ ] Page navigation system (future enhancement)
 
 - [x] **CHECKPOINT 2: Performance Test ✅ COMPLETE**
   - ✅ **Performance Validated with Full System:**
@@ -297,9 +311,10 @@ Successfully completed **BOTH Phase 3 (Controls) AND Phase 4 (Effects)** on **re
 - ✅ CPU usage <75% with oscillators + controls (14.5% achieved!)
 - ⏳ Display deferred (lower priority, can add later)
 
-**Phase 3 Complete Date:** November 2, 2025
-**Implementation Duration:** ~4 days (October 29 - November 2, 2025)
-**Build Impact:** ~40KB Flash, +144 bytes RAM
+**Phase 3 Complete Date:** November 5, 2025 (Display and multi-function button added)
+**Implementation Duration:** ~7 days (October 29 - November 5, 2025)
+**Build Impact:** +~5KB Flash (Adafruit libraries), minimal RAM increase
+**Key Features:** MCP23017 GPIO expander + 15 switches + SSD1306 OLED + multi-function button
 
 ---
 
@@ -448,6 +463,274 @@ Successfully completed **BOTH Phase 3 (Controls) AND Phase 4 (Effects)** on **re
 Ideas: I2S DAC upgrade, MIDI, CV/Gate, WiFi control, granular synthesis...
 
 (See `/productbrief.md` Phase 7 for complete list)
+
+---
+
+## Remaining Work & Future Enhancements
+
+### 🚧 In-Progress Features
+
+#### Display Integration (Partially Complete)
+
+**Status:** Basic DisplayManager working, advanced features pending
+
+**Completed:**
+- ✅ DisplayManager class with SSD1306 OLED (128x64, I2C 0x3C)
+- ✅ TomThumb font support (3x5px)
+- ✅ Helper methods: showText(), showCenteredText(), clear(), update()
+- ✅ Visual feedback for modifier button (circle with "2" indicator)
+- ✅ Integration with GPIOControls
+
+**Remaining Work:**
+- [ ] **Real-Time Status Display**
+  - CPU usage percentage
+  - Free RAM (KB)
+  - Update rate optimization (avoid flicker)
+  - Dedicated update loop or periodic refresh
+
+- [ ] **Oscillator State Display**
+  - Show current waveform for each oscillator
+  - Show octave shift for each oscillator
+  - Show volume levels (visual bars or percentage)
+  - Compact layout to fit 3 oscillators
+
+- [ ] **Sensor Monitoring**
+  - Show pitch sensor distance (mm or visual bar)
+  - Show volume sensor distance (mm or visual bar)
+  - Show current frequency (Hz)
+  - Optional: Show smoothing status
+
+- [ ] **Page Navigation System**
+  - Implement multiple display pages/views
+  - Short press button to cycle through pages
+  - Page 1: Status (CPU, RAM, uptime)
+  - Page 2: Oscillators (waveform, octave, volume)
+  - Page 3: Sensors (distances, frequency, amplitude)
+  - Page 4: Effects (enabled status, parameters)
+  - Visual page indicator (e.g., "Page 2/4")
+
+**Estimated Effort:** 1-2 days
+**CPU Impact:** ~1-2% (display updates are slow compared to audio)
+**Priority:** High (great for debugging and performance monitoring)
+
+#### Multi-Function Button Expansion
+
+**Status:** State machine working, only one secondary function implemented
+
+**Completed:**
+- ✅ Button state machine (IDLE → PRESSED → LONG_PRESS_ACTIVE → RELEASED)
+- ✅ Long press detection (600ms threshold)
+- ✅ Visual feedback on display (modifier mode indicator)
+- ✅ One secondary function: OSC1 octave → Smoothing presets
+- ✅ Short press detection ready for page navigation
+
+**Remaining Work:**
+- [ ] **Expand Secondary Controls (Modifier Mode)**
+  - OSC2 waveform switch → Effects enable/disable (Delay/Chorus/Reverb)
+  - OSC2 octave switch → Effects parameters (quick adjust)
+  - OSC3 waveform switch → Oscillator volumes (preset levels)
+  - OSC3 octave switch → Reserved for future use
+  - Document each secondary function clearly
+
+- [ ] **Implement Page Navigation**
+  - Short press cycles through display pages
+  - Update current page state variable
+  - Call display update for new page
+  - Wrap around (page 4 → page 1)
+
+- [ ] **Visual Feedback Improvements**
+  - Show which secondary function is active during modifier mode
+  - Display parameter values as they change
+  - Brief confirmation messages ("Delay ON", "Vol: 0.8", etc.)
+
+**Estimated Effort:** 1 day
+**Priority:** Medium (nice quality of life improvement)
+
+---
+
+### 🌟 Optional Enhancements
+
+#### LED Meters (Phase 4 Deferred)
+
+**Status:** Not Started (deferred from Phase 4)
+
+**Scope:**
+- [ ] **Hardware Setup**
+  - Connect 2x WS2812B LED strips (8 LEDs each)
+  - Pitch sensor → LED strip 1 (green to red gradient)
+  - Volume sensor → LED strip 2 (blue to purple gradient)
+  - Wire to available GPIO pins (check pin usage first)
+
+- [ ] **Software Implementation**
+  - Create LEDMeter class (similar to DisplayManager)
+  - Use FastLED or Adafruit NeoPixel library
+  - Map sensor distance → LED bar graph (0-8 LEDs)
+  - Smooth transitions for visual appeal
+  - Integrate into Theremin update loop
+
+**Estimated Effort:** 1 day
+**CPU Impact:** ~2-3% (WS2812B updates are DMA-based, efficient)
+**RAM Impact:** ~500 bytes (LED buffer + FastLED overhead)
+**Priority:** Low (purely aesthetic, system already has visual feedback)
+
+#### Web/BLE Interface (Not Previously Documented)
+
+**Status:** Not Started (Phase 7+ feature)
+
+**Scope:**
+- [ ] **Web Interface (WiFi)**
+  - Create WebServer class (ESP32 AsyncWebServer)
+  - WiFi AP mode (like OTA) or STA mode (join existing network)
+  - Web UI with HTML/CSS/JavaScript
+  - Real-time parameter updates via WebSocket
+  - Control oscillators, effects, sensors from browser
+  - Preset save/load system (SPIFFS or LittleFS)
+  - Optional: mDNS for easy discovery (theremin.local)
+
+- [ ] **BLE Interface (Bluetooth Low Energy)**
+  - BLE GATT server for parameter control
+  - Mobile app integration (iOS/Android)
+  - Optional: BLE MIDI for external controller support
+  - Lower power than WiFi for battery operation
+
+- [ ] **Control Features**
+  - Oscillator control (waveform, octave, volume)
+  - Effects control (enable/disable, all parameters)
+  - Sensor smoothing adjustments
+  - Real-time monitoring (CPU, RAM, audio stats)
+  - Preset management (save, load, delete)
+
+**Estimated Effort:** 3-5 days (web UI design takes time)
+**CPU Impact:** ~5-8% (WebSocket updates, JSON serialization)
+**RAM Impact:** ~30-50 KB (web server, WebSocket buffers)
+**Priority:** Low (nice-to-have, but physical controls work great)
+**Note:** Consider if network control is actually needed for a musical instrument
+
+---
+
+### 🎯 Audio Quality Enhancements (Phase G - Optional)
+
+**Status:** Not Required (current quality excellent)
+
+**Background:**
+- Current system uses int16_t samples throughout
+- Minor low-volume glitches in reverb/delay (quantization noise)
+- Three noise gates mitigate the issue effectively
+- Only noticeable when effects decay to very low levels
+
+**Optional Improvements:**
+
+- [ ] **Reverb int32_t Precision Upgrade**
+  - Use int32_t for comb filter calculations (keep int16_t buffers)
+  - Reduces quantization errors in feedback loops
+  - Estimated CPU impact: +5-10% (total ~20-25%)
+  - Benefit: Smoother tail decay, less graininess at low volumes
+  - **Priority:** Medium (noticeable improvement if pursuing quality)
+
+- [ ] **Full Freeverb Implementation**
+  - Upgrade from simplified (4 combs + 2 allpass) to full (8 combs + 4 allpass)
+  - Richer early reflections, better diffusion
+  - Estimated CPU impact: +5-8% additional (after int32_t upgrade)
+  - Note: Stereo version not planned (mono signal path)
+  - **Priority:** Low (diminishing returns, current reverb sounds good)
+
+- [ ] **Delay Noise Gate**
+  - Add similar noise gate strategy to delay feedback loop
+  - Prevents quantization noise accumulation during decay
+  - Estimated CPU impact: <1%
+  - **Priority:** Low (delay already sounds clean)
+
+- [ ] **Parameter Optimization**
+  - Test various effect combinations
+  - Document "sweet spot" settings for different sounds
+  - Create preset combinations (e.g., "Hall", "Plate", "Spring" reverb styles)
+  - No CPU impact (just documentation)
+  - **Priority:** Low (users can experiment themselves)
+
+**Decision Point:** Current quality is professional-grade. Only pursue if perfectionism strikes!
+
+---
+
+### 🚀 Future Ideas (Phase 7+)
+
+These are "someday" features - documented for completeness:
+
+#### Audio Filters
+- [ ] State Variable Filter (SVF) implementation
+- [ ] Low-pass, high-pass, band-pass modes with resonance
+- [ ] Per-oscillator filtering or post-mix filtering
+- [ ] Classic synthesizer timbral shaping
+- Estimated CPU: 3-5% per filter
+- **Benefit:** Huge tonal versatility, subtractive synthesis capability
+
+#### MIDI Integration
+- [ ] MIDI input for external keyboard control
+- [ ] MIDI output for recording/sequencing
+- [ ] USB MIDI or hardware MIDI (DIN connectors)
+- [ ] Note-to-frequency mapping
+- [ ] MIDI CC for parameter control
+
+#### CV/Gate Outputs
+- [ ] DAC outputs for modular synth integration
+- [ ] Control voltage for frequency (1V/octave standard)
+- [ ] Gate output for envelope trigger
+- [ ] Requires additional DAC hardware (MCP4725 or similar)
+
+#### Preset Management
+- [ ] Save/load system (SPIFFS/LittleFS)
+- [ ] Store oscillator configurations
+- [ ] Store effect settings
+- [ ] Quick recall via button combinations
+
+#### Recording/Looping
+- [ ] Audio buffer recording to SD card
+- [ ] Simple looper functionality
+- [ ] Requires SD card module
+- [ ] Significant RAM/storage requirements
+
+---
+
+## Summary: What's Left To Do
+
+### ✅ Core Synthesizer Status
+**Fully Functional and Production-Ready:**
+- 3 oscillators with 4 waveforms each
+- Volume control per oscillator
+- 3 effects (Delay, Chorus, Reverb) with full parameter control
+- Physical switches for real-time control (MCP23017)
+- Serial command interface for debugging
+- Professional 16-bit audio (PCM5102 DAC)
+- 14.5% CPU usage (85% headroom available!)
+- Stable, no crashes, sounds great
+
+### 🎯 Recommended Next Steps (Priority Order)
+
+**High Priority (Most Impactful):**
+1. Complete display integration (status, oscillators, sensors)
+2. Implement page navigation system (short press button)
+3. Expand secondary controls (modifier mode functions)
+
+**Medium Priority (Nice Quality of Life):**
+4. LED meters for visual feedback
+5. Audio quality polish (Phase G int32_t precision)
+
+**Low Priority (Experimental/Future):**
+6. Web/BLE interface for remote control
+7. Phase 5 finishing (labels, cable management)
+8. Audio filters (SVF implementation)
+9. Advanced features (MIDI, CV/Gate, presets)
+
+### 📝 Documentation Status
+- [x] Core architecture documented (ARCHITECTURE.md)
+- [x] Effects implementation documented (EFFECTS_IMPLEMENTATION_PLAN.md)
+- [x] DAC migration documented (DAC_MIGRATION_PCM5102.md)
+- [x] Progress tracking updated (progress.md)
+- [x] Active context updated (activeContext.md)
+- [x] Remaining work documented (this section!)
+- [ ] Display implementation guide (to be created after completion)
+- [ ] Web interface guide (if/when implemented)
+
+**Project is ~75% complete** - Core functionality is done, remaining work is enhancements and polish!
 
 ## Known Issues
 

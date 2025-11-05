@@ -46,6 +46,15 @@ Step-by-step guides for setup, development, and debugging.
 
 Detailed documentation of major improvements, optimizations, and implementation decisions.
 
+### System Components
+
+- **DisplayManager** - SSD1306 OLED Integration ⭐ NEW (November 5, 2025)
+  - Basic implementation complete with text rendering
+  - TomThumb font support (3x5px - very compact)
+  - Visual feedback for multi-function button (circle indicator)
+  - API: `showText()`, `showCenteredText()`, `clear()`, `update()`
+  - Future: Status pages, metrics display, page navigation
+
 ### Audio System
 
 - **[CONTINUOUS_AUDIO_IMPLEMENTATION.md](improvements/CONTINUOUS_AUDIO_IMPLEMENTATION.md)**
