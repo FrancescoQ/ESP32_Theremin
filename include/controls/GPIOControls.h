@@ -94,17 +94,6 @@ private:
   OscillatorState osc2State;
   OscillatorState osc3State;
 
-  // Secondary control state tracking
-  // Track last preset applyied to avoid redundant calls
-  int8_t lastSmoothingPreset;
-  unsigned long lastSmoothingChangeTime;
-  Oscillator::Waveform lastOsc1Waveform;
-  unsigned long lastOsc1ChangeTime;
-  Oscillator::Waveform lastOsc2Waveform;
-  unsigned long lastOsc2ChangeTime;
-  Oscillator::Waveform lastOsc3Waveform;
-  unsigned long lastOsc3ChangeTime;
-
   // Debounce timing
   static constexpr unsigned long DEBOUNCE_MS = 50;
 

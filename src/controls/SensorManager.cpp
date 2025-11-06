@@ -17,6 +17,8 @@ SensorManager::SensorManager()
       volumeSmoothingAlpha(DEFAULT_SMOOTHING_ALPHA),
       cachedPitchRaw(0),
       cachedVolumeRaw(0),
+      pitchMinDist(DEFAULT_PITCH_MIN_DIST),
+      pitchMaxDist(DEFAULT_PITCH_MAX_DIST),
       pitchEnabled(true),
       volumeEnabled(true),
       pitchSmoothingEnabled(true),
@@ -130,7 +132,7 @@ int SensorManager::applyExponentialSmoothing(float& smoothedValue, int newReadin
 int SensorManager::readPitchRaw() {
   pitchSensor.rangingTest(&pitchMeasure, false);
   // Return measured distance, or max distance if out of range
-  return (pitchMeasure.RangeStatus != 4) ? pitchMeasure.RangeMilliMeter : PITCH_MAX_DIST;
+  return (pitchMeasure.RangeStatus != 4) ? pitchMeasure.RangeMilliMeter : pitchMaxDist;
 }
 
 int SensorManager::readVolumeRaw() {
@@ -173,4 +175,14 @@ void SensorManager::setVolumeSmoothingAlpha(float alpha) {
   volumeSmoothingAlpha = constrain(alpha, 0.0f, 1.0f);
   DEBUG_PRINT("[SENSOR] Volume smoothing alpha set to ");
   DEBUG_PRINTLN(volumeSmoothingAlpha);
+}
+
+void SensorManager::setPitchRange(int minDist, int maxDist) {
+  pitchMinDist = minDist;
+  pitchMaxDist = maxDist;
+  DEBUG_PRINT("[SENSOR] Pitch range set to ");
+  DEBUG_PRINT(pitchMinDist);
+  DEBUG_PRINT(" - ");
+  DEBUG_PRINT(pitchMaxDist);
+  DEBUG_PRINTLN(" mm");
 }

@@ -15,10 +15,12 @@
 
 // Constructor
 AudioEngine::AudioEngine(PerformanceMonitor* perfMon)
-    : currentFrequency(MIN_FREQUENCY),
+    : currentFrequency(DEFAULT_MIN_FREQUENCY),
       currentAmplitude(0),
       smoothedAmplitude(0.0),
-      smoothedFrequency((float)MIN_FREQUENCY),
+      smoothedFrequency((float)DEFAULT_MIN_FREQUENCY),
+      minFrequency(DEFAULT_MIN_FREQUENCY),
+      maxFrequency(DEFAULT_MAX_FREQUENCY),
       pitchSmoothingFactor(DEFAULT_PITCH_SMOOTHING),
       volumeSmoothingFactor(DEFAULT_VOLUME_SMOOTHING),
       currentChannelMode(STEREO_BOTH),
@@ -115,8 +117,8 @@ void AudioEngine::setDefaultSettings() {
 // Set frequency (thread-safe)
 void AudioEngine::setFrequency(int freq) {
   if (paramMutex != NULL && xSemaphoreTake(paramMutex, portMAX_DELAY) == pdTRUE) {
-    // Constrain to valid range (A3-A5)
-    currentFrequency = constrain(freq, MIN_FREQUENCY, MAX_FREQUENCY);
+    // Constrain to current dynamic range
+    currentFrequency = constrain(freq, minFrequency, maxFrequency);
 
     // Don't update oscillators here - let generateAudioBuffer() do it with smoothing
 
@@ -288,6 +290,26 @@ void AudioEngine::setChannelMode(ChannelMode mode) {
 // Get stereo channel routing mode (thread-safe)
 AudioEngine::ChannelMode AudioEngine::getChannelMode() const {
   return currentChannelMode;
+}
+
+// Set frequency range dynamically (thread-safe)
+void AudioEngine::setFrequencyRange(int minFreq, int maxFreq) {
+  if (paramMutex != NULL && xSemaphoreTake(paramMutex, portMAX_DELAY) == pdTRUE) {
+    minFrequency = minFreq;
+    maxFrequency = maxFreq;
+
+    // Re-constrain current frequency to new range
+    currentFrequency = constrain(currentFrequency, minFrequency, maxFrequency);
+    smoothedFrequency = constrain(smoothedFrequency, (float)minFrequency, (float)maxFrequency);
+
+    DEBUG_PRINT("[AUDIO] Frequency range set to ");
+    DEBUG_PRINT(minFrequency);
+    DEBUG_PRINT(" - ");
+    DEBUG_PRINT(maxFrequency);
+    DEBUG_PRINTLN(" Hz");
+
+    xSemaphoreGive(paramMutex);
+  }
 }
 
 // ============================================================================

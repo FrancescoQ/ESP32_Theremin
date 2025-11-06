@@ -67,14 +67,15 @@ void Theremin::update() {
     int pitchDistance = sensors.getPitchDistance();
 
     // Map pitch to frequency using floating-point math for smooth transitions
+    // Use dynamic ranges from audio engine and sensor manager
     float frequencyFloat = mapFloat((float)pitchDistance,
-                                     (float)SensorManager::PITCH_MIN_DIST,
-                                     (float)SensorManager::PITCH_MAX_DIST,
-                                     (float)AudioEngine::MAX_FREQUENCY,
-                                     (float)AudioEngine::MIN_FREQUENCY);
+                                     (float)sensors.getPitchMinDist(),
+                                     (float)sensors.getPitchMaxDist(),
+                                     (float)audio.getMaxFrequency(),
+                                     (float)audio.getMinFrequency());
 
     // Constrain and convert to integer
-    int frequency = constrain((int)frequencyFloat, AudioEngine::MIN_FREQUENCY, AudioEngine::MAX_FREQUENCY);
+    int frequency = constrain((int)frequencyFloat, audio.getMinFrequency(), audio.getMaxFrequency());
 
     // Update audio engine frequency
     audio.setFrequency(frequency);
@@ -106,11 +107,11 @@ void Theremin::update() {
     // Note: frequency and amplitude shown in debug may not match current audio
     // if sensors are disabled, but shows sensor readings for diagnostics
     float frequencyFloat = mapFloat((float)pitchDistance,
-                                     (float)SensorManager::PITCH_MIN_DIST,
-                                     (float)SensorManager::PITCH_MAX_DIST,
-                                     (float)AudioEngine::MAX_FREQUENCY,
-                                     (float)AudioEngine::MIN_FREQUENCY);
-    int frequency = constrain((int)frequencyFloat, AudioEngine::MIN_FREQUENCY, AudioEngine::MAX_FREQUENCY);
+                                     (float)sensors.getPitchMinDist(),
+                                     (float)sensors.getPitchMaxDist(),
+                                     (float)audio.getMaxFrequency(),
+                                     (float)audio.getMinFrequency());
+    int frequency = constrain((int)frequencyFloat, audio.getMinFrequency(), audio.getMaxFrequency());
     int amplitude = map(volumeDistance, SensorManager::VOLUME_MIN_DIST, SensorManager::VOLUME_MAX_DIST,
                         MIN_AMPLITUDE_PERCENT, MAX_AMPLITUDE_PERCENT);
     amplitude = constrain(amplitude, MIN_AMPLITUDE_PERCENT, MAX_AMPLITUDE_PERCENT);
@@ -241,6 +242,38 @@ static const char* formatBuildTimestamp() {
   }
 
   return timestamp;
+}
+
+// Set frequency range preset (coordinates both audio frequency range and sensor range)
+void Theremin::setFrequencyRangePreset(FrequencyRangePreset preset) {
+  DEBUG_PRINT("[THEREMIN] Setting frequency range preset: ");
+  DEBUG_PRINTLN((int)preset);
+
+  switch (preset) {
+    case RANGE_NARROW:
+      // 1 octave: A4-A5 (440-880 Hz)
+      // Tight sensor range for intimate playing
+      audio.setFrequencyRange(440, 880);
+      sensors.setPitchRange(50, 300);  // 250mm range
+      DEBUG_PRINTLN("[THEREMIN] Range: NARROW (1 octave, 250mm)");
+      break;
+
+    case RANGE_NORMAL:
+      // 2 octaves: A3-A5 (220-880 Hz) - DEFAULT
+      // Standard sensor range
+      audio.setFrequencyRange(220, 880);
+      sensors.setPitchRange(50, 400);  // 350mm range
+      DEBUG_PRINTLN("[THEREMIN] Range: NORMAL (2 octaves, 350mm)");
+      break;
+
+    case RANGE_WIDE:
+      // 3 octaves: A2-A5 (110-880 Hz)
+      // Extended sensor range for precision
+      audio.setFrequencyRange(110, 880);
+      sensors.setPitchRange(50, 500);  // 450mm range
+      DEBUG_PRINTLN("[THEREMIN] Range: WIDE (3 octaves, 450mm)");
+      break;
+  }
 }
 
 // Draw splash page for display

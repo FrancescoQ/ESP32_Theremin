@@ -27,6 +27,15 @@ class Theremin {
   };
 
   /**
+   * Frequency range presets for different playing styles
+   */
+  enum FrequencyRangePreset {
+    RANGE_NARROW = 0,   // 1 octave  - tight playing area
+    RANGE_NORMAL = 1,   // 2 octaves - balanced (default)
+    RANGE_WIDE = 2      // 3 octaves - extended range
+  };
+
+  /**
    * Constructor
    * @param perfMon Pointer to PerformanceMonitor instance (optional)
    */
@@ -73,6 +82,12 @@ class Theremin {
    * @param preset Smoothing preset level
    */
   void setVolumeSmoothingPreset(SmoothingPreset preset);
+
+  /**
+   * Set frequency range preset (coordinates both audio frequency range and sensor range)
+   * @param preset Frequency range preset level
+   */
+  void setFrequencyRangePreset(FrequencyRangePreset preset);
 
  private:
   SensorManager sensors;

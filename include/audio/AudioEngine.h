@@ -266,9 +266,28 @@ class AudioEngine {
    */
   ChannelMode getChannelMode() const;
 
-  // Audio range constants (A3 to A5, 2 octaves)
-  static const int MIN_FREQUENCY = 220;  // A3
-  static const int MAX_FREQUENCY = 880;  // A5
+  /**
+   * Set frequency range dynamically (for range presets)
+   * @param minFreq Minimum frequency in Hz
+   * @param maxFreq Maximum frequency in Hz
+   */
+  void setFrequencyRange(int minFreq, int maxFreq);
+
+  /**
+   * Get current minimum frequency
+   * @return Minimum frequency in Hz
+   */
+  int getMinFrequency() const { return minFrequency; }
+
+  /**
+   * Get current maximum frequency
+   * @return Maximum frequency in Hz
+   */
+  int getMaxFrequency() const { return maxFrequency; }
+
+  // Default audio range constants (A3 to A5, 2 octaves)
+  static const int DEFAULT_MIN_FREQUENCY = 220;  // A3
+  static const int DEFAULT_MAX_FREQUENCY = 880;  // A5
 
  private:
   // I2S configuration
@@ -306,6 +325,10 @@ class AudioEngine {
   int currentAmplitude;     // Target amplitude
   float smoothedAmplitude;  // Actual smoothed amplitude value
   float smoothedFrequency;  // Actual smoothed frequency value
+
+  // Dynamic frequency range (can be changed at runtime)
+  int minFrequency;
+  int maxFrequency;
 
   // Runtime-configurable smoothing factors
   float pitchSmoothingFactor;   // Pitch audio-level smoothing (0.0-1.0)

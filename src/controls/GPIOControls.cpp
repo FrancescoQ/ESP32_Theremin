@@ -13,11 +13,8 @@ GPIOControls::GPIOControls(Theremin* thereminPtr, DisplayManager* displayMgr)
     : theremin(thereminPtr), initialized(false), controlsEnabled(true), firstUpdate(true),
       displayManager(displayMgr),
       buttonState(IDLE), buttonPressTime(0), modifierActive(false), shortPressFlag(false),
-      firstPressReleaseTime(0), waitingForSecondClick(false), doubleClickFlag(false),
-      lastSmoothingPreset(0), lastSmoothingChangeTime(0),
-      lastOsc1Waveform(Oscillator::Waveform::OFF), lastOsc1ChangeTime(0),
-      lastOsc2Waveform(Oscillator::Waveform::OFF), lastOsc2ChangeTime(0),
-      lastOsc3Waveform(Oscillator::Waveform::OFF), lastOsc3ChangeTime(0) {
+      firstPressReleaseTime(0), waitingForSecondClick(false), doubleClickFlag(false) {
+
   // Initialize state tracking
   osc1State.waveform = Oscillator::OFF;
   osc1State.octave = 0;
@@ -330,12 +327,17 @@ void GPIOControls::updateSecondaryControls() {
   osc3WaveformSecondaryControl();
 }
 
+// OSC1 Pitch secondary control: Smoothing Presets
 void GPIOControls::osc1PitchSecondaryControl() {
   unsigned long now = millis();
 
   // OSC1 Octave Switch → Smoothing Preset Control
   // Read OSC1 octave switch position (-1, 0, +1)
   int8_t octaveValue = readOctave(PIN_OSC1_OCT_UP, PIN_OSC1_OCT_DOWN);
+
+  // Track last state for debouncing (static local variables)
+  static int8_t lastSmoothingPreset = 0;
+  static unsigned long lastSmoothingChangeTime = 0;
 
   // Check if smoothing preset changed
   if (octaveValue != lastSmoothingPreset) {
@@ -376,18 +378,112 @@ void GPIOControls::osc1PitchSecondaryControl() {
   }
 }
 
+// OSC2 Pitch secondary control: Frequency Range Presets
 void GPIOControls::osc2PitchSecondaryControl() {
+  unsigned long now = millis();
 
+  // OSC2 Octave Switch → Frequency Range Presets
+  int8_t octaveValue = readOctave(PIN_OSC2_OCT_UP, PIN_OSC2_OCT_DOWN);
+
+  // Track last state for debouncing
+  static int8_t lastRangePreset = 0;
+  static unsigned long lastRangeChangeTime = 0;
+
+  if (octaveValue != lastRangePreset) {
+    if (now - lastRangeChangeTime > DEBOUNCE_MS) {
+      lastRangePreset = octaveValue;
+      lastRangeChangeTime = now;
+
+      // Map octave position to frequency range preset
+      // -1 (down) → NARROW (1 octave)
+      //  0 (center) → NORMAL (2 octaves)
+      // +1 (up) → WIDE (3 octaves)
+      Theremin::FrequencyRangePreset preset = static_cast<Theremin::FrequencyRangePreset>(octaveValue + 1);
+
+      theremin->setFrequencyRangePreset(preset);
+
+      // Debug output
+      const char* presetName;
+      switch (preset) {
+        case Theremin::RANGE_NARROW:
+          presetName = "NARROW (1 octave, 250mm)";
+          break;
+        case Theremin::RANGE_NORMAL:
+          presetName = "NORMAL (2 octaves, 350mm)";
+          break;
+        case Theremin::RANGE_WIDE:
+          presetName = "WIDE (3 octaves, 450mm)";
+          break;
+        default:
+          presetName = "UNKNOWN";
+          break;
+      }
+
+      DEBUG_PRINT("[GPIO] Frequency range changed: ");
+      DEBUG_PRINTLN(presetName);
+    }
+  }
 }
 
+// OSC3 Pitch secondary control: Oscillator Mix Presets
 void GPIOControls::osc3PitchSecondaryControl() {
+  unsigned long now = millis();
 
+  // OSC3 Octave Switch → Oscillator Mix Presets
+  int8_t octaveValue = readOctave(PIN_OSC3_OCT_UP, PIN_OSC3_OCT_DOWN);
+
+  // Track last state for debouncing
+  static int8_t lastMixPreset = 0;
+  static unsigned long lastMixChangeTime = 0;
+
+  if (octaveValue != lastMixPreset) {
+    if (now - lastMixChangeTime > DEBOUNCE_MS) {
+      lastMixPreset = octaveValue;
+      lastMixChangeTime = now;
+
+      // Map octave position to oscillator mix preset
+      const char* presetName;
+      switch (octaveValue) {
+        case -1:  // Down position - Equal mix (thickest)
+          theremin->getAudioEngine()->setOscillatorVolume(1, 1.0f);
+          theremin->getAudioEngine()->setOscillatorVolume(2, 1.0f);
+          theremin->getAudioEngine()->setOscillatorVolume(3, 1.0f);
+          presetName = "EQUAL (1.0, 1.0, 1.0)";
+          break;
+
+        case 0:   // Center - Primary focus (balanced)
+          theremin->getAudioEngine()->setOscillatorVolume(1, 1.0f);
+          theremin->getAudioEngine()->setOscillatorVolume(2, 0.7f);
+          theremin->getAudioEngine()->setOscillatorVolume(3, 0.5f);
+          presetName = "PRIMARY (1.0, 0.7, 0.5)";
+          break;
+
+        case +1:  // Up position - Gradient (focused)
+          theremin->getAudioEngine()->setOscillatorVolume(1, 1.0f);
+          theremin->getAudioEngine()->setOscillatorVolume(2, 0.6f);
+          theremin->getAudioEngine()->setOscillatorVolume(3, 0.3f);
+          presetName = "GRADIENT (1.0, 0.6, 0.3)";
+          break;
+
+        default:
+          presetName = "UNKNOWN";
+          break;
+      }
+
+      DEBUG_PRINT("[GPIO] Oscillator mix: ");
+      DEBUG_PRINTLN(presetName);
+    }
+  }
 }
 
 // Oscillator 1 waveform secondary control: Reverb effect presets
 void GPIOControls::osc1WaveformSecondaryControl() {
   unsigned long now = millis();
   Oscillator::Waveform waveformValue = readWaveform(PIN_OSC1_WAVE_A, PIN_OSC1_WAVE_B, PIN_OSC1_WAVE_C);
+
+  // Track last state for debouncing (static local variables)
+  static Oscillator::Waveform lastOsc1Waveform = Oscillator::Waveform::OFF;
+  static unsigned long lastOsc1ChangeTime = 0;
 
   // Check if preset changed
   if (waveformValue != lastOsc1Waveform) {
@@ -437,6 +533,10 @@ void GPIOControls::osc2WaveformSecondaryControl() {
   unsigned long now = millis();
   Oscillator::Waveform waveformValue = readWaveform(PIN_OSC2_WAVE_A, PIN_OSC2_WAVE_B, PIN_OSC2_WAVE_C);
 
+  // Track last state for debouncing (static local variables)
+  static Oscillator::Waveform lastOsc2Waveform = Oscillator::Waveform::OFF;
+  static unsigned long lastOsc2ChangeTime = 0;
+
   // Check if preset changed
   if (waveformValue != lastOsc2Waveform) {
     if (now - lastOsc2ChangeTime > DEBOUNCE_MS) {
@@ -485,9 +585,13 @@ void GPIOControls::osc3WaveformSecondaryControl() {
   unsigned long now = millis();
   Oscillator::Waveform waveformValue = readWaveform(PIN_OSC3_WAVE_A, PIN_OSC3_WAVE_B, PIN_OS3_WAVE_C);
 
+  // Track last state for debouncing (static local variables)
+  static Oscillator::Waveform lastOsc3Waveform = Oscillator::Waveform::OFF;
+  static unsigned long lastOsc3ChangeTime = 0;
+
   // Check if preset changed
   if (waveformValue != lastOsc3Waveform) {
-    if (now - lastOsc2ChangeTime > DEBOUNCE_MS) {
+    if (now - lastOsc3ChangeTime > DEBOUNCE_MS) {
       lastOsc3Waveform = waveformValue;
       lastOsc3ChangeTime = now;
 
