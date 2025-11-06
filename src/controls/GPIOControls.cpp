@@ -14,7 +14,10 @@ GPIOControls::GPIOControls(Theremin* thereminPtr, DisplayManager* displayMgr)
       displayManager(displayMgr),
       buttonState(IDLE), buttonPressTime(0), modifierActive(false), shortPressFlag(false),
       firstPressReleaseTime(0), waitingForSecondClick(false), doubleClickFlag(false),
-      lastSmoothingPreset(0), lastSmoothingChangeTime(0) {
+      lastSmoothingPreset(0), lastSmoothingChangeTime(0),
+      lastOsc1Waveform(Oscillator::Waveform::OFF), lastOsc1ChangeTime(0),
+      lastOsc2Waveform(Oscillator::Waveform::OFF), lastOsc2ChangeTime(0),
+      lastOsc3Waveform(Oscillator::Waveform::OFF), lastOsc3ChangeTime(0) {
   // Initialize state tracking
   osc1State.waveform = Oscillator::OFF;
   osc1State.octave = 0;
@@ -319,6 +322,15 @@ bool GPIOControls::wasDoubleClicked() {
 }
 
 void GPIOControls::updateSecondaryControls() {
+  osc1PitchSecondaryControl();
+  osc2PitchSecondaryControl();
+  osc3PitchSecondaryControl();
+  osc1WaveformSecondaryControl();
+  osc2WaveformSecondaryControl();
+  osc3WaveformSecondaryControl();
+}
+
+void GPIOControls::osc1PitchSecondaryControl() {
   unsigned long now = millis();
 
   // OSC1 Octave Switch → Smoothing Preset Control
@@ -362,7 +374,156 @@ void GPIOControls::updateSecondaryControls() {
       DEBUG_PRINTLN(presetName);
     }
   }
+}
 
-  // TODO: OSC2 switches → Effects control (future)
-  // TODO: OSC3 switches → Reserved for future features
+void GPIOControls::osc2PitchSecondaryControl() {
+
+}
+
+void GPIOControls::osc3PitchSecondaryControl() {
+
+}
+
+// Oscillator 1 waveform secondary control: Reverb effect presets
+void GPIOControls::osc1WaveformSecondaryControl() {
+  unsigned long now = millis();
+  Oscillator::Waveform waveformValue = readWaveform(PIN_OSC1_WAVE_A, PIN_OSC1_WAVE_B, PIN_OSC1_WAVE_C);
+
+  // Check if preset changed
+  if (waveformValue != lastOsc1Waveform) {
+    if (now - lastOsc1ChangeTime > DEBOUNCE_MS) {
+      lastOsc1Waveform = waveformValue;
+      lastOsc1ChangeTime = now;
+
+      ReverbEffect::Preset preset;
+      const char* presetName;
+      // We use a switch to map since enums are not ordered like we want for
+      // the presets, the physical switch shows sine as first, than square and
+      // than triangle. Saw is not used in the physiical switch.
+      switch (waveformValue) {
+        case Oscillator::Waveform::OFF:
+          preset = ReverbEffect::REVERB_OFF;
+          presetName = "OFF";
+          break;
+        case Oscillator::Waveform::SINE:
+          preset = ReverbEffect::REVERB_SMALL;
+          presetName = "SMALL";
+          break;
+        case Oscillator::Waveform::SQUARE:
+          preset = ReverbEffect::REVERB_NORMAL;
+          presetName = "NORMAL";
+          break;
+        case Oscillator::Waveform::TRIANGLE:
+          preset = ReverbEffect::REVERB_MAX;
+          presetName = "MAX";
+          break;
+        default:
+          preset = ReverbEffect::REVERB_OFF;
+          presetName = "UNKNOWN";
+          break;  // Safe fallback
+      }
+
+      // Apply preset
+      theremin->getAudioEngine()->getEffectsChain()->getReverb()->setPreset(preset);
+
+      DEBUG_PRINT("[GPIO] Reverb preset changed: ");
+      DEBUG_PRINTLN(presetName);
+    }
+  }
+}
+
+// Oscillator 2 waveform secondary control: Delay effect presets
+void GPIOControls::osc2WaveformSecondaryControl() {
+  unsigned long now = millis();
+  Oscillator::Waveform waveformValue = readWaveform(PIN_OSC2_WAVE_A, PIN_OSC2_WAVE_B, PIN_OSC2_WAVE_C);
+
+  // Check if preset changed
+  if (waveformValue != lastOsc2Waveform) {
+    if (now - lastOsc2ChangeTime > DEBOUNCE_MS) {
+      lastOsc2Waveform = waveformValue;
+      lastOsc2ChangeTime = now;
+
+      DelayEffect::Preset preset;
+      const char* presetName;
+      // We use a switch to map since enums are not ordered like we want for
+      // the presets, the physical switch shows sine as first, than square and
+      // than triangle. Saw is not used in the physiical switch.
+      switch (waveformValue) {
+        case Oscillator::Waveform::OFF:
+          preset = DelayEffect::DELAY_OFF;
+          presetName = "OFF";
+          break;
+        case Oscillator::Waveform::SINE:
+          preset = DelayEffect::DELAY_SHORT;
+          presetName = "SMALL";
+          break;
+        case Oscillator::Waveform::SQUARE:
+          preset = DelayEffect::DELAY_MEDIUM;
+          presetName = "NORMAL";
+          break;
+        case Oscillator::Waveform::TRIANGLE:
+          preset = DelayEffect::DELAY_LONG;
+          presetName = "MAX";
+          break;
+        default:
+          preset = DelayEffect::DELAY_OFF;
+          presetName = "UNKNOWN";
+          break;  // Safe fallback
+      }
+
+      // Apply preset
+      theremin->getAudioEngine()->getEffectsChain()->getDelay()->setPreset(preset);
+
+      DEBUG_PRINT("[GPIO] Delay preset changed: ");
+      DEBUG_PRINTLN(presetName);
+    }
+  }
+}
+
+// Oscillator 3 waveform secondary control: Chorus effect presets
+void GPIOControls::osc3WaveformSecondaryControl() {
+  unsigned long now = millis();
+  Oscillator::Waveform waveformValue = readWaveform(PIN_OSC3_WAVE_A, PIN_OSC3_WAVE_B, PIN_OS3_WAVE_C);
+
+  // Check if preset changed
+  if (waveformValue != lastOsc3Waveform) {
+    if (now - lastOsc2ChangeTime > DEBOUNCE_MS) {
+      lastOsc3Waveform = waveformValue;
+      lastOsc3ChangeTime = now;
+
+      ChorusEffect::Preset preset;
+      const char* presetName;
+      // We use a switch to map since enums are not ordered like we want for
+      // the presets, the physical switch shows sine as first, than square and
+      // than triangle. Saw is not used in the physiical switch.
+      switch (waveformValue) {
+        case Oscillator::Waveform::OFF:
+          preset = ChorusEffect::CHORUS_OFF;
+          presetName = "OFF";
+          break;
+        case Oscillator::Waveform::SINE:
+          preset = ChorusEffect::CHORUS_MIN;
+          presetName = "SMALL";
+          break;
+        case Oscillator::Waveform::SQUARE:
+          preset = ChorusEffect::CHORUS_MEDIUM;
+          presetName = "NORMAL";
+          break;
+        case Oscillator::Waveform::TRIANGLE:
+          preset = ChorusEffect::CHORUS_MAX;
+          presetName = "MAX";
+          break;
+        default:
+          preset = ChorusEffect::CHORUS_OFF;
+          presetName = "UNKNOWN";
+          break;  // Safe fallback
+      }
+
+      // Apply preset
+      theremin->getAudioEngine()->getEffectsChain()->getChorus()->setPreset(preset);
+
+      DEBUG_PRINT("[GPIO] Chorus preset changed: ");
+      DEBUG_PRINTLN(presetName);
+    }
+  }
 }

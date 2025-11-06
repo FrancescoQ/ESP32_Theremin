@@ -149,6 +149,13 @@ public:
      */
     ~ChorusEffect();
 
+    enum Preset {
+      CHORUS_OFF,
+      CHORUS_MIN,
+      CHORUS_MEDIUM,
+      CHORUS_MAX,
+    };
+
     /**
      * Process single audio sample
      */
@@ -189,6 +196,11 @@ public:
     float getRate() const;
     float getDepth() const { return lfoDepthMs; }
     float getMix() const { return wetDryMix; }
+
+    /**
+     * Set preset configurations
+     */
+    void setPreset(Preset preset);
 
 private:
     std::unique_ptr<int16_t[]> delayBuffer;  // Fixed-size buffer (auto-managed)

@@ -95,8 +95,15 @@ private:
   OscillatorState osc3State;
 
   // Secondary control state tracking
-  int8_t lastSmoothingPreset;        // Track last smoothing preset to avoid redundant calls
+  // Track last preset applyied to avoid redundant calls
+  int8_t lastSmoothingPreset;
   unsigned long lastSmoothingChangeTime;
+  Oscillator::Waveform lastOsc1Waveform;
+  unsigned long lastOsc1ChangeTime;
+  Oscillator::Waveform lastOsc2Waveform;
+  unsigned long lastOsc2ChangeTime;
+  Oscillator::Waveform lastOsc3Waveform;
+  unsigned long lastOsc3ChangeTime;
 
   // Debounce timing
   static constexpr unsigned long DEBOUNCE_MS = 50;
@@ -133,6 +140,16 @@ private:
    * Called when modifier button is held and switches are used
    */
   void updateSecondaryControls();
+
+  /**
+   * Specific methods for each control's secondary function
+   */
+  void osc1PitchSecondaryControl();
+  void osc2PitchSecondaryControl();
+  void osc3PitchSecondaryControl();
+  void osc1WaveformSecondaryControl();
+  void osc2WaveformSecondaryControl();
+  void osc3WaveformSecondaryControl();
 
   /**
    * Read waveform from 3-pin switch

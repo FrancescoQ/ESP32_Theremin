@@ -174,3 +174,35 @@ void ChorusEffect::reset() {
         DEBUG_PRINTLN("[CHORUS] Buffer cleared");
     }
 }
+
+void ChorusEffect::setPreset(Preset preset) {
+  switch (preset) {
+    case CHORUS_OFF:
+      setEnabled(false);
+      break;
+    case CHORUS_MIN:
+      setEnabled(true);
+      setRate(0.5f);
+      setDepth(3.0f);
+      setMix(0.2f);
+      break;
+    case CHORUS_MEDIUM:
+      setEnabled(true);
+      setRate(1.5f);
+      setDepth(7.0f);
+      setMix(0.4f);
+      break;
+    case CHORUS_MAX:
+      setEnabled(true);
+      setRate(3.0f);
+      setDepth(15.0f);
+      setMix(0.6f);
+      break;
+    default:
+      DEBUG_PRINTLN("[CHORUS] WARNING: Unknown preset");
+      break;
+  }
+
+  DEBUG_PRINT("[CHORUS] Preset applied: ");
+  DEBUG_PRINTLN((int)preset);
+}

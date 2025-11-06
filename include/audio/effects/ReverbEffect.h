@@ -27,6 +27,13 @@ public:
      */
     ~ReverbEffect();
 
+    enum Preset {
+      REVERB_OFF,
+      REVERB_SMALL,
+      REVERB_NORMAL,
+      REVERB_MAX,
+    };
+
     /**
      * Process single audio sample through reverb
      */
@@ -67,6 +74,11 @@ public:
     float getRoomSize() const { return roomSize; }
     float getDamping() const { return damping; }
     float getMix() const { return wetDryMix; }
+
+    /**
+     * Set an effect preset
+     */
+    void setPreset(Preset preset);
 
 private:
     // Comb filter structure

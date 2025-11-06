@@ -132,3 +132,29 @@ void DelayEffect::reset() {
         DEBUG_PRINTLN("[DELAY] Buffer cleared");
     }
 }
+
+void DelayEffect::setPreset(Preset preset) {
+  switch (preset) {
+      case DELAY_OFF:
+        setEnabled(false);
+        break;
+      case DELAY_SHORT:
+        setEnabled(true);
+        setDelayTime(300);
+        setFeedback(0.4f);
+        setMix(0.3f);
+        break;
+      case DELAY_MEDIUM:
+        setEnabled(true);
+        setDelayTime(500);
+        setFeedback(0.5f);
+        setMix(0.4f);
+        break;
+      case DELAY_LONG:
+        setEnabled(true);
+        setDelayTime(800);
+        setFeedback(0.6f);
+        setMix(0.5f);
+        break;
+  }
+}

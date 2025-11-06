@@ -115,6 +115,13 @@ public:
      */
     ~DelayEffect();
 
+    enum Preset {
+      DELAY_OFF,
+      DELAY_SHORT,
+      DELAY_MEDIUM,
+      DELAY_LONG,
+    };
+
     /**
      * Process single audio sample through delay
      * @param input Input sample (int16_t, -32768 to 32767)
@@ -163,6 +170,11 @@ public:
     uint32_t getDelayTime() const { return delayTimeMs; }
     float getFeedback() const { return feedback; }
     float getMix() const { return wetDryMix; }
+
+    /**
+     * Set an effect preset
+     */
+    void setPreset(Preset preset);
 
 private:
     std::vector<int16_t> delayBuffer;  // Circular buffer (auto-managed, resizable)

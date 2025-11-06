@@ -265,6 +265,38 @@ void ReverbEffect::setMix(float mix) {
     DEBUG_PRINTLN(wetDryMix);
 }
 
+void ReverbEffect::setPreset(Preset preset) {
+  switch (preset) {
+      case REVERB_OFF:
+        setEnabled(false);
+        break;
+      case REVERB_SMALL:
+        setEnabled(true);
+        setRoomSize(0.3f);
+        setDamping(0.5f);
+        setMix(0.3f);
+        break;
+      case REVERB_NORMAL:
+        setEnabled(true);
+        setRoomSize(0.5f);
+        setDamping(0.5f);
+        setMix(0.3f);
+        break;
+      case REVERB_MAX:
+        setEnabled(true);
+        setRoomSize(1.0f);
+        setDamping(0.2f);
+        setMix(0.4f);
+        break;
+      default:
+        DEBUG_PRINTLN("[REVERB] WARNING: Unknown preset");
+        break;
+  }
+
+  DEBUG_PRINT("[REVERB] Preset applied: ");
+  DEBUG_PRINTLN((int)preset);
+}
+
 void ReverbEffect::reset() {
     // Clear all comb filter buffers
     for (int i = 0; i < NUM_COMBS; i++) {
