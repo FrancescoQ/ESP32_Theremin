@@ -1,2 +1,4 @@
 .pio
 .vscode
+#temprary ignore data folder for webui in the future
+/data 

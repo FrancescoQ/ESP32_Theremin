@@ -476,48 +476,36 @@ Ideas: I2S DAC upgrade, MIDI, CV/Gate, WiFi control, granular synthesis...
 
 ### 🚧 In-Progress Features
 
-#### Display Integration (Partially Complete)
+#### Display Integration (Core Complete - November 5, 2025) ✅
 
-**Status:** Basic DisplayManager working, advanced features pending
+**Status:** Core display system complete with page navigation and real-time monitoring
 
 **Completed:**
 - ✅ DisplayManager class with SSD1306 OLED (128x64, I2C 0x3C)
-- ✅ TomThumb font support (3x5px)
-- ✅ Helper methods: showText(), showCenteredText(), clear(), update()
+- ✅ DisplayPage struct with optional title support
+- ✅ Automatic title rendering (title + separator line)
+- ✅ Page registration system with callback-based rendering
+- ✅ Page navigation with button integration (short press cycles pages)
+- ✅ Page indicator (e.g., "1/2", "2/2")
+- ✅ TomThumb font support (3x5px - very compact)
 - ✅ Visual feedback for modifier button (circle with "2" indicator)
 - ✅ Integration with GPIOControls
+- ✅ **Splash Page (1/2):** "TheremAIn 0.1" centered + build timestamp (YYYYMMDD.HHMMSS format)
+- ✅ **Performance Page (2/2):** Real-time monitoring (Status/Audio/RAM) updating at ~200 FPS
+- ✅ Build timestamp formatter in Theremin.cpp
 
-**Remaining Work:**
-- [ ] **Real-Time Status Display**
-  - CPU usage percentage
-  - Free RAM (KB)
-  - Update rate optimization (avoid flicker)
-  - Dedicated update loop or periodic refresh
+**Optional Future Enhancements (Deferred):**
+- [ ] **Additional Pages** (oscillators, sensors, effects detail pages)
+- [ ] **Overlay System** (global indicators that appear on top of any page)
+- [ ] **Text Alignment Helpers** (showTextLeft, showTextRight methods)
+- [ ] **Advanced Features** (auto-rotation, page metadata, transition effects)
 
-- [ ] **Oscillator State Display**
-  - Show current waveform for each oscillator
-  - Show octave shift for each oscillator
-  - Show volume levels (visual bars or percentage)
-  - Compact layout to fit 3 oscillators
+**Documentation:** See `docs/improvements/DISPLAY_IMPLEMENTATION_PLAN.md` for complete details
 
-- [ ] **Sensor Monitoring**
-  - Show pitch sensor distance (mm or visual bar)
-  - Show volume sensor distance (mm or visual bar)
-  - Show current frequency (Hz)
-  - Optional: Show smoothing status
-
-- [ ] **Page Navigation System**
-  - Implement multiple display pages/views
-  - Short press button to cycle through pages
-  - Page 1: Status (CPU, RAM, uptime)
-  - Page 2: Oscillators (waveform, octave, volume)
-  - Page 3: Sensors (distances, frequency, amplitude)
-  - Page 4: Effects (enabled status, parameters)
-  - Visual page indicator (e.g., "Page 2/4")
-
-**Estimated Effort:** 1-2 days
-**CPU Impact:** ~1-2% (display updates are slow compared to audio)
-**Priority:** High (great for debugging and performance monitoring)
+**Implementation Date:** November 5, 2025
+**Estimated Effort for Future:** 1-2 days (if adding more pages/overlays)
+**CPU Impact:** ~1% (current implementation)
+**Priority:** Optional (core functionality complete and working)
 
 #### Multi-Function Button Expansion
 
