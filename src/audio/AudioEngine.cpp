@@ -7,6 +7,7 @@
 
 #include "audio/AudioEngine.h"
 #include "system/PerformanceMonitor.h"
+#include "system/NotificationManager.h"
 #include "system/Debug.h"
 
 // ============================================================================
@@ -28,7 +29,8 @@ AudioEngine::AudioEngine(PerformanceMonitor* perfMon)
       paramMutex(NULL),
       taskRunning(false),
       effectsChain(nullptr),
-      performanceMonitor(perfMon) {
+      performanceMonitor(perfMon),
+      notificationManager(nullptr) {
 
   // Create mutex for thread-safe parameter updates
   paramMutex = xSemaphoreCreateMutex();
@@ -171,6 +173,42 @@ void AudioEngine::setOscillatorWaveform(int oscNum, Oscillator::Waveform wf) {
     DEBUG_PRINTLN((int)wf);
 
     xSemaphoreGive(paramMutex);
+
+    // Show notification if notification manager available
+    if (notificationManager != nullptr) {
+      // Convert waveform enum to short name
+      const char* waveformName;
+      switch (wf) {
+        case Oscillator::OFF: {
+          waveformName = "OFF";
+          break;
+        }
+        case Oscillator::SINE: {
+          waveformName = "SIN";
+          break;
+        }
+        case Oscillator::SQUARE: {
+          waveformName = "SQR";
+          break;
+        }
+        case Oscillator::TRIANGLE: {
+          waveformName = "TRI";
+          break;
+        }
+        case Oscillator::SAW: {
+          waveformName = "SAW";
+          break;
+        }
+        default: {
+          waveformName = "???";
+          break;
+        }
+      }
+
+      // Format: "OSC1:SIN"
+      String message = "OSC" + String(oscNum) + ":" + String(waveformName);
+      notificationManager->show(message);
+    }
   }
 }
 
@@ -290,6 +328,12 @@ void AudioEngine::setChannelMode(ChannelMode mode) {
 // Get stereo channel routing mode (thread-safe)
 AudioEngine::ChannelMode AudioEngine::getChannelMode() const {
   return currentChannelMode;
+}
+
+// Set notification manager for displaying control changes
+void AudioEngine::setNotificationManager(NotificationManager* notifMgr) {
+  notificationManager = notifMgr;
+  DEBUG_PRINTLN("[AUDIO] Notification manager connected");
 }
 
 // Set frequency range dynamically (thread-safe)

@@ -18,6 +18,7 @@
 
 // Forward declaration to avoid circular dependency
 class PerformanceMonitor;
+class NotificationManager;
 
 // Musical note frequencies (Hz) - Scientific pitch notation
 // Based on A4 = 440 Hz (concert pitch)
@@ -243,6 +244,12 @@ class AudioEngine {
   EffectsChain* getEffectsChain() { return effectsChain; }
 
   /**
+   * Set notification manager for displaying control changes
+   * @param notifMgr Pointer to NotificationManager instance (can be nullptr)
+   */
+  void setNotificationManager(NotificationManager* notifMgr);
+
+  /**
    * Set pitch audio-level smoothing factor
    * @param factor Smoothing factor (0.0 = very smooth, 1.0 = instant)
    */
@@ -403,6 +410,9 @@ class AudioEngine {
 
   // Performance monitoring
   PerformanceMonitor* performanceMonitor;  // Optional monitoring (nullptr = disabled)
+
+  // Notification system
+  NotificationManager* notificationManager;  // Optional notifications (nullptr = disabled)
 
   /**
    * Initialize I2S in built-in DAC mode

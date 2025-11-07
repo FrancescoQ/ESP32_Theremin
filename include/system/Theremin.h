@@ -11,6 +11,7 @@
 #include "controls/SerialControls.h"
 #include "controls/GPIOControls.h"
 #include "system/DisplayManager.h"
+#include "system/NotificationManager.h"
 
 // Forward declaration
 class PerformanceMonitor;
@@ -72,6 +73,12 @@ class Theremin {
   SensorManager* getSensorManager() { return &sensors; }
 
   /**
+   * Get pointer to NotificationManager instance (for control access)
+   * @return Pointer to NotificationManager, or nullptr if display not available
+   */
+  NotificationManager* getNotificationManager() { return notifications; }
+
+  /**
    * Set pitch smoothing preset (coordinates both sensor and audio levels)
    * @param preset Smoothing preset level
    */
@@ -95,6 +102,7 @@ class Theremin {
   SerialControls serialControls;
   GPIOControls gpioControls;
   DisplayManager* display;
+  NotificationManager* notifications;
   bool debugEnabled;
 
   /**

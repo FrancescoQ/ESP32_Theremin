@@ -10,9 +10,12 @@
 
 // Constructor
 Theremin::Theremin(PerformanceMonitor* perfMon, DisplayManager* displayMgr)
-    : sensors(), audio(perfMon), serialControls(this), gpioControls(this, displayMgr), display(displayMgr), debugEnabled(false) {
-  // Register splash page if display is available
+    : sensors(), audio(perfMon), serialControls(this), gpioControls(this, displayMgr), display(displayMgr), notifications(nullptr), debugEnabled(false) {
+  // Create NotificationManager if display is available
   if (display) {
+    notifications = new NotificationManager(display);
+
+    // Register splash page
     display->registerPage("Splash", [this](Adafruit_SSD1306& oled) {
       this->drawSplashPage(oled);
     });
@@ -31,6 +34,11 @@ bool Theremin::begin() {
 
   // Initialize audio
   audio.begin();
+
+  // Pass NotificationManager to AudioEngine (for notification integration)
+  if (notifications) {
+    audio.setNotificationManager(notifications);
+  }
 
   // Initialize serial controls
   serialControls.begin();
@@ -54,6 +62,11 @@ float Theremin::mapFloat(float x, float in_min, float in_max, float out_min, flo
 
 // Main update loop
 void Theremin::update() {
+  // Update notification manager (for auto-hide timing)
+  if (notifications) {
+    notifications->update();
+  }
+
   // Handle control inputs (serial commands and GPIO switches)
   serialControls.update();
   gpioControls.update();
