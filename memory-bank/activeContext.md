@@ -63,6 +63,28 @@ Successfully completed **BOTH Phase 3 (Controls) AND Phase 4 (Effects)** on **re
 
 ## Recent Changes
 
+**Documentation Sync - Fixed Code/Docs Mismatches (November 7, 2025 - ✅ COMPLETE):**
+- **Achievement:** Corrected all documentation to match actual PCM5102 implementation!
+- **Critical Fix:** PCM5102 pin table in DAC_MIGRATION_PCM5102.md had GPIO25/26 swapped
+  - Corrected to: GPIO25=BCK, GPIO26=DOUT, GPIO27=WS (matching actual PinConfig.h)
+- **Architecture Update:** ARCHITECTURE.md reflected outdated PWM/built-in DAC
+  - Updated AudioEngine section to show PCM5102 as current implementation
+  - Moved DAC features from "future" to "current" status
+- **Code Comments:** Fixed outdated header comments
+  - AudioEngine.cpp: Changed "built-in DAC" to "PCM5102 external DAC"
+  - PinConfig.h: Updated GPIO allocation summary to show I2S pins 25/26/27
+  - PinConfig.h: Updated hardware revision tracking (v1.0 → v1.4) documenting all phases
+- **Result:** All documentation now accurately reflects the codebase
+  - PCM5102 external DAC (not built-in)
+  - 16-bit stereo output (not 8-bit mono)
+  - 3x oscillators, effects chain, display (implemented, not planned)
+- **Files Modified:**
+  - docs/improvements/DAC_MIGRATION_PCM5102.md: Fixed pin table
+  - docs/architecture/ARCHITECTURE.md: Updated AudioEngine section
+  - src/audio/AudioEngine.cpp: Fixed header comment
+  - include/system/PinConfig.h: Updated GPIO allocation and hardware revision
+- **Insight:** Documentation can lag behind rapid development - periodic sync checks important!
+
 **Display System Implementation Complete (November 5, 2025 - ✅ FULLY COMPLETE):**
 - **Achievement:** Built complete page-based display system with navigation and live monitoring!
 - **Core System:**
