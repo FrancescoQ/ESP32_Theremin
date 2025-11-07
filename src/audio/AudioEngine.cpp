@@ -2,7 +2,7 @@
  * AudioEngine.cpp
  *
  * Implementation of audio synthesis for ESP32 Theremin.
- * Uses I2S in built-in DAC mode for high-quality audio output.
+ * Uses I2S with external PCM5102 DAC for professional-grade 16-bit stereo audio output.
  */
 
 #include "audio/AudioEngine.h"

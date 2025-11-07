@@ -49,16 +49,17 @@ Successfully migrated from ESP32 built-in DAC (GPIO25, 8-bit unsigned) to extern
 ```
 ESP32          →  PCM5102 Module
 ─────────────────────────────────
-GPIO26 (BCK)   →  BCK (Bit Clock)
+GPIO25 (BCK)   →  BCK (Bit Clock)
 GPIO27 (WS)    →  LRCK/WS (Word Select)
-GPIO25 (DOUT)  →  DIN (Data Input)
+GPIO26 (DOUT)  →  DIN (Data Input)
 3.3V/5V        →  VIN (check your module)
 GND            →  GND
 ```
 
 **Pin Selection Rationale:**
-- GPIO25: Previously used for built-in DAC - convenient reuse
-- GPIO26/27: Available GPIO pins, no conflicts with sensors (I2C) or controls (MCP23017)
+- GPIO25: Bit Clock - safe GPIO, no conflicts with sensors or controls
+- GPIO26: Data Output - safe GPIO, no conflicts with sensors or controls
+- GPIO27: Word Select - safe GPIO, no conflicts with sensors or controls
 - All pins are "safe" GPIO (not boot strapping pins)
 
 ## Software Implementation

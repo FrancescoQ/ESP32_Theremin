@@ -35,7 +35,7 @@ The ESP32 Theremin has been refactored from a single monolithic file into a clea
 │- Dual VL53L0X│ │ - 3x Oscillator instances (sine/square/tri/saw)       │
 │- Smoothing   │ │ - Frequency/amplitude control (sensor-driven)          │
 │- Enable flags│ │ - EffectsChain integration                             │
-│- getPitch    │ │ - I2S DAC output (22050 Hz)                            │
+│- getPitch    │ │ - I2S PCM5102 DAC output (22050 Hz, 16-bit stereo)     │
 │- getVolume   │ │ - FreeRTOS audio task (Core 1, high priority)          │
 │              │ │                                                         │
 │Features:     │ │ Components:                                             │
@@ -140,15 +140,16 @@ theremin/
 - `void update()` - Apply settings to hardware
 
 **Current Implementation:**
-- PWM-based square wave generation
-- 8-bit resolution, GPIO25 output
+- I2S output to external PCM5102 DAC
+- 16-bit resolution, stereo output (GPIO25/26/27)
+- 3x oscillators with waveform selection (sine, triangle, square, sawtooth)
+- Audio effects chain (delay, chorus, reverb)
+- FreeRTOS audio task on Core 1
 
 **Future Extensions:**
-- DAC output for better audio quality
-- Waveform selection (sine, triangle, sawtooth)
-- Multiple oscillators with mixing
-- Effects (vibrato, tremolo, reverb)
 - ADSR envelope
+- True stereo effects (currently mono duplicated)
+- Higher sample rates (up to 384 kHz supported by PCM5102)
 
 ### Theremin
 **Purpose:** Coordinate sensors and audio

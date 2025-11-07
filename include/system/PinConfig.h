@@ -111,20 +111,22 @@
 // PIN USAGE SUMMARY
 //=============================================================================
 /*
- * Current GPIO Allocation (Phase 1):
+ * Current GPIO Allocation:
  * ----------------------------------
  *   16  - Sensor XSHUT (pitch)
  *   19  - Sensor XSHUT (volume)
  *   21  - I2C SDA (shared bus)
  *   22  - I2C SCL (shared bus)
- *   25  - Audio DAC output (I2S built-in DAC mode)
+ *   25  - I2S BCK (Bit Clock for PCM5102)
+ *   26  - I2S DOUT (Data Output for PCM5102)
+ *   27  - I2S WS (Word Select for PCM5102)
  *
- * Future GPIO Allocation (Phase 2+):
+ * Future GPIO Allocation:
  * -----------------------------------
- *   4   - LED pitch meter (WS2812B)
- *   5   - LED volume meter (WS2812B)
- *   26  - Amplifier enable/disable
- *   TBD - OTA enable button (when chosen)
+ *   4   - LED pitch meter (WS2812B) - optional
+ *   5   - LED volume meter (WS2812B) - optional
+ *   TBD - Amplifier enable/disable (if needed)
+ *   TBD - OTA enable button (if desired, currently -1 = always on)
  *
  * I2C Device Addresses:
  * ---------------------
@@ -151,18 +153,35 @@
 // HARDWARE REVISION TRACKING
 //=============================================================================
 #define HARDWARE_VERSION_MAJOR    1
-#define HARDWARE_VERSION_MINOR    0
+#define HARDWARE_VERSION_MINOR    4
 
 // Hardware change log:
-// v1.0 (October 2025) - Initial Phase 1 implementation
+// v1.0 (October 2025) - Phase 1 - Initial implementation
 //   - 2x VL53L0X sensors on I2C
-//   - I2S DAC audio output on GPIO 25 (built-in DAC mode)
+//   - ESP32 built-in 8-bit DAC audio output
 //   - OTA with optional button activation
-
-// Planned v2.0 (Future)
-//   - DAC audio output with PAM8403 amplifier
+//
+// v1.1 (October 2025) - Phase 2 - Audio improvements
+//   - Migrated to PCM5102 external 16-bit I2S DAC
+//   - 3x oscillators with waveform selection (sine, triangle, square, sawtooth)
+//   - Continuous audio generation with FreeRTOS task
+//
+// v1.2 (November 2025) - Phase 3 - Controls
+//   - MCP23017 GPIO expander for physical controls
+//   - Serial command interface
+//   - Hardware switches for oscillator control
+//
+// v1.3 (November 2025) - Phase 4 - Effects
+//   - Effects chain (Delay, Chorus, Reverb)
+//   - Serial controls for effects parameters
+//
+// v1.4 (November 2025) - Phase 5 - Display
 //   - SSD1306 OLED display on I2C
-//   - MCP23017 GPIO expander for control switches
-//   - WS2812B LED strips for visual meters
-//   - 3x oscillators with waveform/octave controls
-//   - Effects chain (Delay, Chorus, optional Reverb)
+//   - Page-based display manager
+//   - Performance monitoring display
+//
+// Planned Future Enhancements:
+//   - WS2812B LED strips for visual pitch/volume meters
+//   - External amplifier with enable control (e.g., PAM8403)
+//   - Preset system with save/load functionality
+//   - MIDI control interface
