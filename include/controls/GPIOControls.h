@@ -15,7 +15,7 @@
 // GPIOControls only needs a pointer to Theremin, so we declare it here
 // Full definition included in GPIOControls.cpp
 class Theremin;
-
+class NotificationManager;
 class GPIOControls {
 public:
   /**
@@ -78,6 +78,7 @@ public:
 private:
   Theremin* theremin;
   DisplayManager* displayManager;
+  NotificationManager* notificationManager;
   Adafruit_MCP23X17 mcp;
   bool initialized;
   bool controlsEnabled;  // Master enable/disable for web interface override
@@ -139,6 +140,12 @@ private:
   void osc1WaveformSecondaryControl();
   void osc2WaveformSecondaryControl();
   void osc3WaveformSecondaryControl();
+
+  /**
+   * Show notification wrapper with included null check for
+   * notificationManager existence.
+   */
+  void showNotification(const String& message, uint16_t durationMs = 2000);
 
   /**
    * Read waveform from 3-pin switch

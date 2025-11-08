@@ -13,6 +13,7 @@
 GPIOControls::GPIOControls(Theremin* thereminPtr, DisplayManager* displayMgr)
     : theremin(thereminPtr), initialized(false), controlsEnabled(true), firstUpdate(true),
       displayManager(displayMgr),
+      notificationManager(nullptr),
       buttonState(IDLE), buttonPressTime(0), modifierActive(false), shortPressFlag(false),
       firstPressReleaseTime(0), waitingForSecondClick(false), doubleClickFlag(false) {
 
@@ -51,6 +52,10 @@ bool GPIOControls::begin() {
   for (uint8_t pin = 0; pin < 16; pin++) {
     mcp.pinMode(pin, INPUT_PULLUP);
   }
+
+  // Assign here instead the construction or initialization list, to be sure
+  // Theremin is completely initialized with display and everything is needed.
+  notificationManager = theremin->getNotificationManager();
 
   DEBUG_PRINTLN("[GPIO] MCP23017 initialized");
   DEBUG_PRINTLN("[GPIO] Oscillator switches configured:");
@@ -131,36 +136,32 @@ void GPIOControls::updateOscillator(int oscNum, OscillatorState& state,
 
       theremin->getAudioEngine()->setOscillatorWaveform(oscNum, currentWaveform);
 
-      // Show notification
-      NotificationManager* notif = theremin->getNotificationManager();
-      if (notif) {
-        // Convert waveform to short name
-        const char* waveformName;
-        switch (currentWaveform) {
-          case Oscillator::OFF:
-            waveformName = "OFF";
-            break;
-          case Oscillator::SINE:
-            waveformName = "SIN";
-            break;
-          case Oscillator::SQUARE:
-            waveformName = "SQR";
-            break;
-          case Oscillator::TRIANGLE:
-            waveformName = "TRI";
-            break;
-          case Oscillator::SAW:
-            waveformName = "SAW";
-            break;
-          default:
-            waveformName = "???";
-            break;
-        }
-
-        // Format: "OSC1:SIN"
-        String message = "OSC" + String(oscNum) + ":" + String(waveformName);
-        notif->show(message);
+      // Convert waveform to short name
+      const char* waveformName;
+      switch (currentWaveform) {
+        case Oscillator::OFF:
+          waveformName = "OFF";
+          break;
+        case Oscillator::SINE:
+          waveformName = "SIN";
+          break;
+        case Oscillator::SQUARE:
+          waveformName = "SQR";
+          break;
+        case Oscillator::TRIANGLE:
+          waveformName = "TRI";
+          break;
+        case Oscillator::SAW:
+          waveformName = "SAW";
+          break;
+        default:
+          waveformName = "???";
+          break;
       }
+
+      // Format: "OSC1:SIN"
+      String message = "OSC" + String(oscNum) + ":" + String(waveformName);
+      showNotification(message);
 
       DEBUG_PRINT("[GPIO] OSC");
       DEBUG_PRINT(oscNum);
@@ -177,30 +178,26 @@ void GPIOControls::updateOscillator(int oscNum, OscillatorState& state,
 
       theremin->getAudioEngine()->setOscillatorOctave(oscNum, currentOctave);
 
-      // Show notification
-      NotificationManager* notif = theremin->getNotificationManager();
-      if (notif) {
-        // Convert octave to short name
-        const char* octaveString;
-        switch (currentOctave) {
-          case 0:
-            octaveString = "0";
-            break;
-          case -1:
-            octaveString = "-1";
-            break;
-          case +1:
-            octaveString = "+1";
-            break;
-          default:
-            octaveString = "???";
-            break;
-        }
-
-        // Format: "OSC1:+1"
-        String message = "OSC" + String(oscNum) + ":" + String(octaveString);
-        notif->show(message);
+      // Convert octave to short name
+      const char* octaveString;
+      switch (currentOctave) {
+        case 0:
+          octaveString = "0";
+          break;
+        case -1:
+          octaveString = "-1";
+          break;
+        case +1:
+          octaveString = "+1";
+          break;
+        default:
+          octaveString = "???";
+          break;
       }
+
+      // Format: "OSC1:+1"
+      String message = "OSC" + String(oscNum) + ":" + String(octaveString);
+      showNotification(message);
 
       DEBUG_PRINT("[GPIO] OSC");
       DEBUG_PRINT(oscNum);
@@ -417,15 +414,19 @@ void GPIOControls::osc1PitchSecondaryControl() {
       switch (preset) {
         case Theremin::SMOOTH_NONE:
           presetName = "NONE (instant response)";
+          showNotification("SMT:OFF");
           break;
         case Theremin::SMOOTH_NORMAL:
           presetName = "NORMAL (balanced)";
+          showNotification("SMT:NRM");
           break;
         case Theremin::SMOOTH_EXTRA:
           presetName = "EXTRA (maximum smoothness)";
+          showNotification("SMT:MAX");
           break;
         default:
           presetName = "UNKNOWN";
+          showNotification("SMT:???");
           break;
       }
 
@@ -464,15 +465,19 @@ void GPIOControls::osc2PitchSecondaryControl() {
       switch (preset) {
         case Theremin::RANGE_NARROW:
           presetName = "NARROW (1 octave, 250mm)";
+          showNotification("RNG:NRW");
           break;
         case Theremin::RANGE_NORMAL:
           presetName = "NORMAL (2 octaves, 350mm)";
+          showNotification("RNG:NRM");
           break;
         case Theremin::RANGE_WIDE:
           presetName = "WIDE (3 octaves, 450mm)";
+          showNotification("RNG:WID");
           break;
         default:
           presetName = "UNKNOWN";
+          showNotification("RNG:???");
           break;
       }
 
@@ -506,6 +511,7 @@ void GPIOControls::osc3PitchSecondaryControl() {
           theremin->getAudioEngine()->setOscillatorVolume(2, 1.0f);
           theremin->getAudioEngine()->setOscillatorVolume(3, 1.0f);
           presetName = "EQUAL (1.0, 1.0, 1.0)";
+          showNotification("MIX:EQ");
           break;
 
         case 0:   // Center - Primary focus (balanced)
@@ -513,6 +519,7 @@ void GPIOControls::osc3PitchSecondaryControl() {
           theremin->getAudioEngine()->setOscillatorVolume(2, 0.7f);
           theremin->getAudioEngine()->setOscillatorVolume(3, 0.5f);
           presetName = "PRIMARY (1.0, 0.7, 0.5)";
+          showNotification("MIX:BAL");
           break;
 
         case +1:  // Up position - Gradient (focused)
@@ -520,10 +527,12 @@ void GPIOControls::osc3PitchSecondaryControl() {
           theremin->getAudioEngine()->setOscillatorVolume(2, 0.6f);
           theremin->getAudioEngine()->setOscillatorVolume(3, 0.3f);
           presetName = "GRADIENT (1.0, 0.6, 0.3)";
+          showNotification("MIX:WID");
           break;
 
         default:
           presetName = "UNKNOWN";
+          showNotification("MIX:???");
           break;
       }
 
@@ -557,22 +566,27 @@ void GPIOControls::osc1WaveformSecondaryControl() {
         case Oscillator::Waveform::OFF:
           preset = ReverbEffect::REVERB_OFF;
           presetName = "OFF";
+          showNotification("REV:OFF");
           break;
         case Oscillator::Waveform::SINE:
           preset = ReverbEffect::REVERB_SMALL;
           presetName = "SMALL";
+          showNotification("REV:SML");
           break;
         case Oscillator::Waveform::SQUARE:
           preset = ReverbEffect::REVERB_NORMAL;
           presetName = "NORMAL";
+          showNotification("REV:NRM");
           break;
         case Oscillator::Waveform::TRIANGLE:
           preset = ReverbEffect::REVERB_MAX;
           presetName = "MAX";
+          showNotification("REV:MAX");
           break;
         default:
           preset = ReverbEffect::REVERB_OFF;
           presetName = "UNKNOWN";
+          showNotification("REV:???");
           break;  // Safe fallback
       }
 
@@ -609,22 +623,27 @@ void GPIOControls::osc2WaveformSecondaryControl() {
         case Oscillator::Waveform::OFF:
           preset = DelayEffect::DELAY_OFF;
           presetName = "OFF";
+          showNotification("DLY:OFF");
           break;
         case Oscillator::Waveform::SINE:
           preset = DelayEffect::DELAY_SHORT;
           presetName = "SMALL";
+          showNotification("DLY:SML");
           break;
         case Oscillator::Waveform::SQUARE:
           preset = DelayEffect::DELAY_MEDIUM;
           presetName = "NORMAL";
+          showNotification("DLY:NRM");
           break;
         case Oscillator::Waveform::TRIANGLE:
           preset = DelayEffect::DELAY_LONG;
           presetName = "MAX";
+          showNotification("DLY:MAX");
           break;
         default:
           preset = DelayEffect::DELAY_OFF;
           presetName = "UNKNOWN";
+          showNotification("DLY:???");
           break;  // Safe fallback
       }
 
@@ -661,22 +680,27 @@ void GPIOControls::osc3WaveformSecondaryControl() {
         case Oscillator::Waveform::OFF:
           preset = ChorusEffect::CHORUS_OFF;
           presetName = "OFF";
+          showNotification("CHR:OFF");
           break;
         case Oscillator::Waveform::SINE:
           preset = ChorusEffect::CHORUS_MIN;
           presetName = "SMALL";
+          showNotification("CHR:SML");
           break;
         case Oscillator::Waveform::SQUARE:
           preset = ChorusEffect::CHORUS_MEDIUM;
           presetName = "NORMAL";
+          showNotification("CHR:NRM");
           break;
         case Oscillator::Waveform::TRIANGLE:
           preset = ChorusEffect::CHORUS_MAX;
           presetName = "MAX";
+          showNotification("CHR:MAX");
           break;
         default:
           preset = ChorusEffect::CHORUS_OFF;
           presetName = "UNKNOWN";
+          showNotification("CHR:???");
           break;  // Safe fallback
       }
 
@@ -686,5 +710,11 @@ void GPIOControls::osc3WaveformSecondaryControl() {
       DEBUG_PRINT("[GPIO] Chorus preset changed: ");
       DEBUG_PRINTLN(presetName);
     }
+  }
+}
+
+void GPIOControls::showNotification(const String& message, uint16_t durationMs) {
+  if (notificationManager) {
+    notificationManager->show(message, durationMs);
   }
 }
