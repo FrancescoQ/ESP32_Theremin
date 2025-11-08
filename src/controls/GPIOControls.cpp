@@ -8,6 +8,7 @@
 #include "system/Theremin.h"
 #include "system/PinConfig.h"
 #include "system/Debug.h"
+#include "system/NotificationManager.h"
 
 GPIOControls::GPIOControls(Theremin* thereminPtr, DisplayManager* displayMgr)
     : theremin(thereminPtr), initialized(false), controlsEnabled(true), firstUpdate(true),
@@ -130,6 +131,37 @@ void GPIOControls::updateOscillator(int oscNum, OscillatorState& state,
 
       theremin->getAudioEngine()->setOscillatorWaveform(oscNum, currentWaveform);
 
+      // Show notification
+      NotificationManager* notif = theremin->getNotificationManager();
+      if (notif) {
+        // Convert waveform to short name
+        const char* waveformName;
+        switch (currentWaveform) {
+          case Oscillator::OFF:
+            waveformName = "OFF";
+            break;
+          case Oscillator::SINE:
+            waveformName = "SIN";
+            break;
+          case Oscillator::SQUARE:
+            waveformName = "SQR";
+            break;
+          case Oscillator::TRIANGLE:
+            waveformName = "TRI";
+            break;
+          case Oscillator::SAW:
+            waveformName = "SAW";
+            break;
+          default:
+            waveformName = "???";
+            break;
+        }
+
+        // Format: "OSC1:SIN"
+        String message = "OSC" + String(oscNum) + ":" + String(waveformName);
+        notif->show(message);
+      }
+
       DEBUG_PRINT("[GPIO] OSC");
       DEBUG_PRINT(oscNum);
       DEBUG_PRINT(" waveform: ");
@@ -144,6 +176,31 @@ void GPIOControls::updateOscillator(int oscNum, OscillatorState& state,
       state.lastChangeTime = now;
 
       theremin->getAudioEngine()->setOscillatorOctave(oscNum, currentOctave);
+
+      // Show notification
+      NotificationManager* notif = theremin->getNotificationManager();
+      if (notif) {
+        // Convert octave to short name
+        const char* octaveString;
+        switch (currentOctave) {
+          case 0:
+            octaveString = "0";
+            break;
+          case -1:
+            octaveString = "-1";
+            break;
+          case +1:
+            octaveString = "+1";
+            break;
+          default:
+            octaveString = "???";
+            break;
+        }
+
+        // Format: "OSC1:+1"
+        String message = "OSC" + String(oscNum) + ":" + String(octaveString);
+        notif->show(message);
+      }
 
       DEBUG_PRINT("[GPIO] OSC");
       DEBUG_PRINT(oscNum);

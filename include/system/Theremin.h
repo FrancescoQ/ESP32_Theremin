@@ -43,6 +43,15 @@ class Theremin {
   Theremin(PerformanceMonitor* perfMon = nullptr, DisplayManager* displayMgr = nullptr);
 
   /**
+   * Destructor - cleans up notification manager
+   *
+   * NOTE: Like AudioEngine, this destructor is never called in practice
+   * (Theremin lives until ESP32 loses power), but included as C++ best
+   * practice for proper RAII pattern and resource cleanup documentation.
+   */
+  ~Theremin();
+
+  /**
    * Initialize theremin (sensors and audio)
    * Must be called in setup()
    * @return true if successful, false if initialization fails

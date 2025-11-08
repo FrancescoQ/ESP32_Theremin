@@ -22,6 +22,20 @@ Theremin::Theremin(PerformanceMonitor* perfMon, DisplayManager* displayMgr)
   }
 }
 
+// Destructor
+// Note: Never called in practice (Theremin lives until power-off),
+// but included as C++ best practice (RAII) for proper resource cleanup.
+// See Theremin.h for detailed explanation.
+Theremin::~Theremin() {
+  // Clean up notification manager (if allocated)
+  if (notifications != nullptr) {
+    delete notifications;
+    notifications = nullptr;
+  }
+
+  DEBUG_PRINTLN("[THEREMIN] Theremin destroyed");
+}
+
 // Initialize theremin
 bool Theremin::begin() {
   DEBUG_PRINTLN("\n=== ESP32 Theremin Initializing ===");
@@ -34,11 +48,6 @@ bool Theremin::begin() {
 
   // Initialize audio
   audio.begin();
-
-  // Pass NotificationManager to AudioEngine (for notification integration)
-  if (notifications) {
-    audio.setNotificationManager(notifications);
-  }
 
   // Initialize serial controls
   serialControls.begin();
