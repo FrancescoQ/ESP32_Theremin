@@ -88,10 +88,17 @@ void DisplayManager::update() {
         display.setTextSize(1);
         display.setTextColor(SSD1306_WHITE);
         display.setCursor(0, 0);
-        display.print(pages[currentPageIndex].title);
+
+        // Convert title to uppercase for display
+        String upperTitle = pages[currentPageIndex].title;
+        upperTitle.toUpperCase();
+        display.print(upperTitle);
 
         // Draw separator line below title
         display.drawLine(0, 9, SCREEN_WIDTH - 1, 9, SSD1306_WHITE);
+
+        // Auto-position cursor for content (below title separator)
+        display.setCursor(0, CONTENT_START_Y);
     }
 
     // Draw current page content

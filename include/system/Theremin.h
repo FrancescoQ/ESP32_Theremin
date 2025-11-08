@@ -119,6 +119,11 @@ class Theremin {
    */
   void drawSplashPage(Adafruit_SSD1306& oled);
 
+  /**
+   * Draw effects page showing current effect settings
+   */
+  void drawEffectsPage(Adafruit_SSD1306& oled);
+
   // Amplitude range constants (internal use only)
   static const int MIN_AMPLITUDE_PERCENT = 0;
   static const int MAX_AMPLITUDE_PERCENT = 100;

@@ -29,7 +29,7 @@ void PerformanceMonitor::setDisplay(DisplayManager* displayMgr) {
   if (display) {
     display->registerPage("Performance", [this](Adafruit_SSD1306& oled) {
       this->drawPerformancePage(oled);
-    }, "SYSTEM");
+    }, "System");
 
     // Register performance warning overlay (appears on all pages)
     display->registerOverlay([this](Adafruit_SSD1306& oled) {
@@ -130,24 +130,22 @@ void PerformanceMonitor::printStatus() {
 
 void PerformanceMonitor::drawPerformancePage(Adafruit_SSD1306& oled) {
   // Title and separator are auto-drawn by DisplayManager
+  // Cursor already positioned at CONTENT_START_Y by DisplayManager
   oled.setTextSize(1);
   oled.setTextColor(SSD1306_WHITE);
 
-  // Status line (starts at y=14 after title+separator)
-  oled.setCursor(0, 14);
+  // Status line
   oled.print("Status: ");
-  oled.print(isSystemOK() ? "OK" : "WARN");
+  oled.println(isSystemOK() ? "OK" : "WARN");
 
   // Audio timing line
-  oled.setCursor(0, 24);
   oled.print("Audio:  ");
   float audioMs = getAudioTimeMs();
   oled.print(audioMs, 1);  // 1 decimal place
-  oled.print("ms/11ms");
+  oled.println("ms/11ms");
 
   // RAM line
-  oled.setCursor(0, 34);
   oled.print("RAM:    ");
   oled.print(getFreeRAMKB());
-  oled.print(" KB free");
+  oled.println(" KB free");
 }

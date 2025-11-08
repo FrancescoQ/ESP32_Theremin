@@ -19,6 +19,11 @@ Theremin::Theremin(PerformanceMonitor* perfMon, DisplayManager* displayMgr)
     display->registerPage("Splash", [this](Adafruit_SSD1306& oled) {
       this->drawSplashPage(oled);
     });
+
+    // Register effects page with title
+    display->registerPage("Effects", [this](Adafruit_SSD1306& oled) {
+      this->drawEffectsPage(oled);
+    }, "Effects");
   }
 }
 
@@ -323,4 +328,62 @@ void Theremin::drawSplashPage(Adafruit_SSD1306& oled) {
   oled.setCursor(DisplayManager::SCREEN_WIDTH - w - 2, DisplayManager::SCREEN_HEIGHT - 5);
   oled.print(buildTime);
   oled.setFont();  // Reset to default font
+}
+
+// Draw effects page showing current effect settings
+void Theremin::drawEffectsPage(Adafruit_SSD1306& oled) {
+  // Use small font for compact display
+  oled.setFont(DisplayManager::SMALL_FONT);
+  oled.setTextSize(1);
+  oled.setTextColor(SSD1306_WHITE);
+
+  // Get effects chain from audio engine
+  EffectsChain* effects = audio.getEffectsChain();
+  if (!effects) {
+    oled.print("No effects available");
+    oled.setFont();
+    return;
+  }
+
+  // Cursor already positioned at CONTENT_START_Y by DisplayManager
+  int lineHeight = 8;  // Spacing between lines
+
+  // Delay Effect
+  DelayEffect* delay = effects->getDelay();
+  oled.print("DLY: ");
+  oled.println(delay->isEnabled() ? "ON " : "OFF");
+  oled.print("Time: ");
+  oled.print(delay->getDelayTime());
+  oled.print("ms FB: ");
+  oled.print((int)(delay->getFeedback() * 100));
+  oled.print("% Mix:");
+  oled.print((int)(delay->getMix() * 100));
+  oled.println("%");
+
+  // Chorus Effect
+  ChorusEffect* chorus = effects->getChorus();
+  oled.print("Chr: ");
+  oled.println(chorus->isEnabled() ? "ON " : "OFF");
+  oled.print("Rate: ");
+  oled.print(chorus->getRate(), 1);  // 1 decimal place
+  oled.print("Hz Depth: ");
+  oled.print((int)chorus->getDepth());
+  oled.print("ms Mix: ");
+  oled.print((int)(chorus->getMix() * 100));
+  oled.println("%");
+
+  // Reverb Effect
+  ReverbEffect* reverb = effects->getReverb();
+  oled.print("REV: ");
+  oled.println(reverb->isEnabled() ? "ON " : "OFF");
+  oled.print("Room: ");
+  oled.print(reverb->getRoomSize(), 1);  // 1 decimal place
+  oled.print(" Damp: ");
+  oled.print(reverb->getDamping(), 1);   // 1 decimal place
+  oled.print(" Mix: ");
+  oled.print((int)(reverb->getMix() * 100));
+  oled.print("%");
+
+  // Reset to default font
+  oled.setFont();
 }

@@ -27,6 +27,7 @@ public:
     static constexpr int CHAR_HEIGHT = 8;
     static constexpr int CHAR_WIDTH = 5;
     static constexpr int LINE_HEIGHT = 10;
+    static constexpr int CONTENT_START_Y = 14;  // Y position where page content starts (below title separator)
 
     // Default font
     static const GFXfont* SMALL_FONT;
