@@ -22,7 +22,8 @@ struct DisplayPage {
     String name;
     String title;  // Optional title - if provided, auto-drawn by DisplayManager
     PageDrawCallback drawFunction;
+    int weight;    // Sort order (lower = earlier, alphabetical for ties)
 
-    DisplayPage(String n, PageDrawCallback func, String t = "")
-        : name(n), title(t), drawFunction(func) {}
+    DisplayPage(String n, PageDrawCallback func, String t = "", int w = 0)
+        : name(n), title(t), drawFunction(func), weight(w) {}
 };

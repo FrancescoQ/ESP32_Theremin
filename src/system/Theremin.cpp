@@ -15,20 +15,20 @@ Theremin::Theremin(PerformanceMonitor* perfMon, DisplayManager* displayMgr)
   if (display) {
     notifications = new NotificationManager(display);
 
-    // Register splash page
+    // Register splash page (weight 0 - first page)
     display->registerPage("Splash", [this](Adafruit_SSD1306& oled) {
       this->drawSplashPage(oled);
-    });
+    }, "", 0);
 
-    // Register effects page with title
-    display->registerPage("Effects", [this](Adafruit_SSD1306& oled) {
-      this->drawEffectsPage(oled);
-    }, "Effects");
-
-    // Register oscillators page with title
+    // Register oscillators page with title (weight 2)
     display->registerPage("Oscillators", [this](Adafruit_SSD1306& oled) {
       this->drawOscillatorsPage(oled);
-    }, "oscillators");
+    }, "Oscillators", 1);
+
+    // Register effects page with title (weight 1)
+    display->registerPage("Effects", [this](Adafruit_SSD1306& oled) {
+      this->drawEffectsPage(oled);
+    }, "Effects", 2);
   }
 }
 

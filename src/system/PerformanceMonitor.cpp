@@ -25,11 +25,11 @@ void PerformanceMonitor::begin() {
 void PerformanceMonitor::setDisplay(DisplayManager* displayMgr) {
   display = displayMgr;
 
-  // Register performance page if display is available
+  // Register performance page if display is available (weight 99, we keep this as last page)
   if (display) {
     display->registerPage("Performance", [this](Adafruit_SSD1306& oled) {
       this->drawPerformancePage(oled);
-    }, "System");
+    }, "System", 99);
 
     // Register performance warning overlay (appears on all pages)
     display->registerOverlay([this](Adafruit_SSD1306& oled) {

@@ -6,6 +6,7 @@
 
 #include "system/DisplayManager.h"
 #include "system/Debug.h"
+#include <algorithm>  // for std::sort
 
 const GFXfont* DisplayManager::SMALL_FONT = &TomThumb;
 
@@ -36,10 +37,19 @@ bool DisplayManager::begin() {
     return true;
 }
 
-void DisplayManager::registerPage(String name, PageDrawCallback drawFunc, String title) {
-    pages.emplace_back(name, drawFunc, title);
-    DEBUG_PRINTF("DisplayManager: Registered page '%s' (total: %d)\n",
-                 name.c_str(), pages.size());
+void DisplayManager::registerPage(String name, PageDrawCallback drawFunc, String title, int weight) {
+    pages.emplace_back(name, drawFunc, title, weight);
+
+    // Sort pages by weight (ascending), then alphabetically by name for ties
+    std::sort(pages.begin(), pages.end(), [](const DisplayPage& a, const DisplayPage& b) {
+        if (a.weight != b.weight) {
+            return a.weight < b.weight;  // Lower weight = earlier
+        }
+        return a.name < b.name;  // Alphabetical for same weight
+    });
+
+    DEBUG_PRINTF("DisplayManager: Registered page '%s' (weight: %d, total: %d)\n",
+                 name.c_str(), weight, pages.size());
 }
 
 void DisplayManager::registerOverlay(PageDrawCallback overlayFunc) {

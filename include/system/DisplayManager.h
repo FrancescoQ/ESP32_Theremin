@@ -43,8 +43,9 @@ public:
      * @param name Page name (for debugging/navigation)
      * @param drawFunc Callback function that draws page content
      * @param title Optional title to auto-draw at top (empty = no title)
+     * @param weight Sort order (lower values appear first, alphabetical for ties, default = 0)
      */
-    void registerPage(String name, PageDrawCallback drawFunc, String title = "");
+    void registerPage(String name, PageDrawCallback drawFunc, String title = "", int weight = 0);
 
     /**
      * Register a global overlay (appears on all pages)
