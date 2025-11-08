@@ -528,7 +528,7 @@ void GPIOControls::osc2PitchSecondaryControl() {
           break;
         case Theremin::RANGE_WIDE:
           presetName = "WIDE (3 octaves, 450mm)";
-          showNotification("RNG:WID");
+          showNotification("RNG:EXT");
           break;
         default:
           presetName = "UNKNOWN";
