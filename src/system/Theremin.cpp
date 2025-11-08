@@ -25,10 +25,15 @@ Theremin::Theremin(PerformanceMonitor* perfMon, DisplayManager* displayMgr)
       this->drawOscillatorsPage(oled);
     }, "Oscillators", 1);
 
-    // Register effects page with title (weight 1)
+    // Register effects page with title (weight 2)
     display->registerPage("Effects", [this](Adafruit_SSD1306& oled) {
       this->drawEffectsPage(oled);
     }, "Effects", 2);
+
+    // Register audio range page with title (weight 3)
+    display->registerPage("Range", [this](Adafruit_SSD1306& oled) {
+      this->drawAudioRangePage(oled);
+    }, "Range", 3);
   }
 }
 
@@ -390,6 +395,42 @@ void Theremin::drawEffectsPage(Adafruit_SSD1306& oled) {
   oled.print(" Mix: ");
   oled.print((int)(reverb->getMix() * 100));
   oled.print("%");
+
+  // Reset to default font
+  oled.setFont();
+}
+
+// Draw audio range page showing frequency and distance ranges
+void Theremin::drawAudioRangePage(Adafruit_SSD1306& oled) {
+  // Use small font for compact display
+  oled.setFont();
+  oled.setTextSize(1);
+  oled.setTextColor(SSD1306_WHITE);
+
+  // Cursor already positioned at CONTENT_START_Y by DisplayManager
+
+  // Frequency Range
+  oled.print("Freq: ");
+  oled.print(audio.getMinFrequency());
+  oled.print("/");
+  oled.print(audio.getMaxFrequency());
+  oled.println("Hz");
+  oled.println();
+
+  // Pitch Sensor Distance Range
+  oled.print("Pitch dist: ");
+  oled.print(sensors.getPitchMinDist());
+  oled.print("/");
+  oled.print(sensors.getPitchMaxDist());
+  oled.println("mm");
+  oled.println();
+
+  // Volume Sensor Distance Range
+  oled.print("Vol dist: ");
+  oled.print(SensorManager::VOLUME_MIN_DIST);
+  oled.print("/");
+  oled.print(SensorManager::VOLUME_MAX_DIST);
+  oled.print("mm");
 
   // Reset to default font
   oled.setFont();

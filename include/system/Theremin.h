@@ -129,6 +129,11 @@ class Theremin {
    */
   void drawOscillatorsPage(Adafruit_SSD1306& oled);
 
+  /**
+   * Draw audio range page showing frequency and distance ranges
+   */
+  void drawAudioRangePage(Adafruit_SSD1306& oled);
+
   // Amplitude range constants (internal use only)
   static const int MIN_AMPLITUDE_PERCENT = 0;
   static const int MAX_AMPLITUDE_PERCENT = 100;
