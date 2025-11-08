@@ -109,6 +109,7 @@ private:
   ButtonState buttonState;
   unsigned long buttonPressTime;
   bool modifierActive;      // True while long press is active
+  bool modifierWasActive;   // Track previous modifier state for transition detection
   bool shortPressFlag;      // Set on short press, cleared by wasShortPressed()
 
   // Double-click detection
@@ -118,6 +119,23 @@ private:
 
   static constexpr unsigned long LONG_PRESS_THRESHOLD_MS = 600;
   static constexpr unsigned long DOUBLE_CLICK_WINDOW_MS = 400;
+
+  // Snapshot variables for smooth mode transitions
+  // Mode 2 (secondary controls) snapshots
+  int8_t snapshotSmoothingPreset;
+  int8_t snapshotFreqRangePreset;
+  int8_t snapshotMixPreset;
+  Oscillator::Waveform snapshotReverbPreset;
+  Oscillator::Waveform snapshotDelayPreset;
+  Oscillator::Waveform snapshotChorusPreset;
+
+  // Mode 1 (primary controls) snapshots
+  Oscillator::Waveform snapshotOsc1Waveform;
+  int8_t snapshotOsc1Octave;
+  Oscillator::Waveform snapshotOsc2Waveform;
+  int8_t snapshotOsc2Octave;
+  Oscillator::Waveform snapshotOsc3Waveform;
+  int8_t snapshotOsc3Octave;
 
   /**
    * Update multi-function button state machine

@@ -14,8 +14,15 @@ GPIOControls::GPIOControls(Theremin* thereminPtr, DisplayManager* displayMgr)
     : theremin(thereminPtr), initialized(false), controlsEnabled(true), firstUpdate(true),
       displayManager(displayMgr),
       notificationManager(nullptr),
-      buttonState(IDLE), buttonPressTime(0), modifierActive(false), shortPressFlag(false),
-      firstPressReleaseTime(0), waitingForSecondClick(false), doubleClickFlag(false) {
+      buttonState(IDLE), buttonPressTime(0), modifierActive(false), modifierWasActive(false),
+      shortPressFlag(false),
+      firstPressReleaseTime(0), waitingForSecondClick(false), doubleClickFlag(false),
+      snapshotSmoothingPreset(0), snapshotFreqRangePreset(0), snapshotMixPreset(0),
+      snapshotReverbPreset(Oscillator::OFF), snapshotDelayPreset(Oscillator::OFF),
+      snapshotChorusPreset(Oscillator::OFF),
+      snapshotOsc1Waveform(Oscillator::OFF), snapshotOsc1Octave(0),
+      snapshotOsc2Waveform(Oscillator::OFF), snapshotOsc2Octave(0),
+      snapshotOsc3Waveform(Oscillator::OFF), snapshotOsc3Octave(0) {
 
   // Initialize state tracking
   osc1State.waveform = Oscillator::OFF;
@@ -94,6 +101,30 @@ void GPIOControls::update() {
     }
   }
 
+  // Detect mode transitions and take snapshots
+  if (modifierActive && !modifierWasActive) {
+    // Just entered Mode 2 - snapshot all secondary control positions
+    DEBUG_PRINTLN("[GPIO] Entering Mode 2 - snapshotting secondary controls");
+    snapshotSmoothingPreset = readOctave(PIN_OSC1_OCT_UP, PIN_OSC1_OCT_DOWN);
+    snapshotFreqRangePreset = readOctave(PIN_OSC2_OCT_UP, PIN_OSC2_OCT_DOWN);
+    snapshotMixPreset = readOctave(PIN_OSC3_OCT_UP, PIN_OSC3_OCT_DOWN);
+    snapshotReverbPreset = readWaveform(PIN_OSC1_WAVE_A, PIN_OSC1_WAVE_B, PIN_OSC1_WAVE_C);
+    snapshotDelayPreset = readWaveform(PIN_OSC2_WAVE_A, PIN_OSC2_WAVE_B, PIN_OSC2_WAVE_C);
+    snapshotChorusPreset = readWaveform(PIN_OSC3_WAVE_A, PIN_OSC3_WAVE_B, PIN_OS3_WAVE_C);
+  } else if (!modifierActive && modifierWasActive) {
+    // Just exited Mode 2 - snapshot all primary control positions
+    DEBUG_PRINTLN("[GPIO] Exiting Mode 2 - snapshotting primary controls");
+    snapshotOsc1Waveform = readWaveform(PIN_OSC1_WAVE_A, PIN_OSC1_WAVE_B, PIN_OSC1_WAVE_C);
+    snapshotOsc1Octave = readOctave(PIN_OSC1_OCT_UP, PIN_OSC1_OCT_DOWN);
+    snapshotOsc2Waveform = readWaveform(PIN_OSC2_WAVE_A, PIN_OSC2_WAVE_B, PIN_OSC2_WAVE_C);
+    snapshotOsc2Octave = readOctave(PIN_OSC2_OCT_UP, PIN_OSC2_OCT_DOWN);
+    snapshotOsc3Waveform = readWaveform(PIN_OSC3_WAVE_A, PIN_OSC3_WAVE_B, PIN_OS3_WAVE_C);
+    snapshotOsc3Octave = readOctave(PIN_OSC3_OCT_UP, PIN_OSC3_OCT_DOWN);
+  }
+
+  // Update tracking variable for next iteration
+  modifierWasActive = modifierActive;
+
   // Branch based on modifier button state
   if (isModifierActive()) {
     // Modifier held: switches control secondary functions (effects, smoothing, etc.)
@@ -128,9 +159,32 @@ void GPIOControls::updateOscillator(int oscNum, OscillatorState& state,
   Oscillator::Waveform currentWaveform = readWaveform(pinA, pinB, pinC);
   int8_t currentOctave = readOctave(pinUp, pinDown);
 
-  // Check for waveform change (force update on first call)
-  if (firstUpdate || currentWaveform != state.waveform) {
+  // Get snapshot pointers for this oscillator
+  Oscillator::Waveform* snapshotWaveform;
+  int8_t* snapshotOctave;
+
+  switch (oscNum) {
+    case 1:
+      snapshotWaveform = &snapshotOsc1Waveform;
+      snapshotOctave = &snapshotOsc1Octave;
+      break;
+    case 2:
+      snapshotWaveform = &snapshotOsc2Waveform;
+      snapshotOctave = &snapshotOsc2Octave;
+      break;
+    case 3:
+      snapshotWaveform = &snapshotOsc3Waveform;
+      snapshotOctave = &snapshotOsc3Octave;
+      break;
+    default:
+      return; // Invalid oscillator
+  }
+
+  // Check for waveform change FROM SNAPSHOT (force update on first call)
+  if (firstUpdate || currentWaveform != *snapshotWaveform) {
     if (firstUpdate || (now - state.lastChangeTime > DEBOUNCE_MS)) {
+      // Update snapshot
+      *snapshotWaveform = currentWaveform;
       state.waveform = currentWaveform;
       state.lastChangeTime = now;
 
@@ -170,9 +224,11 @@ void GPIOControls::updateOscillator(int oscNum, OscillatorState& state,
     }
   }
 
-  // Check for octave change
-  if (firstUpdate || currentOctave != state.octave) {
+  // Check for octave change FROM SNAPSHOT
+  if (firstUpdate || currentOctave != *snapshotOctave) {
     if (firstUpdate || (now - state.lastChangeTime > DEBOUNCE_MS)) {
+      // Update snapshot
+      *snapshotOctave = currentOctave;
       state.octave = currentOctave;
       state.lastChangeTime = now;
 
@@ -390,13 +446,13 @@ void GPIOControls::osc1PitchSecondaryControl() {
   int8_t octaveValue = readOctave(PIN_OSC1_OCT_UP, PIN_OSC1_OCT_DOWN);
 
   // Track last state for debouncing (static local variables)
-  static int8_t lastSmoothingPreset = 0;
   static unsigned long lastSmoothingChangeTime = 0;
 
-  // Check if smoothing preset changed
-  if (octaveValue != lastSmoothingPreset) {
+  // Check if smoothing preset changed FROM SNAPSHOT (not from last applied)
+  if (octaveValue != snapshotSmoothingPreset) {
     if (now - lastSmoothingChangeTime > DEBOUNCE_MS) {
-      lastSmoothingPreset = octaveValue;
+      // Update snapshot to new position
+      snapshotSmoothingPreset = octaveValue;
       lastSmoothingChangeTime = now;
 
       // Map octave position to smoothing preset
@@ -444,12 +500,11 @@ void GPIOControls::osc2PitchSecondaryControl() {
   int8_t octaveValue = readOctave(PIN_OSC2_OCT_UP, PIN_OSC2_OCT_DOWN);
 
   // Track last state for debouncing
-  static int8_t lastRangePreset = 0;
   static unsigned long lastRangeChangeTime = 0;
 
-  if (octaveValue != lastRangePreset) {
+  if (octaveValue != snapshotFreqRangePreset) {
     if (now - lastRangeChangeTime > DEBOUNCE_MS) {
-      lastRangePreset = octaveValue;
+      snapshotFreqRangePreset = octaveValue;
       lastRangeChangeTime = now;
 
       // Map octave position to frequency range preset
@@ -495,12 +550,11 @@ void GPIOControls::osc3PitchSecondaryControl() {
   int8_t octaveValue = readOctave(PIN_OSC3_OCT_UP, PIN_OSC3_OCT_DOWN);
 
   // Track last state for debouncing
-  static int8_t lastMixPreset = 0;
   static unsigned long lastMixChangeTime = 0;
 
-  if (octaveValue != lastMixPreset) {
+  if (octaveValue != snapshotMixPreset) {
     if (now - lastMixChangeTime > DEBOUNCE_MS) {
-      lastMixPreset = octaveValue;
+      snapshotMixPreset = octaveValue;
       lastMixChangeTime = now;
 
       // Map octave position to oscillator mix preset
@@ -548,13 +602,12 @@ void GPIOControls::osc1WaveformSecondaryControl() {
   Oscillator::Waveform waveformValue = readWaveform(PIN_OSC1_WAVE_A, PIN_OSC1_WAVE_B, PIN_OSC1_WAVE_C);
 
   // Track last state for debouncing (static local variables)
-  static Oscillator::Waveform lastOsc1Waveform = Oscillator::Waveform::OFF;
   static unsigned long lastOsc1ChangeTime = 0;
 
-  // Check if preset changed
-  if (waveformValue != lastOsc1Waveform) {
+  // Check if preset changed FROM SNAPSHOT
+  if (waveformValue != snapshotReverbPreset) {
     if (now - lastOsc1ChangeTime > DEBOUNCE_MS) {
-      lastOsc1Waveform = waveformValue;
+      snapshotReverbPreset = waveformValue;
       lastOsc1ChangeTime = now;
 
       ReverbEffect::Preset preset;
@@ -605,13 +658,12 @@ void GPIOControls::osc2WaveformSecondaryControl() {
   Oscillator::Waveform waveformValue = readWaveform(PIN_OSC2_WAVE_A, PIN_OSC2_WAVE_B, PIN_OSC2_WAVE_C);
 
   // Track last state for debouncing (static local variables)
-  static Oscillator::Waveform lastOsc2Waveform = Oscillator::Waveform::OFF;
   static unsigned long lastOsc2ChangeTime = 0;
 
-  // Check if preset changed
-  if (waveformValue != lastOsc2Waveform) {
+  // Check if preset changed FROM SNAPSHOT
+  if (waveformValue != snapshotDelayPreset) {
     if (now - lastOsc2ChangeTime > DEBOUNCE_MS) {
-      lastOsc2Waveform = waveformValue;
+      snapshotDelayPreset = waveformValue;
       lastOsc2ChangeTime = now;
 
       DelayEffect::Preset preset;
@@ -662,13 +714,12 @@ void GPIOControls::osc3WaveformSecondaryControl() {
   Oscillator::Waveform waveformValue = readWaveform(PIN_OSC3_WAVE_A, PIN_OSC3_WAVE_B, PIN_OS3_WAVE_C);
 
   // Track last state for debouncing (static local variables)
-  static Oscillator::Waveform lastOsc3Waveform = Oscillator::Waveform::OFF;
   static unsigned long lastOsc3ChangeTime = 0;
 
-  // Check if preset changed
-  if (waveformValue != lastOsc3Waveform) {
+  // Check if preset changed FROM SNAPSHOT
+  if (waveformValue != snapshotChorusPreset) {
     if (now - lastOsc3ChangeTime > DEBOUNCE_MS) {
-      lastOsc3Waveform = waveformValue;
+      snapshotChorusPreset = waveformValue;
       lastOsc3ChangeTime = now;
 
       ChorusEffect::Preset preset;
