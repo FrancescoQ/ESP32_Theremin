@@ -249,10 +249,22 @@ class AudioEngine {
   void setPitchSmoothingFactor(float factor);
 
   /**
+   * Get pitch audio-level smoothing factor
+   * @return Current smoothing factor (0.0 = very smooth, 1.0 = instant)
+   */
+  float getPitchSmoothingFactor() const { return pitchSmoothingFactor; }
+
+  /**
    * Set volume audio-level smoothing factor
    * @param factor Smoothing factor (0.0 = very smooth, 1.0 = instant)
    */
   void setVolumeSmoothingFactor(float factor);
+
+  /**
+   * Get volume audio-level smoothing factor
+   * @return Current smoothing factor (0.0 = very smooth, 1.0 = instant)
+   */
+  float getVolumeSmoothingFactor() const { return volumeSmoothingFactor; }
 
   /**
    * Set stereo channel routing mode

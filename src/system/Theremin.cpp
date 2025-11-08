@@ -34,6 +34,11 @@ Theremin::Theremin(PerformanceMonitor* perfMon, DisplayManager* displayMgr)
     display->registerPage("Range", [this](Adafruit_SSD1306& oled) {
       this->drawAudioRangePage(oled);
     }, "Range", 3);
+
+    // Register smooth page with title (weight 4)
+    display->registerPage("Smooth", [this](Adafruit_SSD1306& oled) {
+      this->drawSmoothPage(oled);
+    }, "Smooth", 4);
   }
 }
 
@@ -431,6 +436,47 @@ void Theremin::drawAudioRangePage(Adafruit_SSD1306& oled) {
   oled.print("/");
   oled.print(SensorManager::VOLUME_MAX_DIST);
   oled.print("mm");
+
+  // Reset to default font
+  oled.setFont();
+}
+
+// Draw smoothing page showing sensor and audio smoothing settings
+void Theremin::drawSmoothPage(Adafruit_SSD1306& oled) {
+  // Use small font for compact display
+  oled.setFont(DisplayManager::SMALL_FONT);
+  oled.setTextSize(1);
+  oled.setTextColor(SSD1306_WHITE);
+
+  // Cursor already positioned at CONTENT_START_Y by DisplayManager
+
+  // Sensor-level smoothing
+  oled.println("SENSOR:");
+  oled.print("Pitch: ");
+  oled.print(sensors.isPitchSmoothingEnabled() ? "ON " : "OFF");
+  if (sensors.isPitchSmoothingEnabled()) {
+    oled.print(" a:");
+    oled.println(sensors.getPitchSmoothingAlpha(), 2);  // 2 decimal places
+  } else {
+    oled.println();
+  }
+
+  oled.print("Vol:   ");
+  oled.print(sensors.isVolumeSmoothingEnabled() ? "ON " : "OFF");
+  if (sensors.isVolumeSmoothingEnabled()) {
+    oled.print(" a:");
+    oled.println(sensors.getVolumeSmoothingAlpha(), 2);  // 2 decimal places
+  } else {
+    oled.println();
+  }
+  oled.println();
+
+  // Audio-level smoothing
+  oled.println("AUDIO:");
+  oled.print("Pitch: ");
+  oled.println(audio.getPitchSmoothingFactor(), 2);  // 2 decimal places
+  oled.print("Vol:   ");
+  oled.print(audio.getVolumeSmoothingFactor(), 2);  // 2 decimal places
 
   // Reset to default font
   oled.setFont();

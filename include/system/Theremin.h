@@ -134,6 +134,11 @@ class Theremin {
    */
   void drawAudioRangePage(Adafruit_SSD1306& oled);
 
+  /**
+   * Draw smoothing page showing sensor and audio smoothing settings
+   */
+  void drawSmoothPage(Adafruit_SSD1306& oled);
+
   // Amplitude range constants (internal use only)
   static const int MIN_AMPLITUDE_PERCENT = 0;
   static const int MAX_AMPLITUDE_PERCENT = 100;
