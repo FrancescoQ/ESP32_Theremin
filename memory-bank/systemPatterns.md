@@ -1161,6 +1161,232 @@ Oscillator sine LUT      512 bytes   PROGMEM (Flash)
 Total RAM impact         ~16 KB      (from 314 KB free)
 ```
 
+### 11. Display Page Registration Pattern (November 2025)
+
+```cpp
+// Page-based display system with callback registration
+// Components register pages using lambda callbacks
+
+class DisplayManager {
+private:
+    std::vector<DisplayPage> pages;
+    std::vector<PageDrawCallback> overlays;
+    uint8_t currentPageIndex;
+
+public:
+    // Register a page with name, callback, optional title, and weight
+    void registerPage(String name, PageDrawCallback drawFunc, String title = "", int weight = 0) {
+        pages.emplace_back(name, drawFunc, title, weight);
+
+        // Sort by weight (ascending), then alphabetically
+        std::sort(pages.begin(), pages.end(), [](const DisplayPage& a, const DisplayPage& b) {
+            if (a.weight != b.weight) {
+                return a.weight < b.weight;  // Lower weight = earlier
+            }
+            return a.name < b.name;  // Alphabetical for ties
+        });
+    }
+
+    // Register global overlay (appears on all pages)
+    void registerOverlay(PageDrawCallback overlayFunc) {
+        overlays.push_back(overlayFunc);
+    }
+
+    void update() {
+        if (pages.empty()) return;
+
+        display.clearDisplay();
+
+        // 1. Auto-draw title if provided
+        if (!pages[currentPageIndex].title.isEmpty()) {
+            display.setCursor(0, 0);
+            display.print(pages[currentPageIndex].title.toUpperCase());
+            display.drawLine(0, 9, SCREEN_WIDTH - 1, 9, SSD1306_WHITE);
+        }
+
+        // 2. Draw current page content
+        pages[currentPageIndex].drawFunction(display);
+
+        // 3. Draw all overlays on top
+        for (auto& overlay : overlays) {
+            overlay(display);
+        }
+
+        display.display();
+    }
+};
+
+// Component registers its own pages
+class PerformanceMonitor {
+public:
+    void setDisplay(DisplayManager* disp) {
+        displayManager = disp;
+
+        // Register page using lambda that captures 'this'
+        displayManager->registerPage("Performance", [this](Adafruit_SSD1306& oled) {
+            this->drawPerformancePage(oled);
+        }, "SYSTEM", 1);  // Title "SYSTEM", weight 1
+    }
+
+private:
+    void drawPerformancePage(Adafruit_SSD1306& oled) {
+        oled.setCursor(0, DisplayManager::CONTENT_START_Y);
+        oled.printf("CPU: %.1f%%\n", getCPUUsage());
+        oled.printf("RAM: %d KB\n", getFreeRAM());
+    }
+};
+```
+
+**Key Design Patterns:**
+
+1. **Callback-Based Registration**
+   - Components register drawing callbacks, not static data
+   - Allows dynamic content updates
+   - Lambda captures enable access to private members
+
+2. **Weight-Based Sorting**
+   - Pages ordered by weight (lower = earlier)
+   - Alphabetical sorting for equal weights
+   - Predictable page order
+
+3. **Auto-Title Rendering**
+   - Optional title parameter
+   - DisplayManager renders title + separator if provided
+   - Cursor auto-positioned at CONTENT_START_Y
+
+4. **Decoupled Components**
+   - Each component manages its own page content
+   - No central knowledge of all pages needed
+   - Easy to add/remove pages
+
+### 12. Notification Overlay Pattern (November 2025)
+
+```cpp
+// Time-limited notification system using singleton pattern
+// Shows brief status messages on top of any page
+
+class NotificationManager {
+private:
+    DisplayManager* displayManager;
+    String currentMessage;
+    unsigned long hideTime;
+    bool active;
+
+    static NotificationManager* instance;  // Singleton for callback
+
+public:
+    NotificationManager(DisplayManager* display) : displayManager(display) {
+        instance = this;  // Set singleton instance
+
+        // Register overlay callback in constructor
+        if (displayManager) {
+            displayManager->registerOverlay(overlayCallbackStatic);
+        }
+    }
+
+    // Show notification with auto-hide
+    void show(String message, uint16_t durationMs = 2000) {
+        currentMessage = message;
+        hideTime = millis() + durationMs;
+        active = true;
+    }
+
+    // Update - call in main loop
+    void update() {
+        if (active && millis() >= hideTime) {
+            clear();
+        }
+    }
+
+    void clear() {
+        active = false;
+        currentMessage = "";
+    }
+
+private:
+    // Instance method - actual drawing
+    void drawOverlay(Adafruit_SSD1306& display) {
+        if (!active || currentMessage.length() == 0) {
+            return;  // Nothing to draw
+        }
+
+        // Measure text bounds
+        display.setFont(&TomThumb);
+        int16_t x1, y1;
+        uint16_t textWidth, textHeight;
+        display.getTextBounds(currentMessage, 0, 0, &x1, &y1, &textWidth, &textHeight);
+
+        // Position at bottom-center
+        const int PADDING = 4;
+        const int BOX_HEIGHT = textHeight + (PADDING * 2);
+        const int BOX_WIDTH = textWidth + (PADDING * 2);
+        const int BOX_X = (DisplayManager::SCREEN_WIDTH - BOX_WIDTH) / 2;
+        const int BOX_Y = DisplayManager::SCREEN_HEIGHT - BOX_HEIGHT - 2;
+
+        // Draw background box
+        display.fillRect(BOX_X, BOX_Y, BOX_WIDTH, BOX_HEIGHT, SSD1306_WHITE);
+
+        // Draw text (inverted colors)
+        display.setTextColor(SSD1306_BLACK);
+        display.setCursor(BOX_X + PADDING, BOX_Y + PADDING + textHeight);
+        display.print(currentMessage);
+
+        display.setFont(nullptr);  // Reset font
+    }
+
+    // Static callback wrapper required for DisplayManager
+    static void overlayCallbackStatic(Adafruit_SSD1306& display) {
+        if (instance) {
+            instance->drawOverlay(display);
+        }
+    }
+};
+
+// Static member definition
+NotificationManager* NotificationManager::instance = nullptr;
+
+// Usage example:
+notificationManager->show("OSC1:SIN");     // Show for 2 seconds
+notificationManager->show("ERROR", 5000);  // Show for 5 seconds
+```
+
+**Key Design Patterns:**
+
+1. **Singleton Pattern**
+   - Static instance pointer for callback access
+   - Required because DisplayManager uses std::function callbacks
+   - Only one NotificationManager should exist
+
+2. **Static Callback Wrapper**
+   - Static method required for registration
+   - Forwards to instance method for actual work
+   - Common pattern for C++ callbacks
+
+3. **Auto-Hide Timer**
+   - Stores hideTime as millis() timestamp
+   - update() checks if time expired
+   - No separate timer task needed
+
+4. **Overlay System Integration**
+   - Registers as global overlay in constructor
+   - Appears on top of any page
+   - Conditional rendering (only if active)
+
+5. **Text Bounds Calculation**
+   - Dynamic box sizing based on message length
+   - getTextBounds() for accurate measurements
+   - Ensures notification fits on screen
+
+**Memory Impact:**
+- NotificationManager instance: ~100 bytes
+- No heap allocation in hot path (update/draw)
+- String stored only when active
+
+**Performance:**
+- Negligible when inactive (early return)
+- ~1-2ms draw time when active
+- No impact on audio performance
+
 ## Configuration Constants
 
 ```cpp

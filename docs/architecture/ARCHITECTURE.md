@@ -78,6 +78,27 @@ The ESP32 Theremin has been refactored from a single monolithic file into a clea
 │                        │ - Startup sync      │                         │
 └────────────────────────┴─────────────────────┴─────────────────────────┘
 
+┌──────────────────────────────────────────────────────────────────────────┐
+│                      Display System (November 2025)                       │
+├────────────────────────┬──────────────────────────────────────────────┤
+│  DisplayManager        │  NotificationManager                         │
+│  .h/cpp                │  .h/cpp                                      │
+├────────────────────────┼──────────────────────────────────────────────┤
+│ - SSD1306 OLED (128x64)│ - Time-limited overlays                      │
+│ - Page registration    │ - Auto-hide (2s default)                     │
+│ - Callback-based render│ - Control change feedback                    │
+│ - Auto-title rendering │ - Bottom-center position                     │
+│ - Page navigation      │ - TomThumb compact font                      │
+│ - Overlay system       │ - Examples: "OSC1:SIN", "REV:LNG"           │
+│ - Weight-based sorting │ - Works across all pages                     │
+│                        │                                               │
+│ Pages:                 │ Use Cases:                                    │
+│ • Splash (build info)  │ • Oscillator waveform changes                │
+│ • Performance Monitor  │ • Effect preset changes                      │
+│ • Future: Oscillators, │ • Smoothing/range adjustments                │
+│   Sensors, Effects     │ • Any parameter feedback                     │
+└────────────────────────┴──────────────────────────────────────────────┘
+
 Signal Flow:
   Sensors → Theremin → AudioEngine → [3 Oscillators] → [Mix]
                                                           ↓
@@ -94,20 +115,51 @@ Control Flow:
 ```
 theremin/
 ├── include/
-│   ├── SensorManager.h      # Sensor input abstraction
-│   ├── AudioEngine.h         # Audio synthesis abstraction
-│   ├── Theremin.h            # Main coordinator
-│   └── OTAManager.h          # OTA firmware updates (conditional)
+│   ├── audio/
+│   │   ├── AudioEngine.h         # Audio synthesis engine
+│   │   ├── Oscillator.h          # Waveform generator
+│   │   └── effects/              # Effects chain
+│   ├── controls/
+│   │   ├── SensorManager.h       # VL53L0X sensors
+│   │   ├── GPIOControls.h        # Physical switches (MCP23017)
+│   │   ├── SerialControls.h      # Serial commands
+│   │   └── GPIOMonitor.h         # I2C device monitor
+│   └── system/
+│       ├── Theremin.h            # Main coordinator
+│       ├── DisplayManager.h      # Page-based OLED display
+│       ├── DisplayPage.h         # Page structure
+│       ├── NotificationManager.h # Time-limited overlays
+│       ├── PerformanceMonitor.h  # CPU/RAM monitoring
+│       ├── OTAManager.h          # OTA updates (conditional)
+│       ├── PinConfig.h           # Hardware pin definitions
+│       └── Debug.h               # Debug macros
 │
 ├── src/
-│   ├── main.cpp              # Entry point (~60 lines with OTA)
-│   ├── SensorManager.cpp     # Sensor implementation
-│   ├── AudioEngine.cpp       # Audio implementation
-│   ├── Theremin.cpp          # Coordinator implementation
-│   └── OTAManager.cpp        # OTA implementation (conditional)
+│   ├── main.cpp                  # Entry point
+│   ├── audio/
+│   │   ├── AudioEngine.cpp
+│   │   ├── Oscillator.cpp
+│   │   └── effects/              # DelayEffect, ChorusEffect, ReverbEffect
+│   ├── controls/
+│   │   ├── SensorManager.cpp
+│   │   ├── GPIOControls.cpp
+│   │   ├── SerialControls.cpp
+│   │   └── GPIOMonitor.cpp
+│   └── system/
+│       ├── Theremin.cpp
+│       ├── DisplayManager.cpp    # Display implementation
+│       ├── NotificationManager.cpp # Notification implementation
+│       ├── PerformanceMonitor.cpp
+│       └── OTAManager.cpp
 │
-├── memory-bank/              # Project documentation
-└── OTA_SETUP.md              # OTA usage guide
+├── docs/                         # Documentation
+│   ├── architecture/
+│   │   └── ARCHITECTURE.md       # This file
+│   ├── guides/
+│   │   ├── OTA_SETUP.md
+│   │   └── DEBUG_GUIDE.md
+│   └── improvements/             # Implementation plans
+└── memory-bank/                  # Project knowledge base
 ```
 
 ## Class Responsibilities
@@ -170,6 +222,96 @@ theremin/
 - UI handling (buttons/switches)
 - Display management
 - Configuration system
+
+### DisplayManager
+**Purpose:** Manage page-based OLED display system
+
+**Public Interface:**
+- `bool begin()` - Initialize SSD1306 display
+- `void registerPage(String name, PageDrawCallback drawFunc, String title, int weight)` - Register page
+- `void registerOverlay(PageDrawCallback overlayFunc)` - Register global overlay
+- `void nextPage()` / `void previousPage()` - Navigate pages
+- `void update()` - Render current page + overlays
+- `Adafruit_SSD1306& getDisplay()` - Direct OLED access
+
+**Current Implementation:**
+- SSD1306 128x64 OLED display (I2C 0x3C)
+- Callback-based page registration
+- Automatic title rendering (optional per page)
+- Weight-based page sorting
+- Page indicator (e.g., "1/2", "2/2")
+- Overlay system for global indicators
+- TomThumb font for compact display
+
+**Features:**
+- **Decoupled:** Components register their own pages via callbacks
+- **Flexible:** Lambda captures allow access to private members
+- **Automatic:** Title + separator line rendered if title provided
+- **Sorted:** Pages ordered by weight, then alphabetically
+- **Extensible:** Easy to add new pages without modifying DisplayManager
+
+**Example Usage:**
+```cpp
+// Register a page
+displayManager.registerPage("Performance", [this](Adafruit_SSD1306& oled) {
+    oled.setCursor(0, DisplayManager::CONTENT_START_Y);
+    oled.printf("CPU: %.1f%%\n", cpuUsage);
+    oled.printf("RAM: %d KB\n", freeRAM);
+}, "SYSTEM", 0);  // Title "SYSTEM", weight 0 (first page)
+```
+
+**Future Extensions:**
+- Additional pages (oscillators, sensors, effects)
+- Text alignment helper methods
+- Advanced navigation (direct page selection)
+- Page auto-rotation
+
+### NotificationManager
+**Purpose:** Display time-limited status notifications for control changes
+
+**Public Interface:**
+- `void show(String message, uint16_t durationMs = 2000)` - Show notification
+- `void update()` - Handle auto-hide timing
+- `void clear()` - Clear notification immediately
+- `bool isActive()` - Check if notification is displayed
+
+**Current Implementation:**
+- Registers as global overlay with DisplayManager
+- Bottom-center positioning with background box
+- TomThumb font for compact display
+- Auto-hide after 2 seconds (configurable)
+- Singleton pattern with static callback
+
+**Features:**
+- **Control-agnostic:** Works from GPIO, Serial, WebUI, or any source
+- **Centralized:** Consistent formatting and positioning
+- **Auto-hide:** Notifications disappear automatically
+- **Non-intrusive:** Appears on top of any page
+
+**Example Usage:**
+```cpp
+// Show oscillator change notification
+notificationManager->show("OSC1:SIN");  // "Oscillator 1: Sine"
+
+// Show effect change
+notificationManager->show("REV:LNG");   // "Reverb: Long"
+
+// Custom duration
+notificationManager->show("ERROR", 5000);  // 5 seconds
+```
+
+**Notification Format Examples:**
+- `OSC1:SIN` - Oscillator 1 set to Sine wave
+- `OSC2:+1` - Oscillator 2 octave up
+- `REV:LNG` - Reverb set to Long preset
+- `DLY:OFF` - Delay turned off
+- `SMT:MIN` - Smoothing set to minimum
+
+**Future Extensions:**
+- Notification queue system
+- Icons next to text
+- Fade in/out animations
+- Custom positioning options
 
 ### OTAManager
 **Purpose:** Manage wireless firmware updates

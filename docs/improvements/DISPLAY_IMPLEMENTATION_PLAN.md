@@ -14,11 +14,12 @@
 - ✅ Two functional pages: Splash + Performance
 
 ### Implementation Differences from Plan
-- **Simplified approach:** No overlay system yet (deferred for future)
+- **Overlay system implemented:** Contrary to initial notes, the overlay system IS implemented and functional! DisplayManager supports `registerOverlay()` and renders all overlays after page content.
 - **Title abstraction:** Added automatic title+separator rendering (not in original plan)
-- **Page order fix:** Registration order mattered - fixed with setDisplay() pattern
+- **Page order fix:** Registration order mattered - fixed with setDisplay() pattern + weight-based sorting
 - **Button state machine:** Short press detection required logic fix
 - **Build timestamp:** Static function in Theremin.cpp (not separate BuildInfo.h)
+- **Weight-based sorting:** Pages are sorted by weight parameter (lower values first), then alphabetically
 
 ### Current Pages
 1. **Splash Page** (1/2): "TheremAIn 0.1" centered + build timestamp bottom-right
