@@ -24,6 +24,11 @@ Theremin::Theremin(PerformanceMonitor* perfMon, DisplayManager* displayMgr)
     display->registerPage("Effects", [this](Adafruit_SSD1306& oled) {
       this->drawEffectsPage(oled);
     }, "Effects");
+
+    // Register oscillators page with title
+    display->registerPage("Oscillators", [this](Adafruit_SSD1306& oled) {
+      this->drawOscillatorsPage(oled);
+    }, "oscillators");
   }
 }
 
@@ -359,6 +364,7 @@ void Theremin::drawEffectsPage(Adafruit_SSD1306& oled) {
   oled.print("% Mix:");
   oled.print((int)(delay->getMix() * 100));
   oled.println("%");
+  oled.println();
 
   // Chorus Effect
   ChorusEffect* chorus = effects->getChorus();
@@ -371,6 +377,7 @@ void Theremin::drawEffectsPage(Adafruit_SSD1306& oled) {
   oled.print("ms Mix: ");
   oled.print((int)(chorus->getMix() * 100));
   oled.println("%");
+  oled.println();
 
   // Reverb Effect
   ReverbEffect* reverb = effects->getReverb();
@@ -383,6 +390,55 @@ void Theremin::drawEffectsPage(Adafruit_SSD1306& oled) {
   oled.print(" Mix: ");
   oled.print((int)(reverb->getMix() * 100));
   oled.print("%");
+
+  // Reset to default font
+  oled.setFont();
+}
+
+// Draw oscillators page showing oscillator configurations
+void Theremin::drawOscillatorsPage(Adafruit_SSD1306& oled) {
+  // Use small font for compact display
+  oled.setFont();
+  oled.setTextSize(1);
+  oled.setTextColor(SSD1306_WHITE);
+
+  // Cursor already positioned at CONTENT_START_Y by DisplayManager
+
+  // Helper function to convert waveform enum to string
+  auto waveformToString = [](Oscillator::Waveform wf) -> const char* {
+    switch (wf) {
+      case Oscillator::OFF: return "OFF";
+      case Oscillator::SQUARE: return "SQR";
+      case Oscillator::SINE: return "SIN";
+      case Oscillator::TRIANGLE: return "TRI";
+      case Oscillator::SAW: return "SAW";
+      default: return "???";
+    }
+  };
+
+  // Display each oscillator (1-3)
+  for (int i = 1; i <= 3; i++) {
+    Oscillator::Waveform wf = audio.getOscillatorWaveform(i);
+    int octave = audio.getOscillatorOctave(i);
+    float volume = audio.getOscillatorVolume(i);
+
+    // Oscillator header (e.g., "OSC1: SIN")
+    oled.print(i);
+    oled.print(": ");
+    oled.print(waveformToString(wf));
+
+    // Oscillator parameters (octave and volume)
+    oled.print("/");
+    if (octave >= 0) oled.print("+");
+    oled.print(octave);
+    oled.print(" Vol:");
+    oled.println(volume, 1);  // 1 decimal place
+
+    // Blank line between oscillators (except after last one)
+    if (i < 3) {
+      oled.println();
+    }
+  }
 
   // Reset to default font
   oled.setFont();

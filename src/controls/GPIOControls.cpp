@@ -578,7 +578,7 @@ void GPIOControls::osc3PitchSecondaryControl() {
 
         case +1:  // Up position - Gradient (focused)
           theremin->getAudioEngine()->setOscillatorVolume(1, 1.0f);
-          theremin->getAudioEngine()->setOscillatorVolume(2, 0.6f);
+          theremin->getAudioEngine()->setOscillatorVolume(2, 0.5f);
           theremin->getAudioEngine()->setOscillatorVolume(3, 0.3f);
           presetName = "GRADIENT (1.0, 0.6, 0.3)";
           showNotification("MIX:WID");

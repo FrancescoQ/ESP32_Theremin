@@ -131,18 +131,21 @@ void PerformanceMonitor::printStatus() {
 void PerformanceMonitor::drawPerformancePage(Adafruit_SSD1306& oled) {
   // Title and separator are auto-drawn by DisplayManager
   // Cursor already positioned at CONTENT_START_Y by DisplayManager
+  oled.setFont();
   oled.setTextSize(1);
   oled.setTextColor(SSD1306_WHITE);
 
   // Status line
   oled.print("Status: ");
   oled.println(isSystemOK() ? "OK" : "WARN");
+  oled.println();
 
   // Audio timing line
   oled.print("Audio:  ");
   float audioMs = getAudioTimeMs();
   oled.print(audioMs, 1);  // 1 decimal place
   oled.println("ms/11ms");
+  oled.println();
 
   // RAM line
   oled.print("RAM:    ");
