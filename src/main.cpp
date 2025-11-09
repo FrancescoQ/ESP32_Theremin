@@ -16,6 +16,7 @@
 #include "system/DisplayManager.h"
 
 #if ENABLE_OTA
+#include <ESPAsyncWebServer.h>
 #include "system/OTAManager.h"
 #endif
 
@@ -38,11 +39,14 @@ PerformanceMonitor performanceMonitor(nullptr);
 Theremin theremin(&performanceMonitor, &display);
 
 #if ENABLE_OTA
+// Create shared AsyncWebServer instance (used by OTA and future WebUI)
+AsyncWebServer server(80);
+
 // Create OTA manager instance
 // AP Name: "Theremin-OTA", AP Password: "" (open network)
 // OTA Auth: username "admin", password "theremin"
 // Enable pin: PIN_OTA_ENABLE from PinConfig.h (-1 = always active, >=0 = button)
-OTAManager ota("Theremin-OTA", "", PIN_OTA_ENABLE);
+OTAManager ota(&server, "Theremin-OTA", "", PIN_OTA_ENABLE);
 #endif
 
 #if ENABLE_GPIO_MONITOR
@@ -128,6 +132,10 @@ void setup() {
 
     if (ota.begin("admin", "theremin", otaForcedState)) {
       DEBUG_PRINTLN("[OTA] OTA updates enabled");
+
+      // Start the shared AsyncWebServer (only once, after all managers are initialized)
+      server.begin();
+      DEBUG_PRINTLN("[Server] AsyncWebServer started on port 80");
     } else {
       DEBUG_PRINTLN("[OTA] Failed to start OTA manager");
     }
@@ -161,8 +169,8 @@ void loop() {
   #endif
 
   #if ENABLE_OTA
-    // Handle OTA requests (non-blocking)
-    ota.handle();
+    // Note: AsyncWebServer handles OTA requests automatically via callbacks
+    // No manual ota.handle() needed anymore
   #endif
 
   // Update monitoring (checks RAM, prints periodic status)

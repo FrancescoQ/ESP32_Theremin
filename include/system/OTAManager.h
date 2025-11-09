@@ -25,12 +25,12 @@
 #ifdef ENABLE_OTA
 
   #include <WiFi.h>
-  #include <WebServer.h>
+  #include <ESPAsyncWebServer.h>
   #include <ElegantOTA.h>
 
 class OTAManager {
  private:
-  WebServer server;
+  AsyncWebServer* server;  // Shared pointer (not owned)
   String apSSID;
   String apPassword;
   int enablePin;
@@ -46,11 +46,12 @@ class OTAManager {
 
   /**
    * Constructor
+   * @param srv Pointer to shared AsyncWebServer instance (managed by main.cpp)
    * @param ssid Access Point name (visible WiFi network name)
    * @param apPass Access Point password (leave empty for open network, min 8 chars if used)
    * @param buttonPin GPIO pin for enable button (-1 = always enable, >=0 = check button on boot)
    */
-  OTAManager(const char* ssid, const char* apPass = "", int buttonPin = -1);
+  OTAManager(AsyncWebServer* srv, const char* ssid, const char* apPass = "", int buttonPin = -1);
 
   /**
    * Initialize WiFi AP and ElegantOTA server
@@ -62,7 +63,8 @@ class OTAManager {
 
   /**
    * Handle incoming OTA requests (call in loop())
-   * Non-blocking, processes HTTP requests and OTA updates
+   * NOTE: With AsyncWebServer, this is no longer needed but kept for API compatibility.
+   * AsyncWebServer handles requests automatically via callbacks.
    */
   void handle();
 

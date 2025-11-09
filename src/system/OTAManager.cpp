@@ -11,8 +11,8 @@
 #include "system/Debug.h"
 
 // Constructor
-OTAManager::OTAManager(const char* ssid, const char* apPass, int buttonPin)
-    : server(80), apSSID(ssid), apPassword(apPass), enablePin(buttonPin),
+OTAManager::OTAManager(AsyncWebServer* srv, const char* ssid, const char* apPass, int buttonPin)
+    : server(srv), apSSID(ssid), apPassword(apPass), enablePin(buttonPin),
       isInitialized(false) {}
 
 // Initialize WiFi AP and ElegantOTA
@@ -80,10 +80,10 @@ bool OTAManager::begin(const char* otaUser, const char* otaPass, OTAForceState f
     DEBUG_PRINT("OTA Authentication: Enabled (user: ");
     DEBUG_PRINT(otaUser);
     DEBUG_PRINTLN(")");
-    ElegantOTA.begin(&server, otaUser, otaPass);
+    ElegantOTA.begin(server, otaUser, otaPass);
   } else {
     DEBUG_PRINTLN("OTA Authentication: Disabled (open access)");
-    ElegantOTA.begin(&server);
+    ElegantOTA.begin(server);
   }
 
   // Set OTA callbacks (optional, for debugging)
@@ -107,9 +107,8 @@ bool OTAManager::begin(const char* otaUser, const char* otaPass, OTAForceState f
     }
   });
 
-  // Start web server
-  server.begin();
-  DEBUG_PRINTLN("Web server started on port 80");
+  // Note: AsyncWebServer will be started in main.cpp after all managers are initialized
+  DEBUG_PRINTLN("AsyncWebServer will be started by main.cpp");
   DEBUG_PRINTLN("\nOTA Update Interface:");
   DEBUG_PRINT("  URL: http://");
   DEBUG_PRINT(IP.toString().c_str());
@@ -121,13 +120,15 @@ bool OTAManager::begin(const char* otaUser, const char* otaPass, OTAForceState f
 }
 
 // Handle OTA requests (call in loop())
+// NOTE: With AsyncWebServer, this is no longer needed as the server handles
+// requests automatically via callbacks. Kept for API compatibility.
 void OTAManager::handle() {
   if (!isInitialized) {
     return;
   }
 
-  server.handleClient();
-  ElegantOTA.loop();
+  // AsyncWebServer handles requests automatically - no manual handling needed
+  // ElegantOTA.loop() is also handled automatically with async mode
 }
 
 // Check if OTA is running
