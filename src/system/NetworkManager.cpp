@@ -10,12 +10,15 @@
 #ifdef ENABLE_NETWORK
 
   #include "system/Debug.h"
+  #include "system/Theremin.h"
 
 // Constructor
-NetworkManager::NetworkManager(DisplayManager* disp)
+NetworkManager::NetworkManager(DisplayManager* disp, Theremin* thmn)
     : server(80),
       ota(&server),  // OTAManager only needs server reference (WiFi handled by WiFiManager)
+      webUI(nullptr),  // Created later after Theremin is available
       display(disp),
+      theremin(thmn),
       isInitialized(false),
       apName("Theremin-Setup"),
       mdnsHostname("theremin") {
@@ -25,6 +28,19 @@ NetworkManager::NetworkManager(DisplayManager* disp)
         "Network", [this](Adafruit_SSD1306& oled) { this->renderNetworkPage(oled); }, "Network",
         90);
   }
+}
+
+// Destructor
+NetworkManager::~NetworkManager() {
+  if (webUI) {
+    delete webUI;
+    webUI = nullptr;
+  }
+}
+
+// Set Theremin instance
+void NetworkManager::setTheremin(Theremin* thmn) {
+  theremin = thmn;
 }
 
 // Initialize all network services
@@ -45,6 +61,16 @@ bool NetworkManager::begin(const char* apName, const char* otaUser, const char* 
 
   // Setup OTA
   setupOTA(otaUser, otaPass);
+
+  // Initialize WebUI if Theremin is available
+  if (theremin) {
+    DEBUG_PRINTLN("[Network] Initializing WebUI...");
+    webUI = new WebUIManager(&server, theremin);
+    webUI->begin();
+  } else {
+    DEBUG_PRINTLN("[Network] WARNING: Theremin not set, WebUI disabled");
+    DEBUG_PRINTLN("[Network] Call setTheremin() before begin() to enable WebUI");
+  }
 
   // Start the web server
   server.begin();
@@ -151,8 +177,12 @@ void NetworkManager::update() {
     return;
   }
 
+  // Update WebUI (periodic state broadcasts)
+  if (webUI) {
+    webUI->update();
+  }
+
   // Future: Add reconnect logic, WiFi monitoring, etc.
-  // For now, this is a placeholder for future enhancements
 }
 
 // Check if connected to WiFi

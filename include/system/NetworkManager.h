@@ -32,6 +32,10 @@
   #include <ESPAsyncWebServer.h>
   #include "system/OTAManager.h"
   #include "system/DisplayManager.h"
+  #include "system/WebUIManager.h"
+
+// Forward declaration
+class Theremin;
 
 class NetworkManager {
  private:
@@ -39,7 +43,9 @@ class NetworkManager {
   WiFiManager wifiManager;
   AsyncWebServer server;
   OTAManager ota;
+  WebUIManager* webUI;  // WebUIManager (created dynamically after Theremin is available)
   DisplayManager* display;
+  Theremin* theremin;
 
   bool isInitialized;
 
@@ -59,8 +65,20 @@ class NetworkManager {
   /**
      * Constructor
      * @param disp Pointer to DisplayManager for status page registration
+     * @param thmn Pointer to Theremin instance for WebUI control (optional, can be set later)
      */
-  NetworkManager(DisplayManager* disp);
+  NetworkManager(DisplayManager* disp, Theremin* thmn = nullptr);
+
+  /**
+     * Destructor - cleans up WebUIManager
+     */
+  ~NetworkManager();
+
+  /**
+     * Set Theremin instance (must be called before begin() if not provided in constructor)
+     * @param thmn Pointer to Theremin instance
+     */
+  void setTheremin(Theremin* thmn);
 
   /**
      * Initialize all network services

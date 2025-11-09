@@ -39,7 +39,8 @@ Theremin theremin(&performanceMonitor, &display);
 
 #if ENABLE_NETWORK
 // Create network manager instance (handles WiFi, OTA, and web server)
-NetworkManager network(&display);
+// Note: Theremin instance passed for WebUI control
+NetworkManager network(&display, &theremin);
 #endif
 
 #if ENABLE_GPIO_MONITOR
