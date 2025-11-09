@@ -120,15 +120,23 @@ void setup() {
 
   #if ENABLE_NETWORK
     // Initialize network manager (WiFi, OTA, web server)
-    // If we start the system with 3 oscillators OFF and all
-    // octave switch -1 disable network:
+    // Check for WiFi reset condition (special state + button held)
+    bool resetWiFi = false;
     if (theremin.getAudioEngine()->getSpecialState(1)) {
-      // Special state to disable network capabilities.
-      DEBUG_PRINTLN("[NETWORK] Network capabilities disabled for 'special state' of controls.");
+      // Special state detected - check if multi-function button is held
+      if (theremin.getMCP().digitalRead(PIN_MULTI_BUTTON) == LOW) {
+        resetWiFi = true;
+        DEBUG_PRINTLN("[NETWORK] WiFi reset requested (special state + button held)");
+      } else {
+        // Special state but button not held - disable network completely
+        DEBUG_PRINTLN("[NETWORK] Network capabilities disabled for 'special state' of controls.");
+      }
     }
-    else {
+
+    // Start network if not disabled
+    if (!theremin.getAudioEngine()->getSpecialState(1) || resetWiFi) {
       DEBUG_PRINTLN("[NETWORK] Enabling network.");
-      network.begin("Theremin-Setup", "admin", "theremin", 15, 0);
+      network.begin("Theremin-Setup", "admin", "theremin", 15, 0, resetWiFi);
     }
   #endif
 }

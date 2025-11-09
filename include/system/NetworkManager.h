@@ -51,7 +51,7 @@ class NetworkManager {
   void renderNetworkPage(Adafruit_SSD1306& display);
 
   // Internal setup methods
-  void setupWiFi(uint8_t connectTimeout, uint16_t portalTimeout);
+  void setupWiFi(uint8_t connectTimeout, uint16_t portalTimeout, bool resetCredentials);
   void setupMDNS(const char* hostname);
   void setupOTA(const char* user, const char* pass);
 
@@ -73,7 +73,7 @@ class NetworkManager {
      */
   bool begin(const char* apName = "Theremin-Setup", const char* otaUser = "admin",
              const char* otaPass = "theremin", uint8_t connectTimeout = 15,
-             uint16_t portalTimeout = 0);
+             uint16_t portalTimeout = 0, bool resetCredentials = false);
 
   /**
      * Non-blocking update for network monitoring

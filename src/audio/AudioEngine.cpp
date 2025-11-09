@@ -425,21 +425,10 @@ bool AudioEngine::getSpecialState(int state) {
     return true;
   }
 
-  // Special state 2, 3, 4: only one oscillator ON (triangle), others OFF, with
-  // that oscillator at +1 octave: used to turn on effects during startup.
-  if (osc1waveform == Oscillator::OFF &&
-      osc2waveform == Oscillator::OFF &&
-      osc3waveform == Oscillator::TRIANGLE) {
-
-    if (state == 2 && osc1octave == Oscillator::OCTAVE_UP) {
-      return true;
-    }
-    if (state == 3 && osc2octave == Oscillator::OCTAVE_UP) {
-      return true;
-    }
-    if (state == 4 && osc3octave == Oscillator::OCTAVE_UP) {
-      return true;
-    }
+  // Special state 2: all oscillators OFF and all octave switches at +1
+  if (state == 2 && osc1waveform == Oscillator::OFF && osc2waveform == Oscillator::OFF && osc3waveform == Oscillator::OFF &&
+      osc1octave == Oscillator::OCTAVE_UP && osc2octave == Oscillator::OCTAVE_UP && osc3octave == Oscillator::OCTAVE_UP) {
+    return true;
   }
 
   return false;

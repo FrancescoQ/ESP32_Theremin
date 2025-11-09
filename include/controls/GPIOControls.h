@@ -75,6 +75,12 @@ public:
    */
   bool wasDoubleClicked();
 
+  /**
+   * Get reference to MCP23017 (for advanced use like WiFi reset check)
+   * @return Reference to MCP23017 instance
+   */
+  Adafruit_MCP23X17& getMCP() { return mcp; }
+
 private:
   Theremin* theremin;
   DisplayManager* displayManager;

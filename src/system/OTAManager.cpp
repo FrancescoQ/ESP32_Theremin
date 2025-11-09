@@ -49,7 +49,7 @@ bool OTAManager::begin(const char* otaUser, const char* otaPass) {
     }
   });
 
-  DEBUG_PRINTLN("[OTA] ✓ OTA updates enabled");
+  DEBUG_PRINTLN("[OTA] OTA updates enabled");
   DEBUG_PRINTLN("[OTA] Access OTA at /update route");
 
   isInitialized = true;

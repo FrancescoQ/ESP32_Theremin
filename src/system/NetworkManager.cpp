@@ -29,14 +29,14 @@ NetworkManager::NetworkManager(DisplayManager* disp)
 
 // Initialize all network services
 bool NetworkManager::begin(const char* apName, const char* otaUser, const char* otaPass,
-                           uint8_t connectTimeout, uint16_t portalTimeout) {
+                           uint8_t connectTimeout, uint16_t portalTimeout, bool resetCredentials) {
   DEBUG_PRINTLN("\n[Network] Initializing NetworkManager...");
 
   // Store configuration
   this->apName = apName;
 
   // Setup WiFi connection
-  setupWiFi(connectTimeout, portalTimeout);
+  setupWiFi(connectTimeout, portalTimeout, resetCredentials);
 
   // Setup mDNS if connected to WiFi
   if (WiFi.isConnected()) {
@@ -57,8 +57,15 @@ bool NetworkManager::begin(const char* apName, const char* otaUser, const char* 
 }
 
 // Setup WiFi connection with WiFiManager
-void NetworkManager::setupWiFi(uint8_t connectTimeout, uint16_t portalTimeout) {
+void NetworkManager::setupWiFi(uint8_t connectTimeout, uint16_t portalTimeout, bool resetCredentials) {
   DEBUG_PRINTLN("[WiFi] Configuring WiFiManager...");
+
+  // Reset saved WiFi credentials if requested
+  if (resetCredentials) {
+    DEBUG_PRINTLN("[WiFi] Resetting saved WiFi credentials...");
+    wifiManager.resetSettings();
+    DEBUG_PRINTLN("[WiFi] Credentials cleared - will start in AP mode");
+  }
 
   // Configure timeouts
   wifiManager.setConnectTimeout(connectTimeout);
@@ -91,7 +98,7 @@ void NetworkManager::setupWiFi(uint8_t connectTimeout, uint16_t portalTimeout) {
 
   // Print connection status
   if (WiFi.isConnected()) {
-    DEBUG_PRINTLN("[WiFi] ✓ Connected to WiFi (STA mode)");
+    DEBUG_PRINTLN("[WiFi] Connected to WiFi (STA mode)");
     DEBUG_PRINT("[WiFi] SSID: ");
     DEBUG_PRINTLN(WiFi.SSID());
     DEBUG_PRINT("[WiFi] IP: ");
@@ -118,12 +125,12 @@ void NetworkManager::setupMDNS(const char* hostname) {
 
   if (MDNS.begin(hostname)) {
     MDNS.addService("http", "tcp", 80);
-    DEBUG_PRINT("[mDNS] ✓ Accessible at http://");
+    DEBUG_PRINT("[mDNS] Accessible at http://");
     DEBUG_PRINT(hostname);
     DEBUG_PRINTLN(".local");
   }
   else {
-    DEBUG_PRINTLN("[mDNS] ✗ Failed to start mDNS service");
+    DEBUG_PRINTLN("[mDNS] Failed to start mDNS service");
   }
 }
 
@@ -132,9 +139,9 @@ void NetworkManager::setupOTA(const char* user, const char* pass) {
   // OTAManager registers ElegantOTA on the shared AsyncWebServer
   // WiFi/AP connection is already handled by WiFiManager
   if (ota.begin(user, pass)) {
-    DEBUG_PRINTLN("[OTA] ✓ OTA registered successfully");
+    DEBUG_PRINTLN("[OTA] OTA registered successfully");
   } else {
-    DEBUG_PRINTLN("[OTA] ✗ Failed to register OTA");
+    DEBUG_PRINTLN("[OTA] Failed to register OTA");
   }
 }
 

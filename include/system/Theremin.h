@@ -88,6 +88,12 @@ class Theremin {
   NotificationManager* getNotificationManager() { return notifications; }
 
   /**
+   * Get reference to MCP23017 (for advanced use like WiFi reset check)
+   * @return Reference to MCP23017 instance from GPIOControls
+   */
+  Adafruit_MCP23X17& getMCP() { return gpioControls.getMCP(); }
+
+  /**
    * Set pitch smoothing preset (coordinates both sensor and audio levels)
    * @param preset Smoothing preset level
    */
