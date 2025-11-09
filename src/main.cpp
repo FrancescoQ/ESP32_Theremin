@@ -75,8 +75,8 @@ void setup() {
   }
   delay(100);
 
+  // Display a loading screen during boot.
   display.showLoadingScreen();
-
 
   #if ENABLE_GPIO_MONITOR
     // Initialize GPIO monitor for MCP23017 debugging
@@ -113,12 +113,6 @@ void setup() {
     theremin.getAudioEngine()->systemTest();
   #endif
 
-    // Play startup sound (if enabled)
-  #if ENABLE_STARTUP_SOUND
-    theremin.getAudioEngine()->playStartupSound();
-    delay(500);
-  #endif
-
   #if ENABLE_NETWORK
     // Initialize network manager (WiFi, OTA, web server)
     // Check for WiFi reset condition (special state + button held)
@@ -139,6 +133,12 @@ void setup() {
       DEBUG_PRINTLN("[NETWORK] Enabling network.");
       network.begin("Theremin-Setup", "admin", "theremin", 15, 0, resetWiFi);
     }
+  #endif
+
+      // Play startup sound (if enabled)
+  #if ENABLE_STARTUP_SOUND
+    theremin.getAudioEngine()->playStartupSound();
+    delay(500);
   #endif
 }
 

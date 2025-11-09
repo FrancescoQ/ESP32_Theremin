@@ -21,6 +21,7 @@ NetworkManager::NetworkManager(DisplayManager* disp, Theremin* thmn)
       display(disp),
       theremin(thmn),
       isInitialized(false),
+      mdnsInitialized(false),
       apName("Theremin-Setup"),
       mdnsHostname("theremin") {
   // Register network status display page using lambda (consistent with Theremin pattern)
@@ -128,6 +129,12 @@ void NetworkManager::setupWiFi(uint8_t connectTimeout, uint16_t portalTimeout, b
 
   // Print connection status
   if (WiFi.isConnected()) {
+    // Disable WiFi sleep mode for reliable server operation
+    // This prevents mDNS timeouts and WebSocket disconnections
+    // Trade-off: ~30-50mA higher power consumption (acceptable for powered device)
+    WiFi.setSleep(WIFI_PS_NONE);
+    DEBUG_PRINTLN("[WiFi] WiFi sleep mode disabled for server operation");
+
     DEBUG_PRINTLN("[WiFi] Connected to WiFi (STA mode)");
     DEBUG_PRINT("[WiFi] SSID: ");
     DEBUG_PRINTLN(WiFi.SSID());
@@ -155,11 +162,13 @@ void NetworkManager::setupMDNS(const char* hostname) {
 
   if (MDNS.begin(hostname)) {
     MDNS.addService("http", "tcp", 80);
+    mdnsInitialized = true;
     DEBUG_PRINT("[mDNS] Accessible at http://");
     DEBUG_PRINT(hostname);
     DEBUG_PRINTLN(".local");
   }
   else {
+    mdnsInitialized = false;
     DEBUG_PRINTLN("[mDNS] Failed to start mDNS service");
   }
 }
@@ -180,6 +189,10 @@ void NetworkManager::update() {
   if (!isInitialized) {
     return;
   }
+
+  // Note: ESP32's mDNS is handled automatically by FreeRTOS tasks
+  // No manual update() call needed (unlike ESP8266)
+  // The mdnsInitialized flag is still useful for tracking state
 
   // Update WebUI (periodic state broadcasts)
   if (webUI) {

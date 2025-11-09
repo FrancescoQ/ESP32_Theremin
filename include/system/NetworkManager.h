@@ -48,6 +48,7 @@ class NetworkManager {
   Theremin* theremin;
 
   bool isInitialized;
+  bool mdnsInitialized;
 
   // Configuration
   String apName;
