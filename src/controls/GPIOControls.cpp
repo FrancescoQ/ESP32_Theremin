@@ -15,6 +15,7 @@ GPIOControls::GPIOControls(Theremin* thereminPtr, DisplayManager* displayMgr)
       displayManager(displayMgr),
       notificationManager(nullptr),
       buttonState(IDLE), buttonPressTime(0), modifierActive(false), modifierWasActive(false),
+      modifierWasUsed(false),
       shortPressFlag(false),
       firstPressReleaseTime(0), waitingForSecondClick(false), doubleClickFlag(false),
       snapshotSmoothingPreset(0), snapshotFreqRangePreset(0), snapshotMixPreset(0),
@@ -390,6 +391,7 @@ void GPIOControls::updateButton() {
         waitingForSecondClick = false;
         buttonState = LONG_PRESS_ACTIVE;
         modifierActive = true;
+        modifierWasUsed = false;  // Reset flag - reboot allowed unless controls are used
         DEBUG_PRINTLN("[GPIO] Long press active - modifier mode ON");
       }
       // Otherwise stay in PRESSED state, waiting
@@ -400,10 +402,11 @@ void GPIOControls::updateButton() {
         // Long press released - exiting modifier mode
         buttonState = IDLE;
         modifierActive = false;
+        modifierWasUsed = false;  // Reset flag for next time
         DEBUG_PRINTLN("[GPIO] Long press released - modifier mode OFF");
       }
-      else if (now - buttonPressTime >= VERY_LONG_PRESS_THRESHOLD_MS) {
-        // VERY long press - trigger system reboot
+      else if (!modifierWasUsed && (now - buttonPressTime >= VERY_LONG_PRESS_THRESHOLD_MS)) {
+        // VERY long press - trigger system reboot (only if modifier wasn't actually used)
         performSystemReboot();
         // Note: ESP.restart() never returns, so no state change needed
       }
@@ -459,6 +462,7 @@ void GPIOControls::osc1PitchSecondaryControl() {
       // Update snapshot to new position
       snapshotSmoothingPreset = octaveValue;
       lastSmoothingChangeTime = now;
+      modifierWasUsed = true;  // Mark modifier as used - prevents accidental reboot
 
       // Map octave position to smoothing preset
       // -1 (down) → SMOOTH_NONE (0)
@@ -511,6 +515,7 @@ void GPIOControls::osc2PitchSecondaryControl() {
     if (now - lastRangeChangeTime > DEBOUNCE_MS) {
       snapshotFreqRangePreset = octaveValue;
       lastRangeChangeTime = now;
+      modifierWasUsed = true;  // Mark modifier as used - prevents accidental reboot
 
       // Map octave position to frequency range preset
       // -1 (down) → NARROW (1 octave)
@@ -561,6 +566,7 @@ void GPIOControls::osc3PitchSecondaryControl() {
     if (now - lastMixChangeTime > DEBOUNCE_MS) {
       snapshotMixPreset = octaveValue;
       lastMixChangeTime = now;
+      modifierWasUsed = true;  // Mark modifier as used - prevents accidental reboot
 
       // Map octave position to oscillator mix preset
       const char* presetName;
@@ -614,6 +620,7 @@ void GPIOControls::osc1WaveformSecondaryControl() {
     if (now - lastOsc1ChangeTime > DEBOUNCE_MS) {
       snapshotReverbPreset = waveformValue;
       lastOsc1ChangeTime = now;
+      modifierWasUsed = true;  // Mark modifier as used - prevents accidental reboot
 
       ReverbEffect::Preset preset;
       const char* presetName;
@@ -670,6 +677,7 @@ void GPIOControls::osc2WaveformSecondaryControl() {
     if (now - lastOsc2ChangeTime > DEBOUNCE_MS) {
       snapshotDelayPreset = waveformValue;
       lastOsc2ChangeTime = now;
+      modifierWasUsed = true;  // Mark modifier as used - prevents accidental reboot
 
       DelayEffect::Preset preset;
       const char* presetName;
@@ -726,6 +734,7 @@ void GPIOControls::osc3WaveformSecondaryControl() {
     if (now - lastOsc3ChangeTime > DEBOUNCE_MS) {
       snapshotChorusPreset = waveformValue;
       lastOsc3ChangeTime = now;
+      modifierWasUsed = true;  // Mark modifier as used - prevents accidental reboot
 
       ChorusEffect::Preset preset;
       const char* presetName;
@@ -781,7 +790,12 @@ void GPIOControls::performSystemReboot() {
   // Show notification if available
   showNotification("REBOOTING...", 2000);
 
-  // Small delay to let notification show
+  // Force display update to show notification immediately
+  if (displayManager) {
+    displayManager->update();
+  }
+
+  // Delay to let user see notification (audio will stop after ~11ms)
   delay(2000);
 
   // Restart the ESP32

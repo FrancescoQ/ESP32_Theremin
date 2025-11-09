@@ -116,6 +116,7 @@ private:
   unsigned long buttonPressTime;
   bool modifierActive;      // True while long press is active
   bool modifierWasActive;   // Track previous modifier state for transition detection
+  bool modifierWasUsed;     // Track if modifier mode was actually used (prevents accidental reboot)
   bool shortPressFlag;      // Set on short press, cleared by wasShortPressed()
 
   // Double-click detection
@@ -124,7 +125,7 @@ private:
   bool doubleClickFlag;
 
   static constexpr unsigned long LONG_PRESS_THRESHOLD_MS = 600;
-  static constexpr unsigned long VERY_LONG_PRESS_THRESHOLD_MS = 10000;  // 10s for system reboot
+  static constexpr unsigned long VERY_LONG_PRESS_THRESHOLD_MS = 6000;  // 6s for system reboot (won't reboot if secondary control is moved)
   static constexpr unsigned long DOUBLE_CLICK_WINDOW_MS = 400;
 
   // Snapshot variables for smooth mode transitions
