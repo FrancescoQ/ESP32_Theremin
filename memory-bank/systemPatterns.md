@@ -1387,6 +1387,195 @@ notificationManager->show("ERROR", 5000);  // Show for 5 seconds
 - ~1-2ms draw time when active
 - No impact on audio performance
 
+### 13. NetworkManager Pattern (November 2025)
+
+```cpp
+// Unified network infrastructure coordinator
+// Encapsulates WiFiManager, OTAManager, and mDNS registration
+
+class NetworkManager {
+private:
+    AsyncWebServer* server;  // Shared server pointer
+    WiFiManager wifiManager;
+    OTAManager* otaManager;
+    DisplayManager* displayManager;
+
+    bool initialized;
+    String ssid;
+    String localIP;
+    int8_t rssi;
+
+public:
+    NetworkManager(AsyncWebServer* srv, DisplayManager* disp = nullptr)
+        : server(srv), displayManager(disp), otaManager(nullptr), initialized(false) {}
+
+    bool begin(bool resetCredentials = false) {
+        // Setup WiFi with captive portal
+        if (!setupWiFi(resetCredentials)) {
+            return false;
+        }
+
+        // Setup mDNS
+        if (!setupMDNS("theremin")) {
+            DEBUG_PRINTLN("[Network] mDNS failed");
+        }
+
+        // Initialize OTA if needed
+        setupOTA();
+
+        // Register display page if available
+        registerDisplayPage();
+
+        initialized = true;
+        return true;
+    }
+
+private:
+    bool setupWiFi(bool resetCredentials) {
+        if (resetCredentials) {
+            DEBUG_PRINTLN("[Network] Resetting WiFi credentials...");
+            wifiManager.resetSettings();
+        }
+
+        // Configure WiFiManager
+        wifiManager.setConfigPortalTimeout(180);  // 3 minutes
+        wifiManager.setAPCallback([](WiFiManager* mgr) {
+            DEBUG_PRINTLN("[WiFi] Entered config mode");
+        });
+
+        // Auto-connect or start captive portal
+        if (!wifiManager.autoConnect("Theremin-Setup")) {
+            DEBUG_PRINTLN("[WiFi] Failed to connect");
+            return false;
+        }
+
+        // Store connection info
+        ssid = WiFi.SSID();
+        localIP = WiFi.localIP().toString();
+        rssi = WiFi.RSSI();
+
+        DEBUG_PRINTLN("[WiFi] Connected!");
+        return true;
+    }
+
+    bool setupMDNS(const char* hostname) {
+        if (MDNS.begin(hostname)) {
+            MDNS.addService("http", "tcp", 80);
+            DEBUG_PRINTF("[mDNS] Registered: %s.local\n", hostname);
+            return true;
+        }
+        return false;
+    }
+
+    void setupOTA() {
+        if (!server) return;
+
+        otaManager = new OTAManager(server);
+        if (otaManager->begin("admin", "theremin")) {
+            DEBUG_PRINTLN("[OTA] Enabled at /update");
+        }
+    }
+
+    void registerDisplayPage() {
+        if (!displayManager) return;
+
+        displayManager->registerPage("Network", [this](Adafruit_SSD1306& oled) {
+            oled.setCursor(0, DisplayManager::CONTENT_START_Y);
+            oled.printf("SSID: %s\n", ssid.c_str());
+            oled.printf("IP: %s\n", localIP.c_str());
+            oled.printf("Signal: %d dBm\n", rssi);
+            oled.printf("Mode: %s\n",
+                WiFi.getMode() == WIFI_MODE_STA ? "STA" :
+                WiFi.getMode() == WIFI_MODE_AP ? "AP" : "AP+STA");
+        }, "NETWORK", 10);  // Title "NETWORK", weight 10 (after system pages)
+    }
+};
+```
+
+**Key Design Patterns:**
+
+1. **Coordinator Pattern**
+   - NetworkManager coordinates WiFiManager, OTAManager, and mDNS
+   - Single point of initialization for all network features
+   - Simplifies main.cpp - one begin() call instead of many
+
+2. **Shared AsyncWebServer Pattern**
+   - Server created in main.cpp, passed as pointer
+   - OTA and future WebSocket backend share same server instance
+   - Only one server.begin() call needed
+   - Prevents port conflicts
+
+3. **WiFi Credentials Reset**
+   - Special boot state detection (in main.cpp)
+   - All oscillators OFF + all octave switches -1 + button held
+   - NetworkManager::begin(true) triggers wifiManager.resetSettings()
+   - System boots into AP mode for reconfiguration
+
+4. **Display Integration**
+   - Optional DisplayManager pointer in constructor
+   - Auto-registers network status page if display available
+   - Shows SSID, IP, signal strength, WiFi mode
+   - Lambda callback captures 'this' for live updates
+
+5. **Auto-Reconnect Pattern**
+   - WiFiManager handles connection logic
+   - Saves credentials to flash automatically
+   - Auto-connects on subsequent boots
+   - Falls back to AP mode if connection fails
+
+**System Reboot Feature (Bonus):**
+```cpp
+// In GPIOControls.cpp - Very long press detection
+void GPIOControls::updateButton() {
+    // ... existing state machine ...
+
+    case LONG_PRESS_ACTIVE:
+        if (!buttonPressed) {
+            // Released - exit modifier mode
+            buttonState = IDLE;
+            modifierActive = false;
+            modifierWasUsed = false;
+        }
+        else if (!modifierWasUsed &&
+                 (now - buttonPressTime >= VERY_LONG_PRESS_THRESHOLD_MS)) {
+            // Very long press - trigger reboot (only if modifier not used)
+            performSystemReboot();
+        }
+        break;
+}
+
+void GPIOControls::performSystemReboot() {
+    DEBUG_PRINTLN("[GPIO] VERY LONG PRESS - REBOOTING...");
+
+    // Show notification
+    showNotification("REBOOTING...", 2000);
+
+    // CRITICAL: Force display update to show notification immediately
+    // Without this, the notification never appears (loop is blocked)
+    if (displayManager) {
+        displayManager->update();
+    }
+
+    // Delay to let user see notification (audio stops after ~11ms)
+    delay(2000);
+
+    // Restart ESP32
+    ESP.restart();
+}
+```
+
+**Protection Against Accidental Reboot:**
+- `modifierWasUsed` flag tracks if any secondary control touched
+- Set to false when entering modifier mode
+- Set to true when any secondary control changed
+- Reboot only triggers if flag is still false after 10s
+- Safe to use modifier mode for extended periods
+
+**Memory Impact:**
+- NetworkManager instance: ~100 bytes
+- WiFiManager library: ~20KB Flash, ~2KB RAM
+- AsyncWebServer: ~30KB Flash, ~5KB RAM (shared with OTA)
+
 ## Configuration Constants
 
 ```cpp
