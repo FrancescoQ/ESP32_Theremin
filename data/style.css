@@ -1,0 +1,74 @@
+body {
+  font-family: Arial, sans-serif;
+  max-width: 600px;
+  margin: 50px auto;
+  padding: 20px;
+  background: #1a1a2e;
+  color: #eee;
+}
+
+h1 {
+  color: #ff6b6b;
+  text-align: center;
+}
+
+.status {
+  padding: 10px;
+  margin: 20px 0;
+  border-radius: 5px;
+  text-align: center;
+  font-weight: bold;
+}
+
+.connected {
+  background: #4caf50;
+  color: white;
+}
+
+.disconnected {
+  background: #e94560;
+  color: white;
+}
+
+.section {
+  background: #16213e;
+  padding: 15px;
+  margin: 15px 0;
+  border-radius: 5px;
+  border: 1px solid #2a2a3e;
+}
+
+.section h2 {
+  margin-top: 0;
+  color: #ff6b6b;
+  font-size: 1.2em;
+}
+
+.data-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 8px 0;
+  border-bottom: 1px solid #2a2a3e;
+}
+
+.data-row:last-child {
+  border-bottom: none;
+}
+
+.control {
+  padding: 15px 0;
+}
+
+label {
+  font-size: 1.1em;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+input[type="checkbox"] {
+  width: 20px;
+  height: 20px;
+  cursor: pointer;
+}

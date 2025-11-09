@@ -11,6 +11,7 @@
 
   #include "system/Debug.h"
   #include "system/Theremin.h"
+  #include <LittleFS.h>
 
 // Constructor
 NetworkManager::NetworkManager(DisplayManager* disp, Theremin* thmn)
@@ -71,6 +72,9 @@ bool NetworkManager::begin(const char* apName, const char* otaUser, const char* 
     DEBUG_PRINTLN("[Network] WARNING: Theremin not set, WebUI disabled");
     DEBUG_PRINTLN("[Network] Call setTheremin() before begin() to enable WebUI");
   }
+
+  // Setup static file serving
+  setupStaticFiles();
 
   // Start the web server
   server.begin();
@@ -183,6 +187,38 @@ void NetworkManager::update() {
   }
 
   // Future: Add reconnect logic, WiFi monitoring, etc.
+}
+
+// Setup static file serving from LittleFS
+// use
+//   pio run -t uploadfs
+// to upload the data folder
+void NetworkManager::setupStaticFiles() {
+  DEBUG_PRINTLN("[Network] Setting up static file serving...");
+
+  // Initialize LittleFS
+  if (!LittleFS.begin(false)) {  // false = don't format on fail
+    DEBUG_PRINTLN("[Network] WARNING: LittleFS mount failed");
+    DEBUG_PRINTLN("[Network] Run 'pio run -t uploadfs' to upload filesystem");
+
+    // Serve a simple fallback page
+    this->server.on("/", HTTP_GET, [](AsyncWebServerRequest* request) {
+      request->send(200, "text/html",
+                    "<html><body><h1>Theremin WebUI</h1>"
+                    "<p>Filesystem not available. Upload with: pio run -t uploadfs</p>"
+                    "<p>WebSocket endpoint: ws://" +
+                        request->host() + "/ws</p></body></html>");
+    });
+    return;
+  }
+
+  DEBUG_PRINTLN("[Network] LittleFS mounted successfully");
+
+  // Serve all static files from root directory
+  // Automatically handles MIME types, subdirectories, and caching
+  this->server.serveStatic("/", LittleFS, "/").setDefaultFile("index.html");
+
+  DEBUG_PRINTLN("[Network] Static file serving enabled");
 }
 
 // Check if connected to WiFi

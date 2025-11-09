@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Theremin WebSocket PoC</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <h1>🎵 Theremin WebSocket PoC</h1>
+
+  <div id="connection-status" class="status disconnected">
+    Disconnected
+  </div>
+
+  <div class="section">
+    <h2>Sensor Data</h2>
+    <div class="data-row">
+      <span>Pitch Distance:</span>
+      <span id="pitch-value">---</span>
+    </div>
+    <div class="data-row">
+      <span>Volume Distance:</span>
+      <span id="volume-value">---</span>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>Oscillator 1</h2>
+    <div class="data-row">
+      <span>Waveform:</span>
+      <span id="osc1-waveform">---</span>
+    </div>
+    <div class="data-row">
+      <span>Octave:</span>
+      <span id="osc1-octave">---</span>
+    </div>
+    <div class="data-row">
+      <span>Volume:</span>
+      <span id="osc1-volume">---</span>
+    </div>
+    <div class="control">
+      <label>
+        <input type="checkbox" id="osc1-enable">
+        <span>Enable Oscillator 1 (SINE wave)</span>
+      </label>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>Performance</h2>
+    <div class="data-row">
+      <span>Free RAM:</span>
+      <span id="ram-value">---</span>
+    </div>
+    <div class="data-row">
+      <span>Uptime:</span>
+      <span id="uptime-value">---</span>
+    </div>
+  </div>
+
+  <script src="scripts.js"></script>
+</body>
+</html>

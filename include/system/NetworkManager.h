@@ -60,6 +60,7 @@ class NetworkManager {
   void setupWiFi(uint8_t connectTimeout, uint16_t portalTimeout, bool resetCredentials);
   void setupMDNS(const char* hostname);
   void setupOTA(const char* user, const char* pass);
+  void setupStaticFiles();
 
  public:
   /**

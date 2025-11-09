@@ -1,7 +1,7 @@
 # Web UI Implementation Plan
 
 **Date:** November 8-9, 2025
-**Status:** Phase 2 Complete (Network Infrastructure Ready)
+**Status:** Phase 3 Complete (WebSocket Backend Ready)
 **Goal:** Add web-based control interface with WebSocket real-time communication
 
 ## Overview
@@ -447,10 +447,57 @@ DEBUG_PRINTLN("[WiFi] AP+STA mode active");
 
 ---
 
-## Phase 3: WebUI Backend (WebSocket Server)
+## Phase 3: WebUI Backend (WebSocket Server) ✅ COMPLETE
 
 ### Goal
 Implement real-time bidirectional communication between ESP32 and web clients
+
+### Implementation Summary
+**IMPLEMENTED:** Created complete WebSocket backend with JSON protocol for real-time Theremin control:
+- WebUIManager class for WebSocket management
+- Bidirectional JSON command/state protocol
+- Integration with NetworkManager (shared AsyncWebServer)
+- Full control of oscillators, effects, and system settings
+- Real-time sensor and performance monitoring
+- 10 Hz broadcast rate (100ms interval)
+- Multi-client support with automatic state sync
+
+### Technical Implementation Details
+
+**Static Callback Bridge Pattern:**
+The implementation uses a global pointer `g_webUIInstance` to bridge between C-style callback requirements and C++ member functions. This pattern is necessary because AsyncWebSocket expects a C-style function pointer, but we need access to the WebUIManager instance methods:
+
+```cpp
+// Global pointer enables callback to access instance
+static WebUIManager* g_webUIInstance = nullptr;
+
+WebUIManager::WebUIManager(AsyncWebServer* srv, Theremin* thmn) {
+  g_webUIInstance = this;  // Store instance pointer
+}
+
+// Static lambda uses global pointer to call member functions
+ws.onEvent([](AsyncWebSocket* server, AsyncWebSocketClient* client, ...) {
+  if (g_webUIInstance) {
+    g_webUIInstance->onWebSocketEvent(server, client, type, arg, data, len);
+  }
+});
+```
+
+This pattern is similar to the FreeRTOS task bridge in AudioEngine, solving the same problem of interfacing C-style APIs with C++ classes.
+
+**Actual Resource Usage (Phase 3):**
+- **RAM:** 51 KB total (15.6%) - added ~4 KB for WebSocket
+- **Flash:** 1.15 MB (87.6%) - includes all WebSocket libraries
+- **Build:** SUCCESS - all libraries resolved correctly
+
+**Files Created:**
+- `include/system/WebUIManager.h` (95 lines)
+- `src/system/WebUIManager.cpp` (435 lines)
+
+**Files Modified:**
+- `include/system/NetworkManager.h` - Added WebUIManager integration
+- `src/system/NetworkManager.cpp` - Initialize and update WebUIManager
+- `src/main.cpp` - Pass Theremin instance to NetworkManager
 
 ### Tasks
 
