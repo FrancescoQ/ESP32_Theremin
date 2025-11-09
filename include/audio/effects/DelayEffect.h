@@ -98,7 +98,7 @@
  * COMPARISON:
  *   Raw new[]/delete[]: Manual, error-prone, zero overhead, must handle resize carefully
  *   std::unique_ptr:    Automatic, safe, zero overhead, manual resize pattern
- *   std::vector:        Automatic, safe, tiny overhead, built-in resize ✓ (BEST for dynamic)
+ *   std::vector:        Automatic, safe, tiny overhead, built-in resize (BEST for dynamic)
  */
 
 class DelayEffect {

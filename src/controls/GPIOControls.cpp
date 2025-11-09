@@ -402,6 +402,11 @@ void GPIOControls::updateButton() {
         modifierActive = false;
         DEBUG_PRINTLN("[GPIO] Long press released - modifier mode OFF");
       }
+      else if (now - buttonPressTime >= VERY_LONG_PRESS_THRESHOLD_MS) {
+        // VERY long press - trigger system reboot
+        performSystemReboot();
+        // Note: ESP.restart() never returns, so no state change needed
+      }
       // While held, stay in this state
       break;
 
@@ -768,4 +773,19 @@ void GPIOControls::showNotification(const String& message, uint16_t durationMs) 
   if (notificationManager) {
     notificationManager->show(message, durationMs);
   }
+}
+
+void GPIOControls::performSystemReboot() {
+  DEBUG_PRINTLN("[GPIO] VERY LONG PRESS DETECTED - REBOOTING SYSTEM...");
+
+  // Show notification if available
+  showNotification("REBOOTING...", 2000);
+
+  // Small delay to let notification show
+  delay(2000);
+
+  // Restart the ESP32
+  ESP.restart();
+
+  // Code never reaches here
 }

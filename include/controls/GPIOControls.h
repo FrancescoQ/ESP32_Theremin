@@ -124,6 +124,7 @@ private:
   bool doubleClickFlag;
 
   static constexpr unsigned long LONG_PRESS_THRESHOLD_MS = 600;
+  static constexpr unsigned long VERY_LONG_PRESS_THRESHOLD_MS = 10000;  // 10s for system reboot
   static constexpr unsigned long DOUBLE_CLICK_WINDOW_MS = 400;
 
   // Snapshot variables for smooth mode transitions
@@ -148,6 +149,12 @@ private:
    * Handles debouncing and long/short press detection
    */
   void updateButton();
+
+  /**
+   * Perform system reboot after very long button press
+   * Shows notification and restarts ESP32
+   */
+  void performSystemReboot();
 
   /**
    * Handle secondary controls (effects, smoothing, etc.)

@@ -132,7 +132,7 @@
  *
  * COMPARISON:
  *   Raw new[]/delete[]: Manual, error-prone, zero overhead
- *   std::unique_ptr:    Automatic, safe, zero overhead ✓ (BEST for fixed-size)
+ *   std::unique_ptr:    Automatic, safe, zero overhead (BEST for fixed-size)
  *   std::vector:        Automatic, safe, ~12 bytes overhead, overkill for fixed buffers
  */
 
