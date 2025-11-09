@@ -1,7 +1,7 @@
 # Web UI Implementation Plan
 
-**Date:** November 8, 2025
-**Status:** Planning Phase
+**Date:** November 8-9, 2025
+**Status:** Phase 2 Complete (Network Infrastructure Ready)
 **Goal:** Add web-based control interface with WebSocket real-time communication
 
 ## Overview
@@ -187,23 +187,27 @@ pio run -t uploadfs  # Upload filesystem to ESP32
 - [x] OTA functionality verified
 
 ### Testing Checklist
-- [ ] Build completes without errors
-- [ ] OTA still accessible at `http://192.168.4.1/update`
-- [ ] Firmware upload works correctly
-- [ ] Static files served from filesystem
+- [x] Build completes without errors
+- [x] OTA accessible via web interface
+- [x] Firmware upload works correctly
+- [ ] Static files served from filesystem (pending Phase 3)
 
 ---
 
-## Phase 2: WiFi Infrastructure (Using tzapu/WiFiManager Library)
+## Phase 2: Network Infrastructure (NetworkManager + WiFiManager) ✅ COMPLETE
 
 ### Goal
-Integrate mature WiFiManager library for automatic WiFi configuration with AP+STA mode and captive portal
+Integrate mature WiFiManager library for automatic WiFi configuration with AP+STA mode, captive portal, OTA, and mDNS
 
-### Strategy Change
-**REVISED APPROACH:** Use `tzapu/WiFiManager` library instead of custom implementation
-- **Time saved:** 2-3 hours (from custom 3-4h to library 1h)
-- **Benefits:** Battle-tested code, automatic captive portal, credential persistence
-- **Library features:** AP+STA mode, non-blocking, mDNS support, auto-reconnect
+### Implementation Approach
+**IMPLEMENTED:** Created unified `NetworkManager` class that encapsulates:
+- WiFiManager integration (tzapu library) for captive portal and auto-connect
+- OTAManager coordination (shared AsyncWebServer)
+- mDNS registration (theremin.local)
+- DisplayManager integration (network status page)
+- **Bonus Features:**
+  - WiFi credentials reset (special state + button during boot)
+  - System reboot (10s button hold with accidental-reboot protection)
 
 ### Tasks
 
@@ -326,22 +330,31 @@ if (digitalRead(RESET_WIFI_PIN) == LOW) {
 ```
 
 ### Deliverables
-- [x] WiFiManager library integrated (already added to platformio.ini)
-- [ ] Auto-connect to saved network implemented
-- [ ] Captive portal accessible on first boot
-- [ ] mDNS `theremin.local` registered
-- [ ] WiFi credentials persisted automatically
-- [ ] Fallback to AP mode on connection failure
+- [x] WiFiManager library integrated
+- [x] NetworkManager class created
+- [x] Auto-connect to saved network implemented
+- [x] Captive portal accessible on first boot
+- [x] mDNS `theremin.local` registered
+- [x] WiFi credentials persisted automatically
+- [x] Fallback to AP mode on connection failure
+- [x] OTAManager integrated with shared AsyncWebServer
+- [x] Display page for network status registered
+- [x] WiFi credentials reset feature (special state + button)
+- [x] System reboot feature (10s button hold with protection)
 
 ### Testing Checklist
-- [ ] First boot: Captive portal appears ("Theremin-Setup" AP)
-- [ ] Portal: Can scan and select WiFi network
-- [ ] Portal: Connection successful after entering password
-- [ ] Reboot: Auto-connects to saved network
-- [ ] STA mode: `theremin.local` resolves correctly
-- [ ] STA mode: AsyncWebServer accessible
-- [ ] Connection loss: Auto-reconnects
-- [ ] Reset: Button clears credentials (if implemented)
+- [x] First boot: Captive portal appears ("Theremin-Setup" AP)
+- [x] Portal: Can scan and select WiFi network
+- [x] Portal: Connection successful after entering password
+- [x] Reboot: Auto-connects to saved network
+- [x] STA mode: `theremin.local` resolves correctly
+- [x] STA mode: AsyncWebServer accessible
+- [x] OTA accessible at `/update` route
+- [x] Display page shows network status (IP, SSID, signal, mode)
+- [x] WiFi reset: Special state + button during boot clears credentials
+- [x] System reboot: 10s button hold triggers reboot
+- [x] Reboot protection: Touching any control in modifier mode prevents reboot
+- [ ] Connection loss: Auto-reconnects (pending hardware testing)
 
 ### Implementation Notes
 
@@ -371,10 +384,63 @@ if (digitalRead(RESET_WIFI_PIN) == LOW) {
 - ⚠️ Less control over portal appearance (but customizable)
 - ⚠️ AP runs only during config (not permanent AP+STA mode)
 
-**Permanent AP+STA Mode (Optional):**
-If you need both modes simultaneously:
+### Additional Features Implemented
+
+#### WiFi Credentials Reset
+**Purpose:** Allow users to reconfigure WiFi without reflashing firmware
+
+**Implementation:**
+- Boot with special state: All oscillators OFF + all octave switches -1
+- Hold multi-function button during boot
+- Credentials erased from flash
+- ESP32 boots into AP mode
+- User configures new WiFi via captive portal
+
+**Code location:**
+- `src/main.cpp`: Detects special state + button press during setup
+- `NetworkManager::begin()`: Accepts `resetCredentials` parameter
+- `NetworkManager::setupWiFi()`: Calls `wifiManager.resetSettings()` if requested
+
+#### System Reboot Feature
+**Purpose:** Allow system restart without power cycling (useful for testing/recovery)
+
+**Implementation:**
+- Hold multi-function button for 10 seconds WITHOUT touching controls
+- Audio stops after ~10s (audible confirmation - I2S buffer drains)
+- "REBOOTING..." notification appears on display
+- 2-second delay to show notification
+- ESP32 restarts via `ESP.restart()`
+
+**Protection Against Accidental Reboot:**
+- `modifierWasUsed` flag tracks if any secondary control was touched
+- If any control is used in modifier mode, reboot is disabled
+- Safe to use modifier mode for extended periods
+- Reboot only triggered if button held idle for full 10s
+
+**Code location:**
+- `GPIOControls::updateButton()`: Detects 10s hold in LONG_PRESS_ACTIVE state
+- `GPIOControls::performSystemReboot()`: Shows notification and calls `ESP.restart()`
+- All 6 secondary control methods: Set `modifierWasUsed = true` on control change
+
+**User Experience:**
+1. Hold button → modifier mode activates (600ms)
+2. Keep holding without touching controls
+3. Audio stops at 10s mark (audible cue)
+4. "REBOOTING..." notification visible for 2s
+5. System restarts
+
+**Optional Timeout Adjustment:**
+The 10-second timeout can be reduced to 5-6 seconds if desired:
 ```cpp
-// After successful connection
+// In GPIOControls.h
+static constexpr unsigned long VERY_LONG_PRESS_THRESHOLD_MS = 6000;  // 6s instead of 10s
+```
+Since the protection mechanism prevents accidental reboots during normal modifier use, a shorter timeout is safe and more convenient.
+
+**Permanent AP+STA Mode (Optional - Not Implemented):**
+If you need both modes simultaneously in the future:
+```cpp
+// After successful connection in NetworkManager
 WiFi.softAP("Theremin-OTA");  // Start AP alongside STA
 DEBUG_PRINTLN("[WiFi] AP+STA mode active");
 ```
