@@ -99,6 +99,8 @@ public:
      */
     Adafruit_SSD1306& getDisplay() { return display; }
 
+    void showLoadingScreen();
+
 private:
     Adafruit_SSD1306 display;
     std::vector<DisplayPage> pages;

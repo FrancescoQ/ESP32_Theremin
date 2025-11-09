@@ -1,0 +1,253 @@
+/*
+ * NetworkManager.cpp
+ *
+ * Implementation of NetworkManager class.
+ * Manages WiFi connection, OTA updates, and web server.
+ */
+
+#include "system/NetworkManager.h"
+
+#ifdef ENABLE_NETWORK
+
+  #include "system/Debug.h"
+
+// Constructor
+NetworkManager::NetworkManager(DisplayManager* disp)
+    : server(80),
+      ota(&server),  // OTAManager only needs server reference (WiFi handled by WiFiManager)
+      display(disp),
+      isInitialized(false),
+      apName("Theremin-Setup"),
+      mdnsHostname("theremin") {
+  // Register network status display page using lambda (consistent with Theremin pattern)
+  if (display) {
+    display->registerPage(
+        "Network", [this](Adafruit_SSD1306& oled) { this->renderNetworkPage(oled); }, "Network",
+        90);
+  }
+}
+
+// Initialize all network services
+bool NetworkManager::begin(const char* apName, const char* otaUser, const char* otaPass,
+                           uint8_t connectTimeout, uint16_t portalTimeout) {
+  DEBUG_PRINTLN("\n[Network] Initializing NetworkManager...");
+
+  // Store configuration
+  this->apName = apName;
+
+  // Setup WiFi connection
+  setupWiFi(connectTimeout, portalTimeout);
+
+  // Setup mDNS if connected to WiFi
+  if (WiFi.isConnected()) {
+    setupMDNS(mdnsHostname.c_str());
+  }
+
+  // Setup OTA
+  setupOTA(otaUser, otaPass);
+
+  // Start the web server
+  server.begin();
+  DEBUG_PRINTLN("[Network] AsyncWebServer started on port 80");
+
+  isInitialized = true;
+  DEBUG_PRINTLN("[Network] NetworkManager initialized successfully\n");
+
+  return true;
+}
+
+// Setup WiFi connection with WiFiManager
+void NetworkManager::setupWiFi(uint8_t connectTimeout, uint16_t portalTimeout) {
+  DEBUG_PRINTLN("[WiFi] Configuring WiFiManager...");
+
+  // Configure timeouts
+  wifiManager.setConnectTimeout(connectTimeout);
+  wifiManager.setConfigPortalTimeout(portalTimeout);
+
+  // Configure AP callback for status updates
+  wifiManager.setAPCallback([](WiFiManager* myWiFiManager) {
+    DEBUG_PRINTLN("[WiFi] Entered config portal mode");
+    DEBUG_PRINT("[WiFi] AP Name: ");
+    DEBUG_PRINTLN(myWiFiManager->getConfigPortalSSID());
+    DEBUG_PRINT("[WiFi] AP IP: ");
+    DEBUG_PRINTLN(WiFi.softAPIP());
+    DEBUG_PRINTLN("[WiFi] Connect to this AP to configure WiFi");
+  });
+
+  // Attempt to auto-connect to saved WiFi or start config portal
+  DEBUG_PRINT("[WiFi] Attempting to connect");
+  if (connectTimeout > 0) {
+    DEBUG_PRINT(" (timeout: ");
+    DEBUG_PRINT(connectTimeout);
+    DEBUG_PRINT("s)");
+  }
+  DEBUG_PRINTLN("...");
+
+  if (!wifiManager.autoConnect(apName.c_str())) {
+    DEBUG_PRINTLN("[WiFi] Failed to connect to WiFi");
+    // With portalTimeout=0, this should not happen
+    // But if it does, we continue (AP mode is running)
+  }
+
+  // Print connection status
+  if (WiFi.isConnected()) {
+    DEBUG_PRINTLN("[WiFi] ✓ Connected to WiFi (STA mode)");
+    DEBUG_PRINT("[WiFi] SSID: ");
+    DEBUG_PRINTLN(WiFi.SSID());
+    DEBUG_PRINT("[WiFi] IP: ");
+    DEBUG_PRINTLN(WiFi.localIP());
+    DEBUG_PRINT("[WiFi] Signal: ");
+    DEBUG_PRINT(WiFi.RSSI());
+    DEBUG_PRINTLN(" dBm");
+  }
+  else {
+    DEBUG_PRINTLN("[WiFi] Running in Access Point mode");
+    DEBUG_PRINT("[WiFi] AP Name: ");
+    DEBUG_PRINTLN(apName);
+    DEBUG_PRINT("[WiFi] AP IP: ");
+    DEBUG_PRINTLN(WiFi.softAPIP());
+    DEBUG_PRINTLN("[WiFi] Connect to this AP to access the web interface");
+  }
+}
+
+// Setup mDNS service
+void NetworkManager::setupMDNS(const char* hostname) {
+  DEBUG_PRINT("[mDNS] Registering hostname: ");
+  DEBUG_PRINT(hostname);
+  DEBUG_PRINTLN(".local");
+
+  if (MDNS.begin(hostname)) {
+    MDNS.addService("http", "tcp", 80);
+    DEBUG_PRINT("[mDNS] ✓ Accessible at http://");
+    DEBUG_PRINT(hostname);
+    DEBUG_PRINTLN(".local");
+  }
+  else {
+    DEBUG_PRINTLN("[mDNS] ✗ Failed to start mDNS service");
+  }
+}
+
+// Setup OTA updates
+void NetworkManager::setupOTA(const char* user, const char* pass) {
+  // OTAManager registers ElegantOTA on the shared AsyncWebServer
+  // WiFi/AP connection is already handled by WiFiManager
+  if (ota.begin(user, pass)) {
+    DEBUG_PRINTLN("[OTA] ✓ OTA registered successfully");
+  } else {
+    DEBUG_PRINTLN("[OTA] ✗ Failed to register OTA");
+  }
+}
+
+// Non-blocking update
+void NetworkManager::update() {
+  if (!isInitialized) {
+    return;
+  }
+
+  // Future: Add reconnect logic, WiFi monitoring, etc.
+  // For now, this is a placeholder for future enhancements
+}
+
+// Check if connected to WiFi
+bool NetworkManager::isConnected() const {
+  return WiFi.isConnected();
+}
+
+// Get current IP address
+IPAddress NetworkManager::getIP() const {
+  if (WiFi.isConnected()) {
+    return WiFi.localIP();
+  }
+  else {
+    return WiFi.softAPIP();
+  }
+}
+
+// Get current WiFi mode
+String NetworkManager::getMode() const {
+  if (!isInitialized) {
+    return "Off";
+  }
+
+  if (WiFi.isConnected()) {
+    return "STA";
+  }
+  else if (WiFi.getMode() == WIFI_AP || WiFi.getMode() == WIFI_AP_STA) {
+    return "AP";
+  }
+  else {
+    return "Off";
+  }
+}
+
+// Get connected WiFi SSID
+String NetworkManager::getSSID() const {
+  if (WiFi.isConnected()) {
+    return WiFi.SSID();
+  }
+  return "N/A";
+}
+
+// Get WiFi signal strength
+int8_t NetworkManager::getRSSI() const {
+  if (WiFi.isConnected()) {
+    return WiFi.RSSI();
+  }
+  return 0;
+}
+
+// Render network status display page
+void NetworkManager::renderNetworkPage(Adafruit_SSD1306& display) {
+  // Mode and connection status
+  String mode = getMode();
+
+  display.setCursor(0, DisplayManager::CONTENT_START_Y);
+  display.print("Mode: ");
+  display.println(mode);
+
+  if (mode == "STA") {
+    // Connected to WiFi - show network details
+    display.print("SSID: ");
+    String ssid = getSSID();
+    if (ssid.length() > 14) {
+      ssid = ssid.substring(0, 14);  // Truncate if too long
+    }
+    display.println(ssid);
+
+    display.print("IP: ");
+    display.println(getIP().toString());
+
+    display.print("Signal: ");
+    display.print(getRSSI());
+    display.println(" dBm");
+
+    display.println("Access:");
+    display.print("  ");
+    display.print(mdnsHostname);
+    display.println(".local");
+  }
+  else if (mode == "AP") {
+    // Access Point mode - show AP details
+    display.print("AP: ");
+    String ap = apName;
+    if (ap.length() > 16) {
+      ap = ap.substring(0, 16);  // Truncate if too long
+    }
+    display.println(ap);
+
+    display.print("IP: ");
+    display.println(getIP().toString());
+
+    display.println("");
+    display.println("Connect to AP");
+    display.println("to configure");
+  }
+  else {
+    // Network disabled
+    display.println("");
+    display.println("Network");
+    display.println("disabled");
+  }
+}
+
+#endif  // ENABLE_NETWORK

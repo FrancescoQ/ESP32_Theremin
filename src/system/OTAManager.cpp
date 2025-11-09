@@ -6,74 +6,16 @@
 
 #include "system/OTAManager.h"
 
-#ifdef ENABLE_OTA
+#ifdef ENABLE_NETWORK
 
-#include "system/Debug.h"
+  #include "system/Debug.h"
 
 // Constructor
-OTAManager::OTAManager(AsyncWebServer* srv, const char* ssid, const char* apPass, int buttonPin)
-    : server(srv), apSSID(ssid), apPassword(apPass), enablePin(buttonPin),
-      isInitialized(false) {}
+OTAManager::OTAManager(AsyncWebServer* srv) : server(srv), isInitialized(false) {}
 
-// Initialize WiFi AP and ElegantOTA
-bool OTAManager::begin(const char* otaUser, const char* otaPass, OTAForceState forceState) {
-
-  // Immediately return if OTA is forced as disabled.
-  if (forceState == OTAForceState::ALWAYS_DISABLE) {
-    DEBUG_PRINTLN("[OTA] FORCE DISABLED.");
-    isInitialized = false;
-    return false;
-  }
-
-  // Check enable pin if configured and if we don't want to always force enable.
-  if (forceState == OTAForceState::AUTO && enablePin >= 0) {
-    DEBUG_PRINTLN("[OTA] ENABLED BY AUTO CHECK.");
-    pinMode(enablePin, INPUT_PULLUP);
-    if (digitalRead(enablePin) != LOW) {
-      // Button not pressed during boot
-      DEBUG_PRINTLN("[OTA] Enable button not pressed, OTA disabled");
-      isInitialized = false;
-      return false;
-    }
-    DEBUG_PRINTLN("[OTA] Enable button detected, starting OTA...");
-  }
-
-  if (forceState == OTAForceState::ALWAYS_ENABLE) {
-    DEBUG_PRINTLN("[OTA] FORCE ENABLE.");
-  }
-
-  DEBUG_PRINTLN("\n=== OTA Manager Initialization ===");
-
-  // Configure and start Access Point
-  DEBUG_PRINT("Creating WiFi Access Point: ");
-  DEBUG_PRINTLN(apSSID.c_str());
-
-  bool apStarted = false;
-  if (apPassword.length() > 0) {
-    // Secured AP (password must be at least 8 characters)
-    if (apPassword.length() < 8) {
-      DEBUG_PRINTLN("[ERROR] AP password must be at least 8 characters!");
-      return false;
-    }
-    apStarted = WiFi.softAP(apSSID.c_str(), apPassword.c_str());
-  } else {
-    // Open AP (no password)
-    DEBUG_PRINTLN("[WARNING] Creating OPEN WiFi network (no password)");
-    apStarted = WiFi.softAP(apSSID.c_str());
-  }
-
-  if (!apStarted) {
-    DEBUG_PRINTLN("[ERROR] Failed to start Access Point!");
-    return false;
-  }
-
-  // Wait for AP to be ready
-  delay(100);
-
-  // Get and display IP address
-  IPAddress IP = WiFi.softAPIP();
-  DEBUG_PRINT("Access Point IP: ");
-  DEBUG_PRINTLN(IP.toString().c_str());
+// Initialize ElegantOTA (WiFi/AP is handled by NetworkManager)
+bool OTAManager::begin(const char* otaUser, const char* otaPass) {
+  DEBUG_PRINTLN("[OTA] Initializing OTA updates...");
 
   // Initialize ElegantOTA with optional authentication
   if (strlen(otaUser) > 0 && strlen(otaPass) > 0) {
@@ -107,13 +49,8 @@ bool OTAManager::begin(const char* otaUser, const char* otaPass, OTAForceState f
     }
   });
 
-  // Note: AsyncWebServer will be started in main.cpp after all managers are initialized
-  DEBUG_PRINTLN("AsyncWebServer will be started by main.cpp");
-  DEBUG_PRINTLN("\nOTA Update Interface:");
-  DEBUG_PRINT("  URL: http://");
-  DEBUG_PRINT(IP.toString().c_str());
-  DEBUG_PRINTLN("/update");
-  DEBUG_PRINTLN("\n=== OTA Manager Ready ===\n");
+  DEBUG_PRINTLN("[OTA] ✓ OTA updates enabled");
+  DEBUG_PRINTLN("[OTA] Access OTA at /update route");
 
   isInitialized = true;
   return true;
@@ -141,4 +78,4 @@ IPAddress OTAManager::getIP() const {
   return WiFi.softAPIP();
 }
 
-#endif  // ENABLE_OTA
+#endif  // ENABLE_NETWORK

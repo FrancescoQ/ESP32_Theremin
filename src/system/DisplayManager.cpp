@@ -16,6 +16,25 @@ DisplayManager::DisplayManager()
       initialized(false) {
 }
 
+void DisplayManager::showLoadingScreen() {
+  display.clearDisplay();
+  display.setTextSize(1);
+  display.setTextColor(SSD1306_WHITE);
+
+  // Center the text both horizontally and vertically
+  const char* text = "Loading...";
+  int16_t x1, y1;
+  uint16_t w, h;
+  display.getTextBounds(text, 0, 0, &x1, &y1, &w, &h);
+
+  int x = (SCREEN_WIDTH - w) / 2;
+  int y = (SCREEN_HEIGHT - h) / 2;
+
+  display.setCursor(x, y);
+  display.print(text);
+  display.display();
+}
+
 bool DisplayManager::begin() {
     DEBUG_PRINTLN("DisplayManager: Initializing SSD1306 display...");
 

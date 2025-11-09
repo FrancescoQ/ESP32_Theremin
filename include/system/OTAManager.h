@@ -22,7 +22,7 @@
 
 #include <Arduino.h>
 
-#ifdef ENABLE_OTA
+#ifdef ENABLE_NETWORK
 
   #include <WiFi.h>
   #include <ESPAsyncWebServer.h>
@@ -31,27 +31,14 @@
 class OTAManager {
  private:
   AsyncWebServer* server;  // Shared pointer (not owned)
-  String apSSID;
-  String apPassword;
-  int enablePin;
   bool isInitialized;
 
  public:
-
-  enum OTAForceState {
-    AUTO = 0,
-    ALWAYS_ENABLE = 1,
-    ALWAYS_DISABLE = 2
-  };
-
   /**
    * Constructor
-   * @param srv Pointer to shared AsyncWebServer instance (managed by main.cpp)
-   * @param ssid Access Point name (visible WiFi network name)
-   * @param apPass Access Point password (leave empty for open network, min 8 chars if used)
-   * @param buttonPin GPIO pin for enable button (-1 = always enable, >=0 = check button on boot)
+   * @param srv Pointer to shared AsyncWebServer instance (managed by NetworkManager)
    */
-  OTAManager(AsyncWebServer* srv, const char* ssid, const char* apPass = "", int buttonPin = -1);
+  OTAManager(AsyncWebServer* srv);
 
   /**
    * Initialize WiFi AP and ElegantOTA server
@@ -59,7 +46,7 @@ class OTAManager {
    * @param otaPass Password for OTA page authentication
    * @return true if initialization successful, false otherwise
    */
-  bool begin(const char* otaUser = "", const char* otaPass = "", OTAForceState forceState = OTAForceState::AUTO);
+  bool begin(const char* otaUser = "", const char* otaPass = "");
 
   /**
    * Handle incoming OTA requests (call in loop())
@@ -81,4 +68,4 @@ class OTAManager {
   IPAddress getIP() const;
 };
 
-#endif  // ENABLE_OTA
+#endif  // ENABLE_NETWORK

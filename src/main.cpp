@@ -15,9 +15,8 @@
 #include "system/PerformanceMonitor.h"
 #include "system/DisplayManager.h"
 
-#if ENABLE_OTA
-#include <ESPAsyncWebServer.h>
-#include "system/OTAManager.h"
+#if ENABLE_NETWORK
+#include "system/NetworkManager.h"
 #endif
 
 #if ENABLE_GPIO_MONITOR
@@ -38,15 +37,9 @@ PerformanceMonitor performanceMonitor(nullptr);
 // belong to the Theremin.
 Theremin theremin(&performanceMonitor, &display);
 
-#if ENABLE_OTA
-// Create shared AsyncWebServer instance (used by OTA and future WebUI)
-AsyncWebServer server(80);
-
-// Create OTA manager instance
-// AP Name: "Theremin-OTA", AP Password: "" (open network)
-// OTA Auth: username "admin", password "theremin"
-// Enable pin: PIN_OTA_ENABLE from PinConfig.h (-1 = always active, >=0 = button)
-OTAManager ota(&server, "Theremin-OTA", "", PIN_OTA_ENABLE);
+#if ENABLE_NETWORK
+// Create network manager instance (handles WiFi, OTA, and web server)
+NetworkManager network(&display);
 #endif
 
 #if ENABLE_GPIO_MONITOR
@@ -80,6 +73,9 @@ void setup() {
     DEBUG_PRINTLN("[Display] Check wiring and I2C address (0x3C or 0x3D)");
   }
   delay(100);
+
+  display.showLoadingScreen();
+
 
   #if ENABLE_GPIO_MONITOR
     // Initialize GPIO monitor for MCP23017 debugging
@@ -122,38 +118,19 @@ void setup() {
     delay(500);
   #endif
 
-  #if ENABLE_OTA
-    // Initialize OTA manager
-    // If we start the system with 3 oscillators OFF and all octave switch -1 enable OTA:
-    OTAManager::OTAForceState otaForcedState = OTAManager::ALWAYS_DISABLE;
+  #if ENABLE_NETWORK
+    // Initialize network manager (WiFi, OTA, web server)
+    // If we start the system with 3 oscillators OFF and all
+    // octave switch -1 disable network:
     if (theremin.getAudioEngine()->getSpecialState(1)) {
-      otaForcedState = OTAManager::ALWAYS_ENABLE;
+      // Special state to disable network capabilities.
+      DEBUG_PRINTLN("[NETWORK] Network capabilities disabled for 'special state' of controls.");
     }
-
-    if (ota.begin("admin", "theremin", otaForcedState)) {
-      DEBUG_PRINTLN("[OTA] OTA updates enabled");
-
-      // Start the shared AsyncWebServer (only once, after all managers are initialized)
-      server.begin();
-      DEBUG_PRINTLN("[Server] AsyncWebServer started on port 80");
-    } else {
-      DEBUG_PRINTLN("[OTA] Failed to start OTA manager");
+    else {
+      DEBUG_PRINTLN("[NETWORK] Enabling network.");
+      network.begin("Theremin-Setup", "admin", "theremin", 15, 0);
     }
   #endif
-
-  // Turn on effects.
-  if (theremin.getAudioEngine()->getSpecialState(2)) {
-    theremin.getAudioEngine()->getEffectsChain()->setDelayEnabled(true);
-    DEBUG_PRINTLN("[STARTUP] Delay enabled");
-  }
-  if (theremin.getAudioEngine()->getSpecialState(3)) {
-    theremin.getAudioEngine()->getEffectsChain()->setChorusEnabled(true);
-    DEBUG_PRINTLN("[STARTUP] Chorus enabled");
-  }
-  if (theremin.getAudioEngine()->getSpecialState(4)) {
-    theremin.getAudioEngine()->getEffectsChain()->setReverbEnabled(true);
-    DEBUG_PRINTLN("[STARTUP] Reverb enabled");
-  }
 }
 
 void loop() {
@@ -168,9 +145,9 @@ void loop() {
     gpioMonitor.update();
   #endif
 
-  #if ENABLE_OTA
-    // Note: AsyncWebServer handles OTA requests automatically via callbacks
-    // No manual ota.handle() needed anymore
+  #if ENABLE_NETWORK
+    // Update network manager (non-blocking)
+    network.update();
   #endif
 
   // Update monitoring (checks RAM, prints periodic status)
