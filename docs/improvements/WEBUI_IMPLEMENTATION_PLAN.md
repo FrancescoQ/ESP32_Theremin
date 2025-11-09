@@ -115,7 +115,6 @@ build_flags =
     -DENABLE_STARTUP_TEST=0
     -DENABLE_STARTUP_SOUND=1
     -DENABLE_GPIO_MONITOR=0
-    -DWEBUI_ENABLED=1                        # NEW
     -DELEGANTOTA_USE_ASYNC_WEBSERVER=1       # NEW
 lib_deps =
     adafruit/Adafruit_VL53L0X@^1.2.0
@@ -123,11 +122,13 @@ lib_deps =
     adafruit/Adafruit MCP23017 Arduino Library@^2.3.2
     adafruit/Adafruit SSD1306@^2.5.7
     adafruit/Adafruit GFX Library@^1.11.9
-    ESPAsyncWebServer@^1.2.3                 # NEW
-    AsyncTCP@^1.1.1                          # NEW
-    ArduinoJson@^6.21.0                      # NEW
+    ESP32Async/ESPAsyncWebServer@^3.8.1      # NEW (AsyncTCP auto-included)
+    tzapu/WiFiManager@^2.0.17                # NEW
+    bblanchon/ArduinoJson@^7.2.1             # NEW
 board_build.filesystem = littlefs            # NEW
 ```
+
+**Note:** We use the `ESP32Async/ESPAsyncWebServer` fork (v3.8.1), which is the most actively maintained fork. AsyncTCP is automatically included as a transitive dependency, so no need to add it explicitly.
 
 #### 1.2 Refactor OTAManager
 
@@ -193,119 +194,190 @@ pio run -t uploadfs  # Upload filesystem to ESP32
 
 ---
 
-## Phase 2: WiFi Infrastructure (AP + STA + Captive Portal)
+## Phase 2: WiFi Infrastructure (Using tzapu/WiFiManager Library)
 
 ### Goal
-Implement dual WiFi mode with automatic connection and easy configuration
+Integrate mature WiFiManager library for automatic WiFi configuration with AP+STA mode and captive portal
+
+### Strategy Change
+**REVISED APPROACH:** Use `tzapu/WiFiManager` library instead of custom implementation
+- **Time saved:** 2-3 hours (from custom 3-4h to library 1h)
+- **Benefits:** Battle-tested code, automatic captive portal, credential persistence
+- **Library features:** AP+STA mode, non-blocking, mDNS support, auto-reconnect
 
 ### Tasks
 
-#### 2.1 Create WiFiManager Class
+#### 2.1 Configure WiFiManager for AsyncWebServer
 
-**File: `include/system/WiFiManager.h`**
+**Integration approach:**
 ```cpp
-#pragma once
+#include <WiFiManager.h>  // tzapu/WiFiManager library
 
-#include <Arduino.h>
-#include <WiFi.h>
-#include <ESPmDNS.h>
-#include <Preferences.h>
-
-class WiFiManager {
-private:
-    String savedSSID;
-    String savedPassword;
-    String apSSID;
-    String apPassword;
-    bool staConnected;
-    Preferences prefs;
-
-    static const int STA_CONNECT_TIMEOUT = 10000;  // 10 seconds
-
-    void loadCredentials();
-    void saveCredentials(String ssid, String password);
-    bool connectSTA();
-    void startAP();
-    void setupMDNS();
-
-public:
-    WiFiManager(const char* apName = "Theremin-OTA",
-                const char* apPass = "");
-
-    void begin();
-    void update();  // Check connection status
-
-    bool isSTAConnected() const;
-    IPAddress getIP() const;
-    String getMode() const;  // "AP", "STA", or "AP+STA"
-};
+// WiFiManager uses its own internal web server for configuration
+// Our AsyncWebServer runs separately on port 80
+// WiFiManager's captive portal runs temporarily during setup
 ```
 
-**File: `src/system/WiFiManager.cpp`**
+#### 2.2 Setup WiFiManager in main.cpp
 
-Key implementation points:
-- Use `Preferences` library to store WiFi credentials in NVS
-- Boot sequence:
-  1. Load saved credentials
-  2. Try STA connection (10s timeout)
-  3. If failed or no credentials → Start AP mode
-  4. If successful → Start AP + STA mode
-- Register mDNS as `theremin.local`
+**File: `src/main.cpp`** (additions to existing code)
 
-#### 2.2 Implement Captive Portal
-
-**Setup Page Route:**
 ```cpp
-// In WebUIManager or WiFiManager
-server->on("/setup", HTTP_GET, [](AsyncWebServerRequest *request) {
-    request->send(SPIFFS, "/setup.html", "text/html");
-});
+#if ENABLE_OTA
+#include <ESPAsyncWebServer.h>
+#include <WiFiManager.h>  // NEW
+#include "system/OTAManager.h"
+#endif
 
-server->on("/setup", HTTP_POST, [this](AsyncWebServerRequest *request) {
-    String ssid = request->arg("ssid");
-    String password = request->arg("password");
+// Global instances
+#if ENABLE_OTA
+AsyncWebServer server(80);
+WiFiManager wifiManager;  // NEW: Library instance
 
-    saveCredentials(ssid, password);
-    request->send(200, "text/plain", "Saved! Rebooting...");
+OTAManager ota(&server, "Theremin-OTA", "", PIN_OTA_ENABLE);
+#endif
 
-    delay(1000);
-    ESP.restart();
-});
+void setup() {
+    // ... existing setup code ...
+
+    #if ENABLE_OTA
+        // Configure WiFiManager
+        wifiManager.setConfigPortalTimeout(180);  // 3 minutes timeout
+        wifiManager.setAPCallback([](WiFiManager *myWiFiManager) {
+            DEBUG_PRINTLN("[WiFi] Entered config mode");
+            DEBUG_PRINT("[WiFi] Config AP: ");
+            DEBUG_PRINTLN(myWiFiManager->getConfigPortalSSID());
+            DEBUG_PRINT("[WiFi] Config IP: ");
+            DEBUG_PRINTLN(WiFi.softAPIP());
+        });
+
+        // Auto-connect to saved WiFi or start config portal
+        if (!wifiManager.autoConnect("Theremin-Setup")) {
+            DEBUG_PRINTLN("[WiFi] Failed to connect, restarting...");
+            delay(3000);
+            ESP.restart();
+        }
+
+        DEBUG_PRINTLN("[WiFi] Connected!");
+        DEBUG_PRINT("[WiFi] IP address: ");
+        DEBUG_PRINTLN(WiFi.localIP());
+
+        // Setup mDNS
+        if (MDNS.begin("theremin")) {
+            MDNS.addService("http", "tcp", 80);
+            DEBUG_PRINTLN("[mDNS] theremin.local registered");
+        }
+
+        // Initialize OTA and start server
+        OTAManager::OTAForceState otaForcedState = OTAManager::ALWAYS_DISABLE;
+        if (theremin.getAudioEngine()->getSpecialState(1)) {
+            otaForcedState = OTAManager::ALWAYS_ENABLE;
+        }
+
+        if (ota.begin("admin", "theremin", otaForcedState)) {
+            DEBUG_PRINTLN("[OTA] OTA updates enabled");
+            server.begin();
+            DEBUG_PRINTLN("[Server] AsyncWebServer started on port 80");
+        }
+    #endif
+}
+
+void loop() {
+    // ... existing loop code ...
+
+    // WiFiManager is non-blocking, no update() needed
+}
 ```
 
-**DNS Handling:**
+#### 2.3 WiFiManager Configuration Options
+
+**Optional customizations:**
 ```cpp
-// Redirect all DNS queries to ESP32 IP (captive portal trick)
-dnsServer.start(53, "*", WiFi.softAPIP());
+// Set custom parameters (before autoConnect)
+wifiManager.setAPStaticIPConfig(
+    IPAddress(192,168,4,1),  // AP IP
+    IPAddress(192,168,4,1),  // Gateway
+    IPAddress(255,255,255,0) // Subnet
+);
+
+// Customize portal appearance
+wifiManager.setTitle("TheremAIn WiFi Setup");
+wifiManager.setCustomHeadElement("<style>body{background:#1a1a2e;}</style>");
+
+// Add custom parameters (advanced)
+WiFiManagerParameter custom_text("<p>TheremAIn Configuration</p>");
+wifiManager.addParameter(&custom_text);
+
+// Enable/disable features
+wifiManager.setShowInfoUpdate(false);
+wifiManager.setShowInfoErase(false);
+wifiManager.setShowStaticFields(true);
 ```
 
-#### 2.3 mDNS Setup
+#### 2.4 Reset WiFi Credentials (Optional Feature)
 
+**Add button-triggered reset:**
 ```cpp
-void WiFiManager::setupMDNS() {
-    if (MDNS.begin("theremin")) {
-        MDNS.addService("http", "tcp", 80);
-        DEBUG_PRINTLN("[mDNS] theremin.local registered");
-    } else {
-        DEBUG_PRINTLN("[mDNS] Failed to start");
-    }
+// In setup(), check button before WiFiManager
+if (digitalRead(RESET_WIFI_PIN) == LOW) {
+    DEBUG_PRINTLN("[WiFi] Reset button pressed, clearing credentials");
+    wifiManager.resetSettings();
 }
 ```
 
 ### Deliverables
-- [x] WiFiManager class created
-- [x] Automatic STA connection with fallback
-- [x] Captive portal for WiFi setup
-- [x] mDNS registration working
-- [x] Credentials persisted across reboots
+- [x] WiFiManager library integrated (already added to platformio.ini)
+- [ ] Auto-connect to saved network implemented
+- [ ] Captive portal accessible on first boot
+- [ ] mDNS `theremin.local` registered
+- [ ] WiFi credentials persisted automatically
+- [ ] Fallback to AP mode on connection failure
 
 ### Testing Checklist
-- [ ] AP mode works when no credentials saved
-- [ ] STA mode connects to saved network
-- [ ] AP+STA mode runs simultaneously
-- [ ] Captive portal appears on first connection
-- [ ] `theremin.local` resolves correctly
-- [ ] Credentials survive reboot
+- [ ] First boot: Captive portal appears ("Theremin-Setup" AP)
+- [ ] Portal: Can scan and select WiFi network
+- [ ] Portal: Connection successful after entering password
+- [ ] Reboot: Auto-connects to saved network
+- [ ] STA mode: `theremin.local` resolves correctly
+- [ ] STA mode: AsyncWebServer accessible
+- [ ] Connection loss: Auto-reconnects
+- [ ] Reset: Button clears credentials (if implemented)
+
+### Implementation Notes
+
+**WiFiManager Operation:**
+1. **First boot (no credentials):**
+   - Creates "Theremin-Setup" AP
+   - Starts captive portal on 192.168.4.1
+   - User connects, configures WiFi
+   - Saves credentials and reboots
+
+2. **Subsequent boots (has credentials):**
+   - Attempts connection to saved network
+   - Success → STA mode, continues to main app
+   - Failure → Falls back to config portal
+
+3. **Our AsyncWebServer:**
+   - Only starts after WiFiManager succeeds
+   - Runs on connected network (STA mode)
+   - No conflict with WiFiManager's temporary server
+
+**Key Differences from Custom Implementation:**
+- ✅ No custom WiFiManager class needed
+- ✅ Library handles credential storage automatically
+- ✅ Captive portal built-in (no custom HTML needed)
+- ✅ Auto-reconnect logic included
+- ✅ Non-blocking operation
+- ⚠️ Less control over portal appearance (but customizable)
+- ⚠️ AP runs only during config (not permanent AP+STA mode)
+
+**Permanent AP+STA Mode (Optional):**
+If you need both modes simultaneously:
+```cpp
+// After successful connection
+WiFi.softAP("Theremin-OTA");  // Start AP alongside STA
+DEBUG_PRINTLN("[WiFi] AP+STA mode active");
+```
 
 ---
 
@@ -1341,17 +1413,17 @@ theremin/
 
 ```ini
 lib_deps =
-    ESPAsyncWebServer@^1.2.3
-    AsyncTCP@^1.1.1
-    ArduinoJson@^6.21.0
-    DNSServer                 # Built-in (for captive portal)
+    ESP32Async/ESPAsyncWebServer@^3.8.1  # AsyncTCP auto-included transitively
+    tzapu/WiFiManager@^2.0.17
+    bblanchon/ArduinoJson@^7.2.1
 ```
+
+**Note:** AsyncTCP is automatically included as a transitive dependency of ESPAsyncWebServer, so no need to add it explicitly.
 
 ### Build Flags
 
 ```ini
 build_flags =
-    -DWEBUI_ENABLED=1
     -DELEGANTOTA_USE_ASYNC_WEBSERVER=1
 ```
 
