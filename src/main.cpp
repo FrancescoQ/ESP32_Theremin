@@ -63,6 +63,11 @@ void setup() {
 
   // Initialize I2C bus (shared by sensors, MCP23017, and display)
   Wire.begin(PIN_SENSOR_I2C_SDA, PIN_SENSOR_I2C_SCL);
+
+  // Lower clock and timeout to try and fight i2c interferences for frozen sensors wheny touchng gnd (i.e. inserting a jack)
+  Wire.setClock(100000);
+  Wire.setTimeOut(1000);
+
   DEBUG_PRINTLN("[I2C] Bus initialized on SDA=21, SCL=22");
   delay(50);
 
