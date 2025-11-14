@@ -694,7 +694,7 @@ void WebUIManager::handleWebSocketMessage(AsyncWebSocketClient *client,
 ## Phase 4: Web Frontend (Dashboard UI)
 
 ### Goal
-Build responsive web interface with real-time controls
+Build responsive web interface with real-time controls and real-time tuner visualization
 
 ### Tasks
 
@@ -1247,6 +1247,584 @@ input[type="checkbox"] {
 - [ ] Real-time updates display properly
 - [ ] Sensor bars animate smoothly
 - [ ] Performance metrics update regularly
+
+#### 4.4 Visual Tuner Component
+
+**Overview:**
+A real-time frequency-based tuner that displays the current note being played without requiring a microphone. The ESP32 sends the calculated frequency over WebSocket, and the browser displays the closest musical note with cents deviation.
+
+**Advantages Over Microphone-Based Tuners:**
+- ✅ No audio analysis needed - frequency is directly available
+- ✅ Lower latency - just WebSocket delay (~10-50ms)
+- ✅ More accurate - no FFT noise/rounding errors
+- ✅ Works in noisy environments - not affected by background sounds
+- ✅ Shows "intended" pitch - even if speakers aren't perfect
+- ✅ Simpler implementation - no Web Audio API FFT needed
+- ✅ Works in silent mode (headphones)
+
+##### Frequency-to-Note Conversion Algorithm
+
+**JavaScript Implementation:**
+
+```javascript
+/**
+ * Convert frequency (Hz) to musical note with cents deviation
+ * @param {number} frequency - Frequency in Hz
+ * @returns {object} Note information
+ */
+function frequencyToNote(frequency) {
+  // A4 = 440 Hz = MIDI note 69
+  const A4 = 440;
+  const A4_MIDI = 69;
+
+  // Calculate MIDI note number using logarithmic formula
+  // halfSteps = 12 * log2(f / 440)
+  const halfSteps = 12 * Math.log2(frequency / A4);
+  const midiNote = Math.round(A4_MIDI + halfSteps);
+
+  // Calculate cents deviation (how far off from perfect pitch)
+  // 100 cents = 1 semitone
+  const exactNote = A4_MIDI + halfSteps;
+  const cents = Math.round((exactNote - midiNote) * 100);
+
+  // Note names (chromatic scale)
+  const noteNames = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+  const noteName = noteNames[midiNote % 12];
+  const octave = Math.floor(midiNote / 12) - 1;
+
+  return {
+    name: `${noteName}${octave}`,     // e.g., "C#4", "A3"
+    noteName: noteName,                // e.g., "C#"
+    octave: octave,                    // e.g., 4
+    frequency: frequency,              // Original frequency
+    midiNote: midiNote,                // MIDI note number (0-127)
+    cents: cents,                      // Deviation in cents (-50 to +50)
+    flat: cents < -10,                 // More than 10 cents flat
+    sharp: cents > 10,                 // More than 10 cents sharp
+    inTune: Math.abs(cents) <= 10     // Within ±10 cents (in tune)
+  };
+}
+```
+
+##### Visual Display Options
+
+**Option 1: Classic Needle Tuner**
+
+HTML:
+```html
+<div class="tuner-display">
+  <!-- Note Name -->
+  <div class="note-name" id="tuner-note">---</div>
+  <div class="frequency" id="tuner-freq">---</div>
+
+  <!-- Needle Meter -->
+  <div class="tuner-meter">
+    <div class="needle" id="tuner-needle"></div>
+    <div class="markers">
+      <span class="marker-flat">♭</span>
+      <span class="marker-center">◆</span>
+      <span class="marker-sharp">♯</span>
+    </div>
+    <div class="scale">
+      <span>-50</span>
+      <span>0</span>
+      <span>+50</span>
+    </div>
+  </div>
+
+  <!-- Cents Display -->
+  <div class="cents-display" id="tuner-cents">
+    <span id="cents-value">0</span> cents
+  </div>
+</div>
+```
+
+CSS:
+```css
+.tuner-display {
+  background: var(--bg-card);
+  padding: 2rem;
+  border-radius: 8px;
+  text-align: center;
+}
+
+.note-name {
+  font-size: 4rem;
+  font-weight: bold;
+  color: var(--accent-light);
+  margin-bottom: 0.5rem;
+}
+
+.frequency {
+  font-size: 1.2rem;
+  color: var(--text-secondary);
+  margin-bottom: 2rem;
+}
+
+.tuner-meter {
+  position: relative;
+  height: 150px;
+  margin: 2rem auto;
+  max-width: 400px;
+}
+
+.needle {
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  width: 4px;
+  height: 100px;
+  background: var(--accent);
+  transform-origin: bottom center;
+  transform: translateX(-50%) rotate(0deg);
+  transition: transform 0.1s ease-out;
+  border-radius: 2px 2px 0 0;
+}
+
+/* Needle rotates ±45 degrees */
+.needle.sharp {
+  background: #ff9800;
+}
+
+.needle.flat {
+  background: #2196f3;
+}
+
+.needle.in-tune {
+  background: var(--success);
+}
+
+.markers {
+  position: absolute;
+  bottom: 10px;
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: space-between;
+  font-size: 2rem;
+}
+
+.marker-center {
+  color: var(--success);
+}
+
+.scale {
+  position: absolute;
+  bottom: -30px;
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+}
+
+.cents-display {
+  font-size: 1.5rem;
+  margin-top: 2rem;
+}
+
+.cents-display.flat {
+  color: #2196f3;
+}
+
+.cents-display.sharp {
+  color: #ff9800;
+}
+
+.cents-display.in-tune {
+  color: var(--success);
+}
+```
+
+JavaScript Update:
+```javascript
+// Add to handleUpdate() function
+function handleUpdate(data) {
+  switch(data.type) {
+    // ... existing cases
+    case 'frequency':
+      updateTunerUI(data);
+      break;
+  }
+}
+
+function updateTunerUI(data) {
+  if (!data.frequency || data.frequency < 20) {
+    // No signal or frequency too low
+    document.getElementById('tuner-note').textContent = '---';
+    document.getElementById('tuner-freq').textContent = '---';
+    document.getElementById('tuner-needle').style.transform = 'translateX(-50%) rotate(0deg)';
+    document.getElementById('cents-value').textContent = '0';
+    return;
+  }
+
+  const note = frequencyToNote(data.frequency);
+
+  // Update note display
+  document.getElementById('tuner-note').textContent = note.name;
+  document.getElementById('tuner-freq').textContent = `${note.frequency.toFixed(2)} Hz`;
+
+  // Update needle rotation (-45° to +45° for -50 to +50 cents)
+  const needleAngle = (note.cents / 50) * 45;
+  const needle = document.getElementById('tuner-needle');
+  needle.style.transform = `translateX(-50%) rotate(${needleAngle}deg)`;
+
+  // Update needle color
+  needle.classList.remove('flat', 'sharp', 'in-tune');
+  if (note.inTune) {
+    needle.classList.add('in-tune');
+  } else if (note.flat) {
+    needle.classList.add('flat');
+  } else if (note.sharp) {
+    needle.classList.add('sharp');
+  }
+
+  // Update cents display
+  const centsEl = document.getElementById('tuner-cents');
+  document.getElementById('cents-value').textContent =
+    (note.cents > 0 ? '+' : '') + note.cents;
+
+  centsEl.classList.remove('flat', 'sharp', 'in-tune');
+  if (note.inTune) {
+    centsEl.classList.add('in-tune');
+  } else if (note.flat) {
+    centsEl.classList.add('flat');
+  } else if (note.sharp) {
+    centsEl.classList.add('sharp');
+  }
+}
+```
+
+**Option 2: Horizontal Bar Indicator**
+
+HTML:
+```html
+<div class="tuner-bar-display">
+  <div class="note-info">
+    <span class="note-name" id="bar-note">---</span>
+    <span class="frequency" id="bar-freq">--- Hz</span>
+  </div>
+
+  <div class="cents-bar-container">
+    <div class="cents-bar">
+      <div class="bar-marker center"></div>
+      <div class="bar-indicator" id="bar-indicator"></div>
+    </div>
+    <div class="bar-labels">
+      <span>-50</span>
+      <span>-25</span>
+      <span>0</span>
+      <span>+25</span>
+      <span>+50</span>
+    </div>
+  </div>
+
+  <div class="cents-value" id="bar-cents">0 cents</div>
+</div>
+```
+
+CSS:
+```css
+.cents-bar-container {
+  margin: 2rem 0;
+}
+
+.cents-bar {
+  position: relative;
+  height: 40px;
+  background: linear-gradient(
+    to right,
+    #2196f3 0%,
+    #2196f3 40%,
+    var(--success) 45%,
+    var(--success) 55%,
+    #ff9800 60%,
+    #ff9800 100%
+  );
+  border-radius: 20px;
+  overflow: visible;
+}
+
+.bar-marker.center {
+  position: absolute;
+  left: 50%;
+  top: -5px;
+  width: 3px;
+  height: 50px;
+  background: white;
+  transform: translateX(-50%);
+}
+
+.bar-indicator {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  border-left: 10px solid transparent;
+  border-right: 10px solid transparent;
+  border-top: 15px solid white;
+  transform: translate(-50%, -50%);
+  transition: left 0.1s ease-out;
+  filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5));
+}
+
+.bar-labels {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 0.5rem;
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+}
+```
+
+JavaScript:
+```javascript
+function updateTunerBarUI(data) {
+  if (!data.frequency || data.frequency < 20) {
+    document.getElementById('bar-note').textContent = '---';
+    document.getElementById('bar-freq').textContent = '--- Hz';
+    document.getElementById('bar-indicator').style.left = '50%';
+    return;
+  }
+
+  const note = frequencyToNote(data.frequency);
+
+  document.getElementById('bar-note').textContent = note.name;
+  document.getElementById('bar-freq').textContent = `${note.frequency.toFixed(2)} Hz`;
+
+  // Position indicator (0% = -50 cents, 50% = 0 cents, 100% = +50 cents)
+  const position = 50 + (note.cents / 50) * 50;
+  document.getElementById('bar-indicator').style.left = `${position}%`;
+
+  const centsText = (note.cents > 0 ? '+' : '') + note.cents + ' cents';
+  document.getElementById('bar-cents').textContent = centsText;
+}
+```
+
+**Option 3: Chromatic Circle Display**
+
+HTML:
+```html
+<div class="tuner-circle">
+  <svg viewBox="0 0 200 200" width="300" height="300">
+    <!-- Circle segments for each note -->
+    <g id="note-circle">
+      <!-- 12 segments, generated in JavaScript -->
+    </g>
+    <!-- Center display -->
+    <circle cx="100" cy="100" r="60" fill="var(--bg-card)"/>
+    <text x="100" y="95" text-anchor="middle" font-size="24" fill="var(--accent-light)" id="circle-note">---</text>
+    <text x="100" y="115" text-anchor="middle" font-size="14" fill="var(--text-secondary)" id="circle-cents">0¢</text>
+  </svg>
+</div>
+```
+
+##### ESP32 Implementation
+
+**Frequency Broadcasting:**
+
+```cpp
+// In WebUIManager.cpp
+
+void WebUIManager::update() {
+  unsigned long now = millis();
+
+  if (now - lastUpdate >= UPDATE_INTERVAL) {
+    lastUpdate = now;
+
+    // Get current frequency from audio engine
+    float currentFrequency = theremin->getAudioEngine()->getCurrentFrequency();
+
+    // Only send if frequency is valid and changed significantly
+    static float lastFrequency = 0.0f;
+    if (currentFrequency > 20.0f && abs(currentFrequency - lastFrequency) > 1.0f) {
+      DynamicJsonDocument doc(128);
+      doc["type"] = "frequency";
+      doc["frequency"] = currentFrequency;
+
+      String json;
+      serializeJson(doc, json);
+      ws.textAll(json);
+
+      lastFrequency = currentFrequency;
+    }
+
+    // ... rest of update code
+  }
+}
+```
+
+**Optional: Note Name Calculation on ESP32**
+
+```cpp
+// Add to WebUIManager or create utility function
+
+struct NoteInfo {
+  String name;
+  float frequency;
+  int cents;
+  bool inTune;
+};
+
+NoteInfo frequencyToNote(float frequency) {
+  NoteInfo note;
+
+  if (frequency < 20.0f) {
+    note.name = "---";
+    note.frequency = 0;
+    note.cents = 0;
+    note.inTune = false;
+    return note;
+  }
+
+  // A4 = 440 Hz = MIDI note 69
+  const float A4 = 440.0f;
+  const int A4_MIDI = 69;
+
+  // Calculate MIDI note
+  float halfSteps = 12.0f * log2f(frequency / A4);
+  int midiNote = round(A4_MIDI + halfSteps);
+
+  // Calculate cents deviation
+  float exactNote = A4_MIDI + halfSteps;
+  int cents = round((exactNote - midiNote) * 100);
+
+  // Note names
+  const char* noteNames[] = {"C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"};
+  String noteName = noteNames[midiNote % 12];
+  int octave = (midiNote / 12) - 1;
+
+  note.name = noteName + String(octave);
+  note.frequency = frequency;
+  note.cents = cents;
+  note.inTune = abs(cents) <= 10;
+
+  return note;
+}
+
+// Send with note name included
+void WebUIManager::sendTunerUpdate(float frequency) {
+  NoteInfo note = frequencyToNote(frequency);
+
+  DynamicJsonDocument doc(256);
+  doc["type"] = "frequency";
+  doc["frequency"] = note.frequency;
+  doc["note"] = note.name;
+  doc["cents"] = note.cents;
+  doc["inTune"] = note.inTune;
+
+  String json;
+  serializeJson(doc, json);
+  ws.textAll(json);
+}
+```
+
+##### Update Rate Optimization
+
+**Adaptive Update Rate:**
+```cpp
+// Increase update rate during active playing
+void WebUIManager::update() {
+  unsigned long now = millis();
+
+  // Dynamic interval: fast when playing, slower when idle
+  float currentFreq = theremin->getAudioEngine()->getCurrentFrequency();
+  int updateInterval = (currentFreq > 50.0f) ? 50 : 200;  // 20 Hz vs 5 Hz
+
+  if (now - lastUpdate >= updateInterval) {
+    // ... send updates
+  }
+}
+```
+
+##### Additional Features
+
+**Quantization Feedback:**
+When quantization is enabled, show both raw and quantized frequencies:
+```javascript
+// Show both frequencies
+document.getElementById('raw-freq').textContent = `Raw: ${data.rawFrequency.toFixed(2)} Hz`;
+document.getElementById('quantized-freq').textContent = `Playing: ${data.frequency.toFixed(2)} Hz`;
+```
+
+**Historical Pitch Graph:**
+```javascript
+// Track last N frequency readings
+const pitchHistory = [];
+const MAX_HISTORY = 100;
+
+function updatePitchHistory(frequency) {
+  pitchHistory.push(frequency);
+  if (pitchHistory.length > MAX_HISTORY) {
+    pitchHistory.shift();
+  }
+  drawPitchGraph();
+}
+
+function drawPitchGraph() {
+  // Use Canvas API to draw line graph
+  const canvas = document.getElementById('pitch-graph');
+  const ctx = canvas.getContext('2d');
+  // ... draw implementation
+}
+```
+
+**Scale Highlighting:**
+```javascript
+// Highlight notes in selected scale
+const scales = {
+  chromatic: ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'],
+  major: ['C', 'D', 'E', 'F', 'G', 'A', 'B'],
+  minor: ['C', 'D', 'D#', 'F', 'G', 'G#', 'A#']
+};
+
+function isInScale(noteName, scale) {
+  return scales[scale].includes(noteName);
+}
+
+// Highlight in-scale notes differently
+if (isInScale(note.noteName, currentScale)) {
+  noteElement.classList.add('in-scale');
+}
+```
+
+##### Integration into Dashboard
+
+**Add to main dashboard HTML:**
+```html
+<section class="tuner-section">
+  <h2>Visual Tuner</h2>
+  <div class="tuner-container">
+    <!-- Include one of the display options above -->
+  </div>
+
+  <div class="tuner-options">
+    <label>
+      <input type="checkbox" id="show-tuner" checked> Enable Tuner
+    </label>
+    <label>
+      Display Style:
+      <select id="tuner-style">
+        <option value="needle">Needle</option>
+        <option value="bar">Bar</option>
+        <option value="circle">Circle</option>
+      </select>
+    </label>
+  </div>
+</section>
+```
+
+**Result:**
+A professional-grade visual tuner with:
+- Real-time frequency display
+- Note name identification
+- Cents deviation visualization
+- Multiple display styles
+- No microphone required
+- <50ms latency via WebSocket
+- Works in silent mode (headphones)
 
 ---
 
