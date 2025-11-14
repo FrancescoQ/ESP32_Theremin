@@ -2,7 +2,7 @@ import { h } from 'preact';
 import { useWebSocket } from './WebSocketProvider';
 
 /**
- * Bottone per inviare comandi via WebSocket
+ * Button to send commands via WebSocket
  */
 export function ControlButton({ label, command, payload, variant = 'primary' }) {
   const { send, connected } = useWebSocket();

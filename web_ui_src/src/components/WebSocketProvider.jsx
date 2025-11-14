@@ -1,7 +1,7 @@
 import { h, createContext } from 'preact';
 import { useState, useEffect, useContext, useCallback } from 'preact/hooks';
 
-// Context per condividere WebSocket in tutta l'app
+// Context to share WebSocket across the app
 const WebSocketContext = createContext(null);
 
 export function WebSocketProvider({ children, url }) {
@@ -16,12 +16,12 @@ export function WebSocketProvider({ children, url }) {
 
     const connect = () => {
       try {
-        // Determina URL WebSocket
+        // Determine WebSocket URL
         const wsUrl = url || `ws://${window.location.hostname}/ws`;
         websocket = new WebSocket(wsUrl);
 
         websocket.onopen = () => {
-          console.log('WebSocket connesso');
+          console.log('WebSocket connected');
           setConnected(true);
           setError(null);
         };
@@ -31,30 +31,30 @@ export function WebSocketProvider({ children, url }) {
             const parsed = JSON.parse(event.data);
             setData(parsed);
           } catch (e) {
-            console.error('Errore parsing JSON:', e);
+            console.error('JSON parsing error:', e);
           }
         };
 
         websocket.onerror = (err) => {
-          console.error('WebSocket errore:', err);
-          setError('Errore connessione WebSocket');
+          console.error('WebSocket error:', err);
+          setError('WebSocket connection error');
         };
 
         websocket.onclose = () => {
-          console.log('WebSocket disconnesso');
+          console.log('WebSocket disconnected');
           setConnected(false);
           setWs(null);
-          
-          // Auto-reconnect dopo 3 secondi
+
+          // Auto-reconnect after 3 seconds
           reconnectTimer = setTimeout(() => {
-            console.log('Tentativo riconnessione...');
+            console.log('Attempting reconnection...');
             connect();
           }, 3000);
         };
 
         setWs(websocket);
       } catch (err) {
-        console.error('Errore creazione WebSocket:', err);
+        console.error('Error creating WebSocket:', err);
         setError(err.message);
       }
     };
@@ -70,12 +70,12 @@ export function WebSocketProvider({ children, url }) {
     };
   }, [url]);
 
-  // Helper per inviare dati
+  // Helper to send data
   const send = useCallback((payload) => {
     if (ws && connected) {
       ws.send(typeof payload === 'string' ? payload : JSON.stringify(payload));
     } else {
-      console.warn('WebSocket non connesso');
+      console.warn('WebSocket not connected');
     }
   }, [ws, connected]);
 
@@ -89,11 +89,11 @@ export function WebSocketProvider({ children, url }) {
   return h(WebSocketContext.Provider, { value }, children);
 }
 
-// Custom hook per usare WebSocket nei componenti
+// Custom hook to use WebSocket in components
 export function useWebSocket() {
   const context = useContext(WebSocketContext);
   if (!context) {
-    throw new Error('useWebSocket deve essere usato dentro WebSocketProvider');
+    throw new Error('useWebSocket must be used inside WebSocketProvider');
   }
   return context;
 }

@@ -3,13 +3,13 @@ import { useState, useEffect } from 'preact/hooks';
 import { useWebSocket } from './WebSocketProvider';
 
 /**
- * Toggle switch stile iOS per controlli on/off
+ * iOS-style toggle switch for on/off controls
  */
 export function ToggleSwitch({ label, dataKey, onCommand, offCommand }) {
   const { data, send } = useWebSocket();
   const [isOn, setIsOn] = useState(false);
 
-  // Sincronizza stato con dati da WebSocket
+  // Synchronize state with WebSocket data
   useEffect(() => {
     if (data && dataKey && data[dataKey] !== undefined) {
       setIsOn(!!data[dataKey]);
@@ -19,8 +19,8 @@ export function ToggleSwitch({ label, dataKey, onCommand, offCommand }) {
   const handleToggle = () => {
     const newState = !isOn;
     setIsOn(newState);
-    
-    // Invia comando appropriato
+
+    // Send appropriate command
     if (newState && onCommand) {
       send({ command: onCommand });
     } else if (!newState && offCommand) {
@@ -31,7 +31,7 @@ export function ToggleSwitch({ label, dataKey, onCommand, offCommand }) {
   return (
     <div class="flex items-center justify-between p-4 bg-white rounded-lg shadow">
       <span class="text-gray-700 font-medium">{label}</span>
-      
+
       <button
         onClick={handleToggle}
         class={`

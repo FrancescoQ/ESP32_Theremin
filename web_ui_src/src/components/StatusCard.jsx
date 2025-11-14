@@ -1,8 +1,8 @@
 import { h } from 'preact';
 
 /**
- * Card per mostrare uno status/metrica
- * Componente riutilizzabile tipo "Drupal block" :)
+ * Card to display a status/metric
+ * Reusable component like a "Drupal block" :)
  */
 export function StatusCard({ title, value, unit, icon, color = 'blue' }) {
   const colorClasses = {
@@ -25,7 +25,7 @@ export function StatusCard({ title, value, unit, icon, color = 'blue' }) {
           </div>
         )}
       </div>
-      
+
       <div class="flex items-baseline">
         <span class="text-3xl font-bold text-gray-900">
           {value !== null && value !== undefined ? value : '--'}

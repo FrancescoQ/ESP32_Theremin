@@ -7,7 +7,7 @@ import { ToggleSwitch } from './components/ToggleSwitch';
 import './styles.css';
 
 /**
- * Header con status connessione
+ * Header with connection status
  */
 function Header() {
   const { connected } = useWebSocket();
@@ -23,7 +23,7 @@ function Header() {
           <div class="flex items-center gap-2">
             <div class={`w-3 h-3 rounded-full ${connected ? 'bg-green-500' : 'bg-red-500'}`} />
             <span class="text-sm text-gray-600">
-              {connected ? 'Connesso' : 'Disconnesso'}
+              {connected ? 'Connected' : 'Disconnected'}
             </span>
           </div>
         </div>
@@ -33,7 +33,7 @@ function Header() {
 }
 
 /**
- * Dashboard principale
+ * Main Dashboard
  */
 function Dashboard() {
   const { data } = useWebSocket();
@@ -41,13 +41,13 @@ function Dashboard() {
   return (
     <div class="max-w-7xl mx-auto px-4 py-8 sm:px-6 lg:px-8">
 
-      {/* Sezione metriche */}
+      {/* Metrics section */}
       <section class="mb-8">
-        <h2 class="text-xl font-semibold text-gray-800 mb-4">Metriche in tempo reale</h2>
+        <h2 class="text-xl font-semibold text-gray-800 mb-4">Real-time Metrics</h2>
 
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           <StatusCard
-            title="Temperatura"
+            title="Temperature"
             value={data.temperature}
             unit="°C"
             icon="🌡️"
@@ -55,7 +55,7 @@ function Dashboard() {
           />
 
           <StatusCard
-            title="Umidità"
+            title="Humidity"
             value={data.humidity}
             unit="%"
             icon="💧"
@@ -80,9 +80,9 @@ function Dashboard() {
         </div>
       </section>
 
-      {/* Sezione controlli */}
+      {/* Controls section */}
       <section class="mb-8">
-        <h2 class="text-xl font-semibold text-gray-800 mb-4">Controlli</h2>
+        <h2 class="text-xl font-semibold text-gray-800 mb-4">Controls</h2>
 
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div class="bg-white rounded-lg shadow p-6">
@@ -106,7 +106,7 @@ function Dashboard() {
           </div>
 
           <div class="bg-white rounded-lg shadow p-6">
-            <h3 class="text-lg font-medium text-gray-900 mb-4">Azioni rapide</h3>
+            <h3 class="text-lg font-medium text-gray-900 mb-4">Quick Actions</h3>
 
             <div class="flex flex-wrap gap-3">
               <ControlButton
@@ -148,7 +148,7 @@ function Dashboard() {
 }
 
 /**
- * App principale
+ * Main App
  */
 function App() {
   return (
