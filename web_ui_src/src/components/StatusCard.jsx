@@ -4,7 +4,7 @@ import { h } from 'preact';
  * Card to display a status/metric
  * Reusable component like a "Drupal block" :)
  */
-export function StatusCard({ title, value, unit, color = 'blue' }) {
+export function StatusCard({ title, value, unit, color = 'blue', description = '' }) {
   const colorClasses = {
     blue: 'bg-blue-500',
     green: 'bg-green-500',
@@ -31,6 +31,11 @@ export function StatusCard({ title, value, unit, color = 'blue' }) {
           </span>
         )}
       </div>
+      {description && (
+        <div class="text-sm text-blue-800 dark:text-blue-200 mt-4 p-4 bg-blue-50 dark:bg-blue-900 rounded-md">
+          {description}
+        </div>
+      )}
     </div>
   );
 }

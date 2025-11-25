@@ -297,6 +297,19 @@ class AudioEngine {
    */
   int getMaxFrequency() const { return maxFrequency; }
 
+  /**
+   * Get performance monitor instance (for WebUI performance metrics)
+   * @return Pointer to PerformanceMonitor, or nullptr if not available
+   */
+  PerformanceMonitor* getPerformanceMonitor() const { return performanceMonitor; }
+
+  /**
+   * Calculate maximum audio task time based on buffer configuration
+   * This is the time available per buffer before audio underruns occur.
+   * @return Maximum time in milliseconds (BUFFER_SIZE / SAMPLE_RATE * 1000)
+   */
+  static float getMaxAudioTimeMs();
+
   // Default audio range constants (A3 to A5, 2 octaves)
   static const int DEFAULT_MIN_FREQUENCY = 220;  // A3
   static const int DEFAULT_MAX_FREQUENCY = 880;  // A5

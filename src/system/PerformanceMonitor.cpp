@@ -8,6 +8,7 @@
 #include "system/PerformanceMonitor.h"
 #include "system/DisplayManager.h"
 #include "system/Debug.h"
+#include "audio/AudioEngine.h"
 
 PerformanceMonitor::PerformanceMonitor(DisplayManager* displayMgr)
     : display(displayMgr),
@@ -63,21 +64,27 @@ void PerformanceMonitor::recordAudioWork(uint32_t workTimeUs) {
   latestAudioWorkTimeUs = workTimeUs;
 
   // Check if audio processing is taking too long
-  // Why "11ms" is the target:
-  // - Audio buffer duration = 256 samples / 22050 Hz = 11.6ms
+  // Audio buffer duration is calculated dynamically from buffer configuration
   // - Audio task must finish computation before next buffer needed
-  // - If CPU work exceeds 11ms, audio will start dropping samples (distortion)
+  // - If CPU work exceeds max time, audio will start dropping samples (distortion)
   // - Current typical values: ~0.3ms (2-3% of available time)
   if (workTimeUs > AUDIO_WARN_US) {
     // Throttle warnings (don't spam console)
     uint32_t now = millis();
     if (now - lastAudioWarn > WARN_THROTTLE_MS) {
+      float maxTimeMs = AudioEngine::getMaxAudioTimeMs();
+      uint32_t maxTimeUs = (uint32_t)(maxTimeMs * 1000);
+
       DEBUG_PRINT("[WARN] AUDIO CPU HIGH: ");
       DEBUG_PRINT(workTimeUs / 1000);
       DEBUG_PRINT(".");
       DEBUG_PRINT((workTimeUs % 1000) / 100);
-      DEBUG_PRINT("ms / 11ms available (");
-      DEBUG_PRINT((workTimeUs * 100) / 11000);
+      DEBUG_PRINT("ms / ");
+      DEBUG_PRINT((uint32_t)maxTimeMs);
+      DEBUG_PRINT(".");
+      DEBUG_PRINT((uint32_t)(maxTimeMs * 10) % 10);
+      DEBUG_PRINT("ms available (");
+      DEBUG_PRINT((workTimeUs * 100) / maxTimeUs);
       DEBUG_PRINTLN("%)");
       lastAudioWarn = now;
     }
@@ -107,17 +114,23 @@ void PerformanceMonitor::printStatus() {
 
   if (now - lastStatusReport > STATUS_INTERVAL_MS) {
     uint32_t freeHeap = ESP.getFreeHeap();
+    float maxTimeMs = AudioEngine::getMaxAudioTimeMs();
+    uint32_t maxTimeUs = (uint32_t)(maxTimeMs * 1000);
 
-    // Display format: "Audio: X.Xms/11ms (Y%)"
+    // Display format: "Audio: X.Xms/Y.Yms (Z%)"
     // - X.Xms = actual CPU time spent generating audio samples
-    // - 11ms = time available per buffer (256 samples / 22050 Hz)
-    // - Y% = CPU utilization (should stay well below 100%)
+    // - Y.Yms = time available per buffer (calculated from buffer configuration)
+    // - Z% = CPU utilization (should stay well below 100%)
     DEBUG_PRINT("[OK] System OK - Audio: ");
     DEBUG_PRINT(latestAudioWorkTimeUs / 1000);
     DEBUG_PRINT(".");
     DEBUG_PRINT((latestAudioWorkTimeUs % 1000) / 100);
-    DEBUG_PRINT("ms/11ms (");
-    DEBUG_PRINT((latestAudioWorkTimeUs * 100) / 11000);
+    DEBUG_PRINT("ms/");
+    DEBUG_PRINT((uint32_t)maxTimeMs);
+    DEBUG_PRINT(".");
+    DEBUG_PRINT((uint32_t)(maxTimeMs * 10) % 10);
+    DEBUG_PRINT("ms (");
+    DEBUG_PRINT((latestAudioWorkTimeUs * 100) / maxTimeUs);
     DEBUG_PRINT("%) / RAM: ");
     DEBUG_PRINT(freeHeap / 1024);
     DEBUG_PRINT(".");
@@ -144,7 +157,10 @@ void PerformanceMonitor::drawPerformancePage(Adafruit_SSD1306& oled) {
   oled.print("Audio:  ");
   float audioMs = getAudioTimeMs();
   oled.print(audioMs, 1);  // 1 decimal place
-  oled.println("ms/11ms");
+  oled.print("ms/");
+  float maxTimeMs = AudioEngine::getMaxAudioTimeMs();
+  oled.print(maxTimeMs, 1);  // 1 decimal place
+  oled.println("ms");
   oled.println();
 
   // RAM line

@@ -170,12 +170,24 @@ export function Dashboard() {
       <section class="mb-8">
         <h2 class="text-xl font-semibold text-gray-800 dark:text-white mb-4">System Performance</h2>
 
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           <StatusCard
             title="Free RAM"
             value={formatRAM(data.performance?.ram)}
             unit=""
             color="blue"
+          />
+
+          <StatusCard
+            title="Audio Task"
+            value={
+              data.performance?.audioTime !== undefined && data.performance?.maxAudioTime !== undefined
+                ? `${data.performance.audioTime.toFixed(2)} / ${data.performance.maxAudioTime.toFixed(2)}`
+                : '0.00 / 0.00'
+            }
+            unit="ms"
+            color="purple"
+            description="This is the time that the audio task takes, compared to the maximum available time calculated on buffer and sample values, es. 256 / 22050 * 1000 = 11.61 ms"
           />
 
           <StatusCard

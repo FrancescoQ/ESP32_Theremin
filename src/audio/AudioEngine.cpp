@@ -434,6 +434,13 @@ bool AudioEngine::getSpecialState(int state) {
   return false;
 }
 
+// Calculate maximum audio task time based on buffer configuration
+float AudioEngine::getMaxAudioTimeMs() {
+  // Max time = BUFFER_SIZE / SAMPLE_RATE * 1000
+  // For current config: 256 / 22050 * 1000 = 11.61 ms
+  return (float)BUFFER_SIZE / Audio::SAMPLE_RATE * 1000.0f;
+}
+
 // ============================================================================
 // SECTION 5: SOUND EFFECTS & TESTING
 // ============================================================================

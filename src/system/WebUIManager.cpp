@@ -379,6 +379,17 @@ void WebUIManager::sendPerformanceState(AsyncWebSocketClient* client) {
   doc["ram"] = ESP.getFreeHeap();
   doc["uptime"] = millis();
 
+  // Add audio task time if PerformanceMonitor is available
+  PerformanceMonitor* perfMon = theremin->getAudioEngine()->getPerformanceMonitor();
+  if (perfMon) {
+    doc["audioTime"] = perfMon->getAudioTimeMs();
+  } else {
+    doc["audioTime"] = 0.0;
+  }
+
+  // Add maximum audio time (calculated from buffer configuration)
+  doc["maxAudioTime"] = AudioEngine::getMaxAudioTimeMs();
+
   String output;
   serializeJson(doc, output);
 
