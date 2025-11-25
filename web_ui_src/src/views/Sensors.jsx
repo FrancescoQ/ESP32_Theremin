@@ -31,15 +31,35 @@ export function Sensors() {
   return (
     <div class="max-w-7xl mx-auto px-4 py-8 sm:px-6 lg:px-8">
 
+      {/* Sensor Readings */}
+      <section class="mb-8">
+        <h2 class="text-xl font-semibold text-gray-800 dark:text-white mb-4">Sensor Readings</h2>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <StatusCard
+            title="Pitch Distance"
+            value={data.sensor?.pitch?.toFixed(1) || '0'}
+            unit="cm"
+            color="blue"
+          />
+
+          <StatusCard
+            title="Volume Distance"
+            value={data.sensor?.volume?.toFixed(1) || '0'}
+            unit="cm"
+            color="purple"
+          />
+        </div>
+      </section>
+
       {/* Smoothing Configuration */}
       <section class="mb-8">
-        <h2 class="text-xl font-semibold text-gray-800 mb-4">Smoothing Configuration</h2>
+        <h2 class="text-xl font-semibold text-gray-800 dark:text-white mb-4">Smoothing Configuration</h2>
 
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
           {/* Pitch Smoothing */}
-          <div class="bg-white rounded-lg shadow p-6">
-            <h3 class="text-lg font-medium text-gray-900 mb-4">Pitch Smoothing</h3>
-            <p class="text-sm text-gray-600 mb-4">
+          <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+            <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-4">Pitch Smoothing</h3>
+            <p class="text-sm text-gray-600 dark:text-gray-400 mb-4">
               Controls how smoothly the pitch responds to hand movement.
             </p>
 
@@ -63,9 +83,9 @@ export function Sensors() {
           </div>
 
           {/* Volume Smoothing */}
-          <div class="bg-white rounded-lg shadow p-6">
-            <h3 class="text-lg font-medium text-gray-900 mb-4">Volume Smoothing</h3>
-            <p class="text-sm text-gray-600 mb-4">
+          <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+            <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-4">Volume Smoothing</h3>
+            <p class="text-sm text-gray-600 dark:text-gray-400 mb-4">
               Controls how smoothly the volume responds to hand movement.
             </p>
 
@@ -92,11 +112,11 @@ export function Sensors() {
 
       {/* Frequency Range Configuration */}
       <section class="mb-8">
-        <h2 class="text-xl font-semibold text-gray-800 mb-4">Frequency Range</h2>
+        <h2 class="text-xl font-semibold text-gray-800 dark:text-white mb-4">Frequency Range</h2>
 
-        <div class="bg-white rounded-lg shadow p-6">
-          <h3 class="text-lg font-medium text-gray-900 mb-4">Playing Range</h3>
-          <p class="text-sm text-gray-600 mb-4">
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+          <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-4">Playing Range</h3>
+          <p class="text-sm text-gray-600 dark:text-gray-400 mb-4">
             Sets the frequency range (musical pitch range) of the theremin.
           </p>
 
@@ -117,8 +137,8 @@ export function Sensors() {
             }}
           />
 
-          <div class="mt-4 p-4 bg-blue-50 rounded-md">
-            <p class="text-sm text-blue-800">
+          <div class="mt-4 p-4 bg-blue-50 dark:bg-blue-900 rounded-md">
+            <p class="text-sm text-blue-800 dark:text-blue-200">
               <strong>Narrow:</strong> 1 octave range - tight playing area for precise control<br/>
               <strong>Normal:</strong> 2 octaves range - balanced (default)<br/>
               <strong>Wide:</strong> 3 octaves range - extended range for expressive playing
@@ -126,27 +146,6 @@ export function Sensors() {
           </div>
         </div>
       </section>
-
-      {/* Sensor Readings */}
-      <section class="mb-8">
-        <h2 class="text-xl font-semibold text-gray-800 mb-4">Sensor Readings</h2>
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <StatusCard
-            title="Pitch Distance"
-            value={data.sensor?.pitch?.toFixed(1) || '0'}
-            unit="cm"
-            color="blue"
-          />
-
-          <StatusCard
-            title="Volume Distance"
-            value={data.sensor?.volume?.toFixed(1) || '0'}
-            unit="cm"
-            color="purple"
-          />
-        </div>
-      </section>
-
     </div>
   );
 }

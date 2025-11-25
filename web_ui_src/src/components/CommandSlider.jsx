@@ -58,10 +58,10 @@ export function CommandSlider({
   const displayValue = step >= 1 ? Math.round(localValue) : localValue.toFixed(2);
 
   return (
-    <div class="flex flex-col p-4 bg-white rounded-lg shadow space-y-2">
+    <div class="flex flex-col p-4 bg-white dark:bg-gray-800 rounded-lg shadow space-y-2">
       <div class="flex items-center justify-between">
-        <span class="text-gray-700 font-medium">{label}</span>
-        <span class="text-gray-600 text-sm font-mono">
+        <span class="text-gray-700 dark:text-gray-300 font-medium">{label}</span>
+        <span class="text-gray-600 dark:text-gray-400 text-sm font-mono">
           {displayValue}{unit}
         </span>
       </div>
@@ -73,9 +73,9 @@ export function CommandSlider({
         step={step}
         value={localValue}
         onChange={handleChange}
-        class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer slider"
+        class="w-full h-2 bg-gray-200 dark:bg-gray-700 rounded-lg appearance-none cursor-pointer slider"
         style={{
-          background: `linear-gradient(to right, #3B82F6 0%, #3B82F6 ${percentage}%, #E5E7EB ${percentage}%, #E5E7EB 100%)`
+          background: `linear-gradient(to right, #3B82F6 0%, #3B82F6 ${percentage}%, ${document.documentElement.classList.contains('dark') ? '#374151' : '#E5E7EB'} ${percentage}%, ${document.documentElement.classList.contains('dark') ? '#374151' : '#E5E7EB'} 100%)`
         }}
       />
     </div>

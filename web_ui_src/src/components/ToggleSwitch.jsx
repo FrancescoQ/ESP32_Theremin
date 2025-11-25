@@ -37,16 +37,16 @@ export function ToggleSwitch({ label, dataKey, onCommand, offCommand, value }) {
   };
 
   return (
-    <div class="flex items-center justify-between p-4 bg-white rounded-lg shadow">
-      <span class="text-gray-700 font-medium">{label}</span>
+    <div class="flex items-center justify-between p-4 bg-white dark:bg-gray-800 rounded-lg shadow">
+      <span class="text-gray-700 dark:text-gray-300 font-medium">{label}</span>
 
       <button
         onClick={handleToggle}
         class={`
           relative inline-flex h-8 w-14 items-center rounded-full
           transition-colors duration-200 ease-in-out
-          focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2
-          ${isOn ? 'bg-blue-500' : 'bg-gray-300'}
+          focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:ring-offset-2 dark:focus:ring-offset-gray-800
+          ${isOn ? 'bg-blue-500 dark:bg-blue-600' : 'bg-gray-300 dark:bg-gray-600'}
         `}
       >
         <span

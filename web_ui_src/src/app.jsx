@@ -30,10 +30,10 @@ const DEFAULT_VIEW = VIEWS.find(v => v.default)?.id || 'dashboard';
 function App() {
   const [view, setView] = useState(DEFAULT_VIEW);
 
-  // Dark mode state with localStorage persistence
+  // Dark mode state with localStorage persistence (default: dark mode)
   const [darkMode, setDarkMode] = useState(() => {
     const saved = localStorage.getItem('darkMode');
-    return saved ? JSON.parse(saved) : false;
+    return saved ? JSON.parse(saved) : true;
   });
 
   // Apply dark mode class to document root
