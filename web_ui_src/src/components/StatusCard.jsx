@@ -14,19 +14,19 @@ export function StatusCard({ title, value, unit, color = 'blue' }) {
   };
 
   return (
-    <div class="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow">
+    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow">
       <div class="flex items-center justify-between mb-4">
-        <h3 class="text-sm font-medium text-gray-600 uppercase tracking-wide">
+        <h3 class="text-sm font-medium text-gray-600 dark:text-gray-400 uppercase tracking-wide">
           {title}
         </h3>
       </div>
 
       <div class="flex items-baseline">
-        <span class="text-3xl font-bold text-gray-900">
+        <span class="text-3xl font-bold text-gray-900 dark:text-white">
           {value !== null && value !== undefined ? value : '--'}
         </span>
         {unit && (
-          <span class="ml-2 text-sm text-gray-500">
+          <span class="ml-2 text-sm text-gray-500 dark:text-gray-400">
             {unit}
           </span>
         )}

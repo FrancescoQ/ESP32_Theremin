@@ -36,16 +36,16 @@ export function Dashboard() {
 
       {/* Oscillators Status */}
       <section class="mb-8">
-        <h2 class="text-xl font-semibold text-gray-800 mb-4">Oscillators</h2>
+        <h2 class="text-xl font-semibold text-gray-800 dark:text-white mb-4">Oscillators</h2>
         <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
           {[1, 2, 3].map(oscNum => {
             const osc = data.oscillators?.[oscNum] || {};
             const isActive = osc.waveform && osc.waveform !== 'OFF';
 
             return (
-              <div key={oscNum} class="bg-white rounded-lg shadow p-6">
+              <div key={oscNum} class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
                 <div class="flex items-center justify-between mb-4">
-                  <h3 class="text-lg font-medium text-gray-900">Oscillator {oscNum}</h3>
+                  <h3 class="text-lg font-medium text-gray-900 dark:text-white">Oscillator {oscNum}</h3>
                   <span class={`px-2 py-1 rounded text-xs font-semibold ${
                     isActive ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
                   }`}>
@@ -55,16 +55,16 @@ export function Dashboard() {
 
                 <div class="space-y-2 text-sm">
                   <div class="flex justify-between">
-                    <span class="text-gray-600">Waveform:</span>
-                    <span class="font-medium">{osc.waveform || 'OFF'}</span>
+                    <span class="text-gray-600 dark:text-gray-400">Waveform:</span>
+                    <span class="font-medium text-gray-900 dark:text-white">{osc.waveform || 'OFF'}</span>
                   </div>
                   <div class="flex justify-between">
-                    <span class="text-gray-600">Octave:</span>
-                    <span class="font-medium">{osc.octave !== undefined ? (osc.octave > 0 ? `+${osc.octave}` : osc.octave) : '0'}</span>
+                    <span class="text-gray-600 dark:text-gray-400">Octave:</span>
+                    <span class="font-medium text-gray-900 dark:text-white">{osc.octave !== undefined ? (osc.octave > 0 ? `+${osc.octave}` : osc.octave) : '0'}</span>
                   </div>
                   <div class="flex justify-between">
-                    <span class="text-gray-600">Volume:</span>
-                    <span class="font-medium">{osc.volume !== undefined ? `${Math.round(osc.volume * 100)}%` : '0%'}</span>
+                    <span class="text-gray-600 dark:text-gray-400">Volume:</span>
+                    <span class="font-medium text-gray-900 dark:text-white">{osc.volume !== undefined ? `${Math.round(osc.volume * 100)}%` : '0%'}</span>
                   </div>
                 </div>
               </div>
@@ -75,12 +75,12 @@ export function Dashboard() {
 
       {/* Effects Status */}
       <section class="mb-8">
-        <h2 class="text-xl font-semibold text-gray-800 mb-4">Effects</h2>
+        <h2 class="text-xl font-semibold text-gray-800 dark:text-white mb-4">Effects</h2>
         <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
           {/* Delay */}
-          <div class="bg-white rounded-lg shadow p-6">
+          <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
             <div class="flex items-center justify-between mb-4">
-              <h3 class="text-lg font-medium text-gray-900">Delay</h3>
+              <h3 class="text-lg font-medium text-gray-900 dark:text-white">Delay</h3>
               <span class={`px-2 py-1 rounded text-xs font-semibold ${
                 data.effects?.delay?.enabled ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-800'
               }`}>
@@ -91,25 +91,25 @@ export function Dashboard() {
             {data.effects?.delay?.enabled && (
               <div class="space-y-2 text-sm">
                 <div class="flex justify-between">
-                  <span class="text-gray-600">Time:</span>
-                  <span class="font-medium">{data.effects.delay.time || 0} ms</span>
+                  <span class="text-gray-600 dark:text-gray-400">Time:</span>
+                  <span class="font-medium text-gray-900 dark:text-white">{data.effects.delay.time || 0} ms</span>
                 </div>
                 <div class="flex justify-between">
-                  <span class="text-gray-600">Feedback:</span>
-                  <span class="font-medium">{((data.effects.delay.feedback || 0) * 100).toFixed(0)}%</span>
+                  <span class="text-gray-600 dark:text-gray-400">Feedback:</span>
+                  <span class="font-medium text-gray-900 dark:text-white">{((data.effects.delay.feedback || 0) * 100).toFixed(0)}%</span>
                 </div>
                 <div class="flex justify-between">
-                  <span class="text-gray-600">Mix:</span>
-                  <span class="font-medium">{((data.effects.delay.mix || 0) * 100).toFixed(0)}%</span>
+                  <span class="text-gray-600 dark:text-gray-400">Mix:</span>
+                  <span class="font-medium text-gray-900 dark:text-white">{((data.effects.delay.mix || 0) * 100).toFixed(0)}%</span>
                 </div>
               </div>
             )}
           </div>
 
           {/* Chorus */}
-          <div class="bg-white rounded-lg shadow p-6">
+          <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
             <div class="flex items-center justify-between mb-4">
-              <h3 class="text-lg font-medium text-gray-900">Chorus</h3>
+              <h3 class="text-lg font-medium text-gray-900 dark:text-white">Chorus</h3>
               <span class={`px-2 py-1 rounded text-xs font-semibold ${
                 data.effects?.chorus?.enabled ? 'bg-purple-100 text-purple-800' : 'bg-gray-100 text-gray-800'
               }`}>
@@ -120,25 +120,25 @@ export function Dashboard() {
             {data.effects?.chorus?.enabled && (
               <div class="space-y-2 text-sm">
                 <div class="flex justify-between">
-                  <span class="text-gray-600">Rate:</span>
-                  <span class="font-medium">{(data.effects.chorus.rate || 0).toFixed(1)} Hz</span>
+                  <span class="text-gray-600 dark:text-gray-400">Rate:</span>
+                  <span class="font-medium text-gray-900 dark:text-white">{(data.effects.chorus.rate || 0).toFixed(1)} Hz</span>
                 </div>
                 <div class="flex justify-between">
-                  <span class="text-gray-600">Depth:</span>
-                  <span class="font-medium">{(data.effects.chorus.depth || 0).toFixed(1)}</span>
+                  <span class="text-gray-600 dark:text-gray-400">Depth:</span>
+                  <span class="font-medium text-gray-900 dark:text-white">{(data.effects.chorus.depth || 0).toFixed(1)}</span>
                 </div>
                 <div class="flex justify-between">
-                  <span class="text-gray-600">Mix:</span>
-                  <span class="font-medium">{((data.effects.chorus.mix || 0) * 100).toFixed(0)}%</span>
+                  <span class="text-gray-600 dark:text-gray-400">Mix:</span>
+                  <span class="font-medium text-gray-900 dark:text-white">{((data.effects.chorus.mix || 0) * 100).toFixed(0)}%</span>
                 </div>
               </div>
             )}
           </div>
 
           {/* Reverb */}
-          <div class="bg-white rounded-lg shadow p-6">
+          <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
             <div class="flex items-center justify-between mb-4">
-              <h3 class="text-lg font-medium text-gray-900">Reverb</h3>
+              <h3 class="text-lg font-medium text-gray-900 dark:text-white">Reverb</h3>
               <span class={`px-2 py-1 rounded text-xs font-semibold ${
                 data.effects?.reverb?.enabled ? 'bg-indigo-100 text-indigo-800' : 'bg-gray-100 text-gray-800'
               }`}>
@@ -149,16 +149,16 @@ export function Dashboard() {
             {data.effects?.reverb?.enabled && (
               <div class="space-y-2 text-sm">
                 <div class="flex justify-between">
-                  <span class="text-gray-600">Room Size:</span>
-                  <span class="font-medium">{((data.effects.reverb.roomSize || 0) * 100).toFixed(0)}%</span>
+                  <span class="text-gray-600 dark:text-gray-400">Room Size:</span>
+                  <span class="font-medium text-gray-900 dark:text-white">{((data.effects.reverb.roomSize || 0) * 100).toFixed(0)}%</span>
                 </div>
                 <div class="flex justify-between">
-                  <span class="text-gray-600">Damping:</span>
-                  <span class="font-medium">{((data.effects.reverb.damping || 0) * 100).toFixed(0)}%</span>
+                  <span class="text-gray-600 dark:text-gray-400">Damping:</span>
+                  <span class="font-medium text-gray-900 dark:text-white">{((data.effects.reverb.damping || 0) * 100).toFixed(0)}%</span>
                 </div>
                 <div class="flex justify-between">
-                  <span class="text-gray-600">Mix:</span>
-                  <span class="font-medium">{((data.effects.reverb.mix || 0) * 100).toFixed(0)}%</span>
+                  <span class="text-gray-600 dark:text-gray-400">Mix:</span>
+                  <span class="font-medium text-gray-900 dark:text-white">{((data.effects.reverb.mix || 0) * 100).toFixed(0)}%</span>
                 </div>
               </div>
             )}
@@ -168,7 +168,7 @@ export function Dashboard() {
 
       {/* Performance Metrics */}
       <section class="mb-8">
-        <h2 class="text-xl font-semibold text-gray-800 mb-4">System Performance</h2>
+        <h2 class="text-xl font-semibold text-gray-800 dark:text-white mb-4">System Performance</h2>
 
         <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
           <StatusCard
@@ -196,7 +196,7 @@ export function Dashboard() {
 
       {/* System Settings/Presets */}
       <section class="mb-8">
-        <h2 class="text-xl font-semibold text-gray-800 mb-4">System Settings</h2>
+        <h2 class="text-xl font-semibold text-gray-800 dark:text-white mb-4">System Settings</h2>
 
         <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
           <StatusCard
@@ -237,7 +237,7 @@ export function Dashboard() {
       {/* Sensor Data (Optional) */}
       {data.sensor?.pitch !== undefined && (
         <section class="mb-8">
-          <h2 class="text-xl font-semibold text-gray-800 mb-4">Sensor Readings</h2>
+          <h2 class="text-xl font-semibold text-gray-800 dark:text-white mb-4">Sensor Readings</h2>
           <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
             <StatusCard
               title="Pitch Distance"
@@ -258,11 +258,11 @@ export function Dashboard() {
 
       {/* Debug info */}
       <section class="mt-8">
-        <details class="bg-white rounded-lg shadow p-4">
-          <summary class="cursor-pointer font-medium text-gray-700">
+        <details class="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
+          <summary class="cursor-pointer font-medium text-gray-700 dark:text-gray-300">
             Debug: Raw WebSocket Data
           </summary>
-          <pre class="mt-4 p-4 bg-gray-100 rounded overflow-auto text-xs">
+          <pre class="mt-4 p-4 bg-gray-100 dark:bg-gray-900 rounded overflow-auto text-xs text-gray-900 dark:text-gray-100">
             {JSON.stringify(data, null, 2)}
           </pre>
         </details>
