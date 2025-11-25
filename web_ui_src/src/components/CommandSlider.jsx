@@ -51,12 +51,18 @@ export function CommandSlider({
     }
   };
 
+  // Calculate the percentage for the slider background gradient
+  const percentage = max > min ? ((localValue - min) / (max - min)) * 100 : 0;
+
+  // Format display value based on step (integer vs decimal)
+  const displayValue = step >= 1 ? Math.round(localValue) : localValue.toFixed(2);
+
   return (
     <div class="flex flex-col p-4 bg-white rounded-lg shadow space-y-2">
       <div class="flex items-center justify-between">
         <span class="text-gray-700 font-medium">{label}</span>
         <span class="text-gray-600 text-sm font-mono">
-          {Math.round(localValue)}{unit}
+          {displayValue}{unit}
         </span>
       </div>
 
@@ -69,7 +75,7 @@ export function CommandSlider({
         onChange={handleChange}
         class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer slider"
         style={{
-          background: `linear-gradient(to right, #3B82F6 0%, #3B82F6 ${localValue}%, #E5E7EB ${localValue}%, #E5E7EB 100%)`
+          background: `linear-gradient(to right, #3B82F6 0%, #3B82F6 ${percentage}%, #E5E7EB ${percentage}%, #E5E7EB 100%)`
         }}
       />
     </div>

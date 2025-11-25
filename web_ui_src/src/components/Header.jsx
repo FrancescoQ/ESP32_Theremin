@@ -14,11 +14,40 @@ export function Header({ setView }) {
             Therem[AI]n Control Panel
           </h1>
 
-          <div class="flex items-center gap-2">
-            <div class={`w-3 h-3 rounded-full ${connected ? 'bg-green-500' : 'bg-red-500'}`} />
-            <span class="text-sm text-gray-600">
-              {connected ? 'Connected' : 'Disconnected'}
-            </span>
+          <div class="flex items-center gap-4">
+            <nav class="flex gap-2">
+              <button
+                onClick={() => setView('dashboard')}
+                class="px-4 py-2 text-sm font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-100 rounded-md transition-colors"
+              >
+                Dashboard
+              </button>
+              <button
+                onClick={() => setView('oscillators')}
+                class="px-4 py-2 text-sm font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-100 rounded-md transition-colors"
+              >
+                Oscillators
+              </button>
+              <button
+                onClick={() => setView('effects')}
+                class="px-4 py-2 text-sm font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-100 rounded-md transition-colors"
+              >
+                Effects
+              </button>
+              <button
+                onClick={() => setView('sensors')}
+                class="px-4 py-2 text-sm font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-100 rounded-md transition-colors"
+              >
+                Sensors
+              </button>
+            </nav>
+
+            <div class="flex items-center gap-2">
+              <div class={`w-3 h-3 rounded-full ${connected ? 'bg-green-500' : 'bg-red-500'}`} />
+              <span class="text-sm text-gray-600">
+                {connected ? 'Connected' : 'Disconnected'}
+              </span>
+            </div>
           </div>
         </div>
       </div>

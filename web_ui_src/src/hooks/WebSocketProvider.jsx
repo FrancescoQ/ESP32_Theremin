@@ -7,7 +7,12 @@ const WebSocketContext = createContext(null);
 export function WebSocketProvider({ children, url }) {
   const [ws, setWs] = useState(null);
   const [connected, setConnected] = useState(false);
-  const [data, setData] = useState({});
+  const [data, setData] = useState({
+    oscillators: {},
+    effects: {},
+    sensor: {},
+    performance: {}
+  });
   const [error, setError] = useState(null);
 
   useEffect(() => {
@@ -29,7 +34,35 @@ export function WebSocketProvider({ children, url }) {
         websocket.onmessage = (event) => {
           try {
             const parsed = JSON.parse(event.data);
-            setData(parsed);
+
+            // Handle different message types
+            if (parsed.type === 'oscillator') {
+              setData(prev => ({
+                ...prev,
+                oscillators: {
+                  ...prev.oscillators,
+                  [parsed.osc]: parsed
+                }
+              }));
+            } else if (parsed.type === 'effect') {
+              setData(prev => ({
+                ...prev,
+                effects: {
+                  ...prev.effects,
+                  [parsed.effect]: parsed
+                }
+              }));
+            } else if (parsed.type === 'sensor') {
+              setData(prev => ({
+                ...prev,
+                sensor: parsed
+              }));
+            } else if (parsed.type === 'performance') {
+              setData(prev => ({
+                ...prev,
+                performance: parsed
+              }));
+            }
           } catch (e) {
             console.error('JSON parsing error:', e);
           }
