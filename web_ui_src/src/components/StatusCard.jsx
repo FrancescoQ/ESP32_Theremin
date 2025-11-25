@@ -1,10 +1,13 @@
 import { h } from 'preact';
+import { useState } from 'preact/hooks';
 
 /**
  * Card to display a status/metric
  * Reusable component like a "Drupal block" :)
  */
 export function StatusCard({ title, value, unit, color = 'blue', description = '' }) {
+  const [showDescription, setShowDescription] = useState(false);
+
   const colorClasses = {
     blue: 'bg-blue-500',
     green: 'bg-green-500',
@@ -19,6 +22,15 @@ export function StatusCard({ title, value, unit, color = 'blue', description = '
         <h3 class="text-sm font-medium text-gray-600 dark:text-gray-400 uppercase tracking-wide">
           {title}
         </h3>
+        {description && (
+          <button
+            onClick={() => setShowDescription(!showDescription)}
+            class="w-6 h-6 rounded-full bg-blue-500 hover:bg-blue-600 text-white flex items-center justify-center text-sm font-bold transition-colors cursor-pointer"
+            aria-label="Toggle description"
+          >
+            i
+          </button>
+        )}
       </div>
 
       <div class="flex items-baseline">
@@ -31,7 +43,7 @@ export function StatusCard({ title, value, unit, color = 'blue', description = '
           </span>
         )}
       </div>
-      {description && (
+      {description && showDescription && (
         <div class="text-sm text-blue-800 dark:text-blue-200 mt-4 p-4 bg-blue-50 dark:bg-blue-900 rounded-md">
           {description}
         </div>
