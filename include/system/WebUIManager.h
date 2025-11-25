@@ -58,6 +58,7 @@ class WebUIManager {
   void sendEffectState(const char* effectName, AsyncWebSocketClient* client = nullptr);
   void sendSensorState(AsyncWebSocketClient* client = nullptr);
   void sendPerformanceState(AsyncWebSocketClient* client = nullptr);
+  void sendSystemState(AsyncWebSocketClient* client = nullptr);
 
  public:
   /**

@@ -10,7 +10,10 @@
 
 // Constructor
 Theremin::Theremin(PerformanceMonitor* perfMon, DisplayManager* displayMgr)
-    : sensors(), audio(perfMon), serialControls(this), gpioControls(this, displayMgr), display(displayMgr), notifications(nullptr), debugEnabled(false) {
+    : sensors(), audio(perfMon), serialControls(this), gpioControls(this, displayMgr), display(displayMgr), notifications(nullptr), debugEnabled(false),
+      currentPitchSmoothingPreset(SMOOTH_NORMAL),
+      currentVolumeSmoothingPreset(SMOOTH_NORMAL),
+      currentFrequencyRangePreset(RANGE_NORMAL) {
   // Create NotificationManager if display is available
   if (display) {
     notifications = new NotificationManager(display);
@@ -194,6 +197,8 @@ void Theremin::setPitchSmoothingPreset(SmoothingPreset preset) {
   DEBUG_PRINT("[THEREMIN] Setting pitch smoothing preset: ");
   DEBUG_PRINTLN((int)preset);
 
+  currentPitchSmoothingPreset = preset;
+
   switch (preset) {
     case SMOOTH_NONE:
       // Sensor: disabled, Audio: instant
@@ -224,6 +229,8 @@ void Theremin::setPitchSmoothingPreset(SmoothingPreset preset) {
 void Theremin::setVolumeSmoothingPreset(SmoothingPreset preset) {
   DEBUG_PRINT("[THEREMIN] Setting volume smoothing preset: ");
   DEBUG_PRINTLN((int)preset);
+
+  currentVolumeSmoothingPreset = preset;
 
   switch (preset) {
     case SMOOTH_NONE:
@@ -290,6 +297,8 @@ static const char* formatBuildTimestamp() {
 void Theremin::setFrequencyRangePreset(FrequencyRangePreset preset) {
   DEBUG_PRINT("[THEREMIN] Setting frequency range preset: ");
   DEBUG_PRINTLN((int)preset);
+
+  currentFrequencyRangePreset = preset;
 
   switch (preset) {
     case RANGE_NARROW:

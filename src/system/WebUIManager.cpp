@@ -254,10 +254,16 @@ void WebUIManager::handleSystemCommand(JsonDocument& doc) {
       DEBUG_PRINTF("[WebUI] Volume smoothing preset -> %d\n", preset);
     }
 
+    // Broadcast updated system state
+    sendSystemState();
+
   } else if (strcmp(cmd, "setRange") == 0) {
     int preset = doc["value"] | 1;
     theremin->setFrequencyRangePreset((Theremin::FrequencyRangePreset)preset);
     DEBUG_PRINTF("[WebUI] Frequency range preset -> %d\n", preset);
+
+    // Broadcast updated system state
+    sendSystemState();
   }
 }
 
@@ -277,6 +283,9 @@ void WebUIManager::sendFullState(AsyncWebSocketClient* client) {
   // Send initial sensor and performance data
   sendSensorState(client);
   sendPerformanceState(client);
+
+  // Send system/preset state
+  sendSystemState(client);
 }
 
 void WebUIManager::sendOscillatorState(int oscNum, AsyncWebSocketClient* client) {
@@ -369,6 +378,23 @@ void WebUIManager::sendPerformanceState(AsyncWebSocketClient* client) {
   doc["cpu"] = 0.0;  // CPU usage calculation would require additional monitoring
   doc["ram"] = ESP.getFreeHeap();
   doc["uptime"] = millis();
+
+  String output;
+  serializeJson(doc, output);
+
+  if (client) {
+    client->text(output);
+  } else {
+    ws.textAll(output);
+  }
+}
+
+void WebUIManager::sendSystemState(AsyncWebSocketClient* client) {
+  JsonDocument doc;
+  doc["type"] = "system";
+  doc["pitchSmoothing"] = (int)theremin->getPitchSmoothingPreset();
+  doc["volumeSmoothing"] = (int)theremin->getVolumeSmoothingPreset();
+  doc["frequencyRange"] = (int)theremin->getFrequencyRangePreset();
 
   String output;
   serializeJson(doc, output);

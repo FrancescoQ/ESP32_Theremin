@@ -111,6 +111,24 @@ class Theremin {
    */
   void setFrequencyRangePreset(FrequencyRangePreset preset);
 
+  /**
+   * Get current pitch smoothing preset
+   * @return Current pitch smoothing preset
+   */
+  SmoothingPreset getPitchSmoothingPreset() const { return currentPitchSmoothingPreset; }
+
+  /**
+   * Get current volume smoothing preset
+   * @return Current volume smoothing preset
+   */
+  SmoothingPreset getVolumeSmoothingPreset() const { return currentVolumeSmoothingPreset; }
+
+  /**
+   * Get current frequency range preset
+   * @return Current frequency range preset
+   */
+  FrequencyRangePreset getFrequencyRangePreset() const { return currentFrequencyRangePreset; }
+
  private:
   SensorManager sensors;
   AudioEngine audio;
@@ -119,6 +137,11 @@ class Theremin {
   DisplayManager* display;
   NotificationManager* notifications;
   bool debugEnabled;
+
+  // Current preset values (for WebUI state tracking)
+  SmoothingPreset currentPitchSmoothingPreset;
+  SmoothingPreset currentVolumeSmoothingPreset;
+  FrequencyRangePreset currentFrequencyRangePreset;
 
   /**
    * Draw splash page for display

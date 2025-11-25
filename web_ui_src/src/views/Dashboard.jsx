@@ -194,6 +194,46 @@ export function Dashboard() {
         </div>
       </section>
 
+      {/* System Settings/Presets */}
+      <section class="mb-8">
+        <h2 class="text-xl font-semibold text-gray-800 mb-4">System Settings</h2>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <StatusCard
+            title="Pitch Smoothing"
+            value={
+              data.system?.pitchSmoothing === 0 ? 'None' :
+              data.system?.pitchSmoothing === 2 ? 'Extra' :
+              'Normal'
+            }
+            unit=""
+            color="purple"
+          />
+
+          <StatusCard
+            title="Volume Smoothing"
+            value={
+              data.system?.volumeSmoothing === 0 ? 'None' :
+              data.system?.volumeSmoothing === 2 ? 'Extra' :
+              'Normal'
+            }
+            unit=""
+            color="purple"
+          />
+
+          <StatusCard
+            title="Frequency Range"
+            value={
+              data.system?.frequencyRange === 0 ? 'Narrow' :
+              data.system?.frequencyRange === 2 ? 'Wide' :
+              'Normal'
+            }
+            unit=""
+            color="indigo"
+          />
+        </div>
+      </section>
+
       {/* Sensor Data (Optional) */}
       {data.sensor?.pitch !== undefined && (
         <section class="mb-8">

@@ -31,26 +31,6 @@ export function Sensors() {
   return (
     <div class="max-w-7xl mx-auto px-4 py-8 sm:px-6 lg:px-8">
 
-      {/* Sensor Readings */}
-      <section class="mb-8">
-        <h2 class="text-xl font-semibold text-gray-800 mb-4">Sensor Readings</h2>
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <StatusCard
-            title="Pitch Distance"
-            value={data.sensor?.pitch?.toFixed(1) || '0'}
-            unit="cm"
-            color="blue"
-          />
-
-          <StatusCard
-            title="Volume Distance"
-            value={data.sensor?.volume?.toFixed(1) || '0'}
-            unit="cm"
-            color="purple"
-          />
-        </div>
-      </section>
-
       {/* Smoothing Configuration */}
       <section class="mb-8">
         <h2 class="text-xl font-semibold text-gray-800 mb-4">Smoothing Configuration</h2>
@@ -144,6 +124,26 @@ export function Sensors() {
               <strong>Wide:</strong> 3 octaves range - extended range for expressive playing
             </p>
           </div>
+        </div>
+      </section>
+
+      {/* Sensor Readings */}
+      <section class="mb-8">
+        <h2 class="text-xl font-semibold text-gray-800 mb-4">Sensor Readings</h2>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <StatusCard
+            title="Pitch Distance"
+            value={data.sensor?.pitch?.toFixed(1) || '0'}
+            unit="cm"
+            color="blue"
+          />
+
+          <StatusCard
+            title="Volume Distance"
+            value={data.sensor?.volume?.toFixed(1) || '0'}
+            unit="cm"
+            color="purple"
+          />
         </div>
       </section>
 

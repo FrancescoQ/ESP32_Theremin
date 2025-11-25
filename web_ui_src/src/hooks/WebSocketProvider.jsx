@@ -11,7 +11,8 @@ export function WebSocketProvider({ children, url }) {
     oscillators: {},
     effects: {},
     sensor: {},
-    performance: {}
+    performance: {},
+    system: {}
   });
   const [error, setError] = useState(null);
 
@@ -61,6 +62,11 @@ export function WebSocketProvider({ children, url }) {
               setData(prev => ({
                 ...prev,
                 performance: parsed
+              }));
+            } else if (parsed.type === 'system') {
+              setData(prev => ({
+                ...prev,
+                system: parsed
               }));
             }
           } catch (e) {
