@@ -5,16 +5,23 @@ import { useWebSocket } from '../hooks/WebSocketProvider';
 /**
  * iOS-style toggle switch for on/off controls
  */
-export function ToggleSwitch({ label, dataKey, onCommand, offCommand }) {
+export function ToggleSwitch({ label, dataKey, onCommand, offCommand, value }) {
   const { data, send } = useWebSocket();
-  const [isOn, setIsOn] = useState(false);
+  const [isOn, setIsOn] = useState(value !== undefined ? value : false);
 
-  // Synchronize state with WebSocket data
+  // Synchronize state with WebSocket data (if dataKey provided)
   useEffect(() => {
     if (data && dataKey && data[dataKey] !== undefined) {
       setIsOn(!!data[dataKey]);
     }
   }, [data, dataKey]);
+
+  // Synchronize with controlled value prop
+  useEffect(() => {
+    if (value !== undefined) {
+      setIsOn(value);
+    }
+  }, [value]);
 
   const handleToggle = () => {
     const newState = !isOn;

@@ -397,6 +397,11 @@ void WebUIManager::update() {
 
     // Only broadcast if there are connected clients
     if (ws.count() > 0) {
+      // Broadcast oscillator states so hardware changes are reflected in UI
+      for (int i = 1; i <= 3; i++) {
+        sendOscillatorState(i);
+      }
+
       sendSensorState();
       sendPerformanceState();
     }

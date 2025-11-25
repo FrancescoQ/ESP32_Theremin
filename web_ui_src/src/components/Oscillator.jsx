@@ -17,7 +17,6 @@ export function Oscillator({id}) {
     <div class="space-y-4">
       <ToggleSwitch
         label="Status"
-        dataKey={`osc${id}Enabled`}
         onCommand={{
           cmd: "setWaveform",
           osc: id,
