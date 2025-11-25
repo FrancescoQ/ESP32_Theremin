@@ -1,6 +1,5 @@
 import { h } from 'preact';
-import { useWebSocket } from './WebSocketProvider';
-
+import { useWebSocket } from '../hooks/WebSocketProvider';
 /**
  * Button to send commands via WebSocket
  */

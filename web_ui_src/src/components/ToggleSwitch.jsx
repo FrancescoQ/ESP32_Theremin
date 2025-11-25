@@ -1,6 +1,6 @@
 import { h } from 'preact';
 import { useState, useEffect } from 'preact/hooks';
-import { useWebSocket } from './WebSocketProvider';
+import { useWebSocket } from '../hooks/WebSocketProvider';
 
 /**
  * iOS-style toggle switch for on/off controls
@@ -21,10 +21,11 @@ export function ToggleSwitch({ label, dataKey, onCommand, offCommand }) {
     setIsOn(newState);
 
     // Send appropriate command
+    // Support both string commands (wrapped in { command: ... }) and object commands (sent directly)
     if (newState && onCommand) {
-      send({ command: onCommand });
+      send(typeof onCommand === 'string' ? { command: onCommand } : onCommand);
     } else if (!newState && offCommand) {
-      send({ command: offCommand });
+      send(typeof offCommand === 'string' ? { command: offCommand } : offCommand);
     }
   };
 

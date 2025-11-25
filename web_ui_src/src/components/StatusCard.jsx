@@ -4,7 +4,7 @@ import { h } from 'preact';
  * Card to display a status/metric
  * Reusable component like a "Drupal block" :)
  */
-export function StatusCard({ title, value, unit, icon, color = 'blue' }) {
+export function StatusCard({ title, value, unit, color = 'blue' }) {
   const colorClasses = {
     blue: 'bg-blue-500',
     green: 'bg-green-500',
@@ -19,11 +19,6 @@ export function StatusCard({ title, value, unit, icon, color = 'blue' }) {
         <h3 class="text-sm font-medium text-gray-600 uppercase tracking-wide">
           {title}
         </h3>
-        {icon && (
-          <div class={`w-10 h-10 rounded-full ${colorClasses[color]} flex items-center justify-center text-white text-xl`}>
-            {icon}
-          </div>
-        )}
       </div>
 
       <div class="flex items-baseline">
