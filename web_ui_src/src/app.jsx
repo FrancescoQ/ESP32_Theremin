@@ -40,18 +40,18 @@ function getWebSocketUrl() {
   if (urlParam) {
     const wsUrl = `ws://${urlParam}/ws`;
     console.log('[WebSocket] Using URL parameter:', wsUrl);
-    return wsUrl;
+    return { url: wsUrl, isOverridden: true, source: urlParam };
   }
 
   // Priority 2: Environment variable (VITE_WS_URL in .env.local)
   if (import.meta.env.VITE_WS_URL) {
     console.log('[WebSocket] Using environment variable:', import.meta.env.VITE_WS_URL);
-    return import.meta.env.VITE_WS_URL;
+    return { url: import.meta.env.VITE_WS_URL, isOverridden: true, source: import.meta.env.VITE_WS_URL };
   }
 
   // Priority 3: Default (undefined - will use window.location.hostname in WebSocketProvider)
   console.log('[WebSocket] Using default (window.location.hostname)');
-  return undefined;
+  return { url: undefined, isOverridden: false, source: null };
 }
 
 /**
@@ -80,11 +80,18 @@ function App() {
   const CurrentView = VIEWS.find(v => v.id === view)?.component || Dashboard;
 
   // Resolve WebSocket URL (supports development override)
-  const wsUrl = getWebSocketUrl();
+  const wsConfig = getWebSocketUrl();
 
   return (
-    <WebSocketProvider url={wsUrl}>
+    <WebSocketProvider url={wsConfig.url}>
       <div class="min-h-screen bg-gray-100 dark:bg-gray-900">
+        {/* Development mode warning banner */}
+        {wsConfig.isOverridden && (
+          <div class="bg-yellow-500 text-black px-4 py-2 text-center text-sm font-medium">
+            ⚠️ Development Mode: Connected to {wsConfig.source}
+          </div>
+        )}
+
         <Header
           setView={setView}
           views={VIEWS.map(v => ({ id: v.id, label: v.label }))}

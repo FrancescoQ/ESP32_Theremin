@@ -1,8 +1,11 @@
-import { useState } from "preact/hooks";
+import { useState, useEffect } from "preact/hooks";
+import { useWebSocket } from "../hooks/WebSocketProvider";
 import { ToggleSwitch } from "./ToggleSwitch";
 import { CommandSlider } from "./CommandSlider";
 
 export function Effect({ effectName }) {
+  const { data } = useWebSocket();
+
   // Effect-specific parameter configurations
   const effectConfigs = {
     delay: {
@@ -112,6 +115,25 @@ export function Effect({ effectName }) {
       return acc;
     }, {})
   );
+
+  // Sync local state with WebSocket data when it updates
+  useEffect(() => {
+    const effectData = data.effects?.[effectName];
+    if (effectData) {
+      // Update all parameter values from WebSocket data
+      const updatedValues = {};
+      config.parameters.forEach(param => {
+        if (effectData[param.name] !== undefined) {
+          updatedValues[param.name] = effectData[param.name];
+        }
+      });
+
+      // Only update if we have data
+      if (Object.keys(updatedValues).length > 0) {
+        setParamValues(prev => ({ ...prev, ...updatedValues }));
+      }
+    }
+  }, [data.effects, effectName, config.parameters]);
 
   const updateParamValue = (paramName, value) => {
     setParamValues(prev => ({ ...prev, [paramName]: value }));

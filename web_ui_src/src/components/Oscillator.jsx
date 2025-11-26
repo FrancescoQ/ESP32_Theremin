@@ -1,9 +1,12 @@
-import { useState } from "preact/hooks";
+import { useState, useEffect } from "preact/hooks";
+import { useWebSocket } from "../hooks/WebSocketProvider";
 import { ToggleSwitch } from "./ToggleSwitch";
 import { CommandSelect } from "./CommandSelect";
 import { CommandSlider } from "./CommandSlider";
 
 export function Oscillator({id}) {
+  const { data } = useWebSocket();
+
   // Track current waveform selection (default to SINE)
   const [currentWaveform, setCurrentWaveform] = useState("SINE");
 
@@ -12,6 +15,27 @@ export function Oscillator({id}) {
 
   // Track octave shift (-1, 0, +1)
   const [octave, setOctave] = useState("0");
+
+  // Sync local state with WebSocket data when it updates
+  useEffect(() => {
+    const oscData = data.oscillators?.[id];
+    if (oscData) {
+      // Update waveform if available
+      if (oscData.waveform) {
+        setCurrentWaveform(oscData.waveform);
+      }
+
+      // Update volume (convert from 0.0-1.0 to 0-100)
+      if (oscData.volume !== undefined) {
+        setVolume(Math.round(oscData.volume * 100));
+      }
+
+      // Update octave (convert number to string)
+      if (oscData.octave !== undefined) {
+        setOctave(String(oscData.octave));
+      }
+    }
+  }, [data.oscillators, id]);
 
   return (
     <div class="space-y-4">

@@ -1,4 +1,4 @@
-import { useState } from 'preact/hooks';
+import { useState, useEffect } from 'preact/hooks';
 import { useWebSocket } from '../hooks/WebSocketProvider';
 import { StatusCard } from '../components/StatusCard';
 import { CommandSelect } from '../components/CommandSelect';
@@ -13,6 +13,21 @@ export function Sensors() {
   const [pitchSmoothing, setPitchSmoothing] = useState('1');
   const [volumeSmoothing, setVolumeSmoothing] = useState('1');
   const [frequencyRange, setFrequencyRange] = useState('1');
+
+  // Sync local state with WebSocket data when it updates
+  useEffect(() => {
+    if (data.system) {
+      if (data.system.pitchSmoothing !== undefined) {
+        setPitchSmoothing(String(data.system.pitchSmoothing));
+      }
+      if (data.system.volumeSmoothing !== undefined) {
+        setVolumeSmoothing(String(data.system.volumeSmoothing));
+      }
+      if (data.system.frequencyRange !== undefined) {
+        setFrequencyRange(String(data.system.frequencyRange));
+      }
+    }
+  }, [data.system]);
 
   // Smoothing preset options
   const smoothingOptions = [
