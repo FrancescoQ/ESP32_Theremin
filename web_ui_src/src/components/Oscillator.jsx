@@ -1,6 +1,5 @@
 import { useState, useEffect } from "preact/hooks";
 import { useWebSocket } from "../hooks/WebSocketProvider";
-import { ToggleSwitch } from "./ToggleSwitch";
 import { CommandSelect } from "./CommandSelect";
 import { CommandSlider } from "./CommandSlider";
 
@@ -37,25 +36,19 @@ export function Oscillator({id}) {
     }
   }, [data.oscillators, id]);
 
+  // Get status color based on waveform
+  const statusColor = currentWaveform && currentWaveform !== 'OFF' ? 'bg-green-500' : 'bg-red-500';
+
   return (
     <div class="space-y-4">
-      <ToggleSwitch
-        label="Status"
-        onCommand={{
-          cmd: "setWaveform",
-          osc: id,
-          value: currentWaveform
-        }}
-        offCommand={{
-          cmd: "setWaveform",
-          osc: id,
-          value: "OFF"
-        }}
-      />
-
+      {/* Title with status indicator */}
+      <h3 class="text-lg font-medium text-gray-900 dark:text-white flex items-center gap-2">
+        <span class={`w-2 h-2 rounded-full ${statusColor}`}></span>
+        Oscillator {id}
+      </h3>
       <CommandSelect
         label="Waveform"
-        options={["SINE", "SQUARE", "TRIANGLE", "SAW"]}
+        options={["OFF", "SINE", "SQUARE", "TRIANGLE", "SAW"]}
         value={currentWaveform}
         onChange={setCurrentWaveform}
         commandGenerator={(value) => ({

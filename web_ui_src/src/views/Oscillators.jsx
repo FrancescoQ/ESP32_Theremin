@@ -7,8 +7,6 @@ import { Oscillator } from '../components/Oscillator';
  * Main Dashboard
  */
 export function Oscillators() {
-  const { data } = useWebSocket();
-
   return (
     <div class="max-w-7xl mx-auto px-4 py-8 sm:px-6 lg:px-8">
       <section class="mb-8">
@@ -16,15 +14,12 @@ export function Oscillators() {
 
         <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-            <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-4">Oscillator 1</h3>
             <Oscillator id={1} />
           </div>
           <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-            <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-4">Oscillator 2</h3>
             <Oscillator id={2} />
           </div>
           <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-            <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-4">Oscillator 3</h3>
             <Oscillator id={3} />
           </div>
         </div>
