@@ -12,6 +12,7 @@
 #include "controls/GPIOControls.h"
 #include "system/DisplayManager.h"
 #include "system/NotificationManager.h"
+#include "system/TunerManager.h"
 
 // Forward declaration
 class PerformanceMonitor;
@@ -88,6 +89,12 @@ class Theremin {
   NotificationManager* getNotificationManager() { return notifications; }
 
   /**
+   * Get pointer to TunerManager instance (for control access)
+   * @return Pointer to TunerManager, or nullptr if not available
+   */
+  TunerManager* getTunerManager() { return tunerManager; }
+
+  /**
    * Get reference to MCP23017 (for advanced use like WiFi reset check)
    * @return Reference to MCP23017 instance from GPIOControls
    */
@@ -136,6 +143,7 @@ class Theremin {
   GPIOControls gpioControls;
   DisplayManager* display;
   NotificationManager* notifications;
+  TunerManager* tunerManager;
   bool debugEnabled;
 
   // Current preset values (for WebUI state tracking)

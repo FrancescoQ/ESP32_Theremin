@@ -489,6 +489,18 @@ void WebUIManager::sendCompleteState(AsyncWebSocketClient* client) {
   system["volumeSmoothing"] = (int)theremin->getVolumeSmoothingPreset();
   system["frequencyRange"] = (int)theremin->getFrequencyRangePreset();
 
+  // Tuner
+  TunerManager* tuner = theremin->getTunerManager();
+  if (tuner && tuner->hasValidData()) {
+    JsonObject tunerObj = doc["tuner"].to<JsonObject>();
+    tunerObj["note"] = tuner->getCurrentNote();
+    tunerObj["noteName"] = tuner->getCurrentNoteName();
+    tunerObj["octave"] = tuner->getCurrentOctave();
+    tunerObj["frequency"] = tuner->getCurrentFrequency();
+    tunerObj["cents"] = tuner->getCents();
+    tunerObj["inTune"] = tuner->isInTune();
+  }
+
   // Send the complete state
   String output;
   serializeJson(doc, output);

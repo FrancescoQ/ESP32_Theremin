@@ -6,6 +6,7 @@ import { Dashboard } from './views/Dashboard';
 import { Oscillators } from './views/Oscillators';
 import { Effects } from './views/Effects';
 import { Sensors } from './views/Sensors';
+import Tuner from './views/Tuner';
 import { Header } from './components/Header';
 import './styles.css';
 
@@ -16,7 +17,8 @@ const VIEWS = [
   { id: 'dashboard', label: 'Dashboard', component: Dashboard, default: true },
   { id: 'oscillators', label: 'Oscillators', component: Oscillators },
   { id: 'effects', label: 'Effects', component: Effects },
-  { id: 'sensors', label: 'Sensors', component: Sensors }
+  { id: 'sensors', label: 'Sensors', component: Sensors },
+  { id: 'tuner', label: 'Tuner', component: Tuner }
 ];
 
 /**

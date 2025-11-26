@@ -12,7 +12,8 @@ export function WebSocketProvider({ children, url }) {
     effects: {},
     sensor: {},
     performance: {},
-    system: {}
+    system: {},
+    tuner: {}
   });
   const [error, setError] = useState(null);
 
@@ -44,7 +45,8 @@ export function WebSocketProvider({ children, url }) {
                 effects: parsed.effects || {},
                 sensor: parsed.sensor || {},
                 performance: parsed.performance || {},
-                system: parsed.system || {}
+                system: parsed.system || {},
+                tuner: parsed.tuner || {}
               });
             } else if (parsed.type === 'oscillator') {
               // Individual oscillator update (backward compatibility)

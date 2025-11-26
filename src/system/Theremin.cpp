@@ -10,13 +10,19 @@
 
 // Constructor
 Theremin::Theremin(PerformanceMonitor* perfMon, DisplayManager* displayMgr)
-    : sensors(), audio(perfMon), serialControls(this), gpioControls(this, displayMgr), display(displayMgr), notifications(nullptr), debugEnabled(false),
+    : sensors(), audio(perfMon), serialControls(this), gpioControls(this, displayMgr), display(displayMgr), notifications(nullptr), tunerManager(nullptr), debugEnabled(false),
       currentPitchSmoothingPreset(SMOOTH_NORMAL),
       currentVolumeSmoothingPreset(SMOOTH_NORMAL),
       currentFrequencyRangePreset(RANGE_NORMAL) {
+  // Create TunerManager (always created)
+  tunerManager = new TunerManager(&audio);
+
   // Create NotificationManager if display is available
   if (display) {
     notifications = new NotificationManager(display);
+
+    // Register TunerManager display page
+    tunerManager->setDisplay(display);
 
     // Register splash page (weight 0 - first page)
     display->registerPage("Splash", [this](Adafruit_SSD1306& oled) {
@@ -50,6 +56,12 @@ Theremin::Theremin(PerformanceMonitor* perfMon, DisplayManager* displayMgr)
 // but included as C++ best practice (RAII) for proper resource cleanup.
 // See Theremin.h for detailed explanation.
 Theremin::~Theremin() {
+  // Clean up tuner manager (if allocated)
+  if (tunerManager != nullptr) {
+    delete tunerManager;
+    tunerManager = nullptr;
+  }
+
   // Clean up notification manager (if allocated)
   if (notifications != nullptr) {
     delete notifications;
@@ -94,6 +106,11 @@ float Theremin::mapFloat(float x, float in_min, float in_max, float out_min, flo
 
 // Main update loop
 void Theremin::update() {
+  // Update tuner manager (calculates note/cents from current frequency)
+  if (tunerManager) {
+    tunerManager->update();
+  }
+
   // Update notification manager (for auto-hide timing)
   if (notifications) {
     notifications->update();
