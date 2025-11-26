@@ -38,15 +38,13 @@ export function Sensors() {
           <StatusCard
             title="Pitch Distance"
             value={data.sensor?.pitch?.toFixed(1) || '0'}
-            unit="cm"
-            color="blue"
+            unit="mm"
           />
 
           <StatusCard
             title="Volume Distance"
             value={data.sensor?.volume?.toFixed(1) || '0'}
-            unit="cm"
-            color="purple"
+            unit="mm"
           />
         </div>
       </section>

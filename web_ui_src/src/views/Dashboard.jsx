@@ -175,7 +175,6 @@ export function Dashboard() {
             title="Free RAM"
             value={formatRAM(data.performance?.ram)}
             unit=""
-            color="blue"
           />
 
           <StatusCard
@@ -186,7 +185,6 @@ export function Dashboard() {
                 : '0.00 / 0.00'
             }
             unit="ms"
-            color="purple"
             description="This is the time that the audio task takes, compared to the maximum available time calculated on buffer and sample values, es. 256 / 22050 * 1000 = 11.61 ms"
           />
 
@@ -194,14 +192,12 @@ export function Dashboard() {
             title="Uptime"
             value={formatUptime(data.performance?.uptime)}
             unit=""
-            color="gray"
           />
 
           <StatusCard
             title="Connection"
             value={data.sensor?.pitch !== undefined ? 'Active' : 'Waiting'}
             unit=""
-            color={data.sensor?.pitch !== undefined ? 'green' : 'gray'}
           />
         </div>
       </section>
@@ -219,7 +215,6 @@ export function Dashboard() {
               'Normal'
             }
             unit=""
-            color="purple"
           />
 
           <StatusCard
@@ -230,7 +225,6 @@ export function Dashboard() {
               'Normal'
             }
             unit=""
-            color="purple"
           />
 
           <StatusCard
@@ -241,7 +235,6 @@ export function Dashboard() {
               'Normal'
             }
             unit=""
-            color="indigo"
           />
         </div>
       </section>
@@ -254,15 +247,13 @@ export function Dashboard() {
             <StatusCard
               title="Pitch Distance"
               value={data.sensor.pitch?.toFixed(1) || '0'}
-              unit="cm"
-              color="blue"
+              unit="mm"
             />
 
             <StatusCard
               title="Volume Distance"
               value={data.sensor.volume?.toFixed(1) || '0'}
-              unit="cm"
-              color="blue"
+              unit="mm"
             />
           </div>
         </section>

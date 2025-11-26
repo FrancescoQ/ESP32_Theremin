@@ -1,10 +1,10 @@
 # ESP32 Preact UI
 
-UI web moderna e leggera per ESP32 con Preact + Tailwind CSS.
+Modern and lightweight web UI for ESP32 with Preact + Tailwind CSS.
 
 ## 🚀 Quick Start
 
-### 1. Installa dipendenze
+### 1. Install dependencies
 ```bash
 npm install
 ```
@@ -13,35 +13,70 @@ npm install
 ```bash
 npm run dev
 ```
-Apri http://localhost:3000
+Open http://localhost:5173
 
-### 3. Build per produzione
+### 3. Build for production
 ```bash
 npm run build
 ```
-I file ottimizzati saranno in `dist/`
+Optimized files will be in `dist/`
 
-## 📁 Struttura
+## 📁 Structure
 
 ```
 esp32-preact-ui/
 ├── src/
 │   ├── components/
-│   │   ├── WebSocketProvider.js  # Context WebSocket globale
-│   │   ├── StatusCard.js         # Card per visualizzare metriche
-│   │   ├── ControlButton.js      # Bottone per comandi
-│   │   └── ToggleSwitch.js       # Switch on/off
+│   │   ├── WebSocketProvider.js  # Global WebSocket context
+│   │   ├── StatusCard.js         # Card for displaying metrics
+│   │   ├── ControlButton.js      # Button for commands
+│   │   └── ToggleSwitch.js       # On/off switch
 │   ├── app.js                    # Entry point
 │   └── styles.css                # Tailwind imports
-├── dist/                         # Build output (da caricare su ESP32)
-└── vite.config.js                # Config build
+├── dist/                         # Build output (to upload to ESP32)
+└── vite.config.js                # Build configuration
 ```
 
 ## 🔌 WebSocket
 
-L'app si connette automaticamente a `ws://[hostname]/ws`.
+The app automatically connects to `ws://[hostname]/ws`.
 
-### Formato dati atteso (esempio):
+### Local Development (Development Override)
+
+When developing the UI locally with `npm run dev`, you can connect to your ESP32's WebSocket without having to reload files on the device. There are two methods:
+
+**Method 1: URL Parameter** (quick, temporary)
+```bash
+# Start the dev server
+npm run dev
+
+# Open in browser with ?ws= parameter
+http://localhost:5173/?ws=192.168.1.100
+```
+
+**Method 2: .env.local File** (persistent, recommended)
+```bash
+# Copy the example file
+cp .env.local.example .env.local
+
+# Edit .env.local and set your ESP32's IP
+VITE_WS_URL=ws://192.168.1.100/ws
+
+# Start the dev server
+npm run dev
+
+# Open normally
+http://localhost:5173
+```
+
+The `.env.local` file is already in `.gitignore` and won't be committed.
+
+**Priority order:**
+1. URL parameter `?ws=192.168.1.100`
+2. Environment variable `VITE_WS_URL`
+3. Default: `window.location.hostname` (for production on ESP32)
+
+### Expected data format (example):
 ```json
 {
   "temperature": 25.5,
@@ -53,26 +88,26 @@ L'app si connette automaticamente a `ws://[hostname]/ws`.
 }
 ```
 
-### Inviare comandi:
+### Sending commands:
 ```javascript
-// Da un componente:
+// From a component:
 import { useWebSocket } from './components/WebSocketProvider';
 
 function MyComponent() {
   const { send } = useWebSocket();
-  
-  send({ command: "LED_ON" });  // Oggetto JSON
-  send("RESTART");               // Stringa semplice
+
+  send({ command: "LED_ON" });  // JSON object
+  send("RESTART");               // Simple string
 }
 ```
 
-## 🎨 Componenti disponibili
+## 🎨 Available components
 
 ### StatusCard
-Visualizza una metrica singola:
+Display a single metric:
 ```jsx
 <StatusCard
-  title="Temperatura"
+  title="Temperature"
   value={25.5}
   unit="°C"
   icon="🌡️"
@@ -81,67 +116,67 @@ Visualizza una metrica singola:
 ```
 
 ### ToggleSwitch
-Switch on/off che si sincronizza con WebSocket:
+On/off switch that syncs with WebSocket:
 ```jsx
 <ToggleSwitch
   label="LED 1"
-  dataKey="led1"           // Chiave nei dati WebSocket
-  onCommand="LED1_ON"      // Comando da inviare quando acceso
-  offCommand="LED1_OFF"    // Comando da inviare quando spento
+  dataKey="led1"           // Key in WebSocket data
+  onCommand="LED1_ON"      // Command to send when on
+  offCommand="LED1_OFF"    // Command to send when off
 />
 ```
 
 ### ControlButton
-Bottone che invia un comando:
+Button that sends a command:
 ```jsx
 <ControlButton
   label="Restart"
-  command="RESTART"        // Stringa comando
+  command="RESTART"        // Command string
   variant="warning"        // primary|success|danger|warning
 />
 ```
 
-## 📦 Deploy su ESP32
+## 📦 Deploy to ESP32
 
-### Metodo 1: SPIFFS/LittleFS
+### Method 1: SPIFFS/LittleFS
 1. `npm run build`
-2. Carica il contenuto di `dist/` su SPIFFS
-3. Servi con AsyncWebServer:
+2. Upload `dist/` contents to SPIFFS
+3. Serve with AsyncWebServer:
 ```cpp
 server.serveStatic("/", SPIFFS, "/").setDefaultFile("index.html");
 ```
 
-### Metodo 2: Embedded in codice
+### Method 2: Embedded in code
 1. `npm run build`
-2. Converti `dist/index.html` in string C++
-3. Usa `server.on("/", HTTP_GET, [](AsyncWebServerRequest *request){ ... })`
+2. Convert `dist/index.html` to C++ string
+3. Use `server.on("/", HTTP_GET, [](AsyncWebServerRequest *request){ ... })`
 
-### Tips per ottimizzare:
-- Il build è già minificato e ottimizzato
-- Abilita GZIP su ESP32 (`response->addHeader("Content-Encoding", "gzip")`)
-- Bundle finale: ~30KB (gzipped ~10KB!)
+### Optimization tips:
+- Build is already minified and optimized
+- Enable GZIP on ESP32 (`response->addHeader("Content-Encoding", "gzip")`)
+- Final bundle: ~30KB (gzipped ~10KB!)
 
-## 🛠️ Personalizzazione
+## 🛠️ Customization
 
-### Cambia endpoint WebSocket
-In `vite.config.js` modifica il proxy:
+### Change WebSocket endpoint
+In `vite.config.js` modify the proxy:
 ```javascript
 proxy: {
   '/ws': {
-    target: 'ws://192.168.1.100',  // <-- Tuo IP ESP32
+    target: 'ws://192.168.1.100',  // <-- Your ESP32 IP
     ws: true
   }
 }
 ```
 
-### Aggiungi nuovi componenti
-Crea file in `src/components/` e importa in `app.js`:
+### Add new components
+Create file in `src/components/` and import in `app.js`:
 ```javascript
 import { MyComponent } from './components/MyComponent';
 ```
 
-### Modifica tema Tailwind
-Edita `tailwind.config.js`:
+### Modify Tailwind theme
+Edit `tailwind.config.js`:
 ```javascript
 theme: {
   extend: {
@@ -154,21 +189,21 @@ theme: {
 
 ## 🐛 Troubleshooting
 
-### WebSocket non si connette in dev
-- Verifica IP ESP32 in `vite.config.js`
-- Check che ESP32 sia raggiungibile
-- Usa console browser (F12) per vedere errori
+### WebSocket doesn't connect in dev
+- Check ESP32 IP in `vite.config.js`
+- Verify ESP32 is reachable
+- Use browser console (F12) to see errors
 
-### Build troppo grande
-- Rimuovi componenti inutilizzati
-- In `vite.config.js` aggiungi `drop_console: true`
-- Usa solo utility Tailwind necessarie
+### Build too large
+- Remove unused components
+- In `vite.config.js` add `drop_console: true`
+- Use only necessary Tailwind utilities
 
-### Stile non carica
-- Verifica che `styles.css` sia importato in `app.js`
-- Rigenera Tailwind: `npm run build`
+### Style doesn't load
+- Verify `styles.css` is imported in `app.js`
+- Regenerate Tailwind: `npm run build`
 
-## 📚 Risorse
+## 📚 Resources
 
 - [Preact Docs](https://preactjs.com)
 - [Tailwind CSS](https://tailwindcss.com)
@@ -176,4 +211,4 @@ theme: {
 
 ---
 
-**Buon divertimento con i "disegnetti"! 😄**
+**Happy hacking! 😄**

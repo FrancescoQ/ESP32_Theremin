@@ -25,6 +25,36 @@ const VIEWS = [
 const DEFAULT_VIEW = VIEWS.find(v => v.default)?.id || 'dashboard';
 
 /**
+ * Helper to resolve WebSocket URL for development
+ * Priority: URL parameter > Environment variable > Default (window.location.hostname)
+ *
+ * Usage examples:
+ * 1. URL parameter: http://localhost:5173/?ws=192.168.1.100
+ * 2. Environment variable: Create .env.local with VITE_WS_URL=ws://192.168.1.100/ws
+ * 3. Default: Uses window.location.hostname (for production on ESP32)
+ */
+function getWebSocketUrl() {
+  // Priority 1: URL parameter (?ws=192.168.1.100)
+  const params = new URLSearchParams(window.location.search);
+  const urlParam = params.get('ws');
+  if (urlParam) {
+    const wsUrl = `ws://${urlParam}/ws`;
+    console.log('[WebSocket] Using URL parameter:', wsUrl);
+    return wsUrl;
+  }
+
+  // Priority 2: Environment variable (VITE_WS_URL in .env.local)
+  if (import.meta.env.VITE_WS_URL) {
+    console.log('[WebSocket] Using environment variable:', import.meta.env.VITE_WS_URL);
+    return import.meta.env.VITE_WS_URL;
+  }
+
+  // Priority 3: Default (undefined - will use window.location.hostname in WebSocketProvider)
+  console.log('[WebSocket] Using default (window.location.hostname)');
+  return undefined;
+}
+
+/**
  * Main App
  */
 function App() {
@@ -49,8 +79,11 @@ function App() {
   // Find current view component dynamically
   const CurrentView = VIEWS.find(v => v.id === view)?.component || Dashboard;
 
+  // Resolve WebSocket URL (supports development override)
+  const wsUrl = getWebSocketUrl();
+
   return (
-    <WebSocketProvider>
+    <WebSocketProvider url={wsUrl}>
       <div class="min-h-screen bg-gray-100 dark:bg-gray-900">
         <Header
           setView={setView}
