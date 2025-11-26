@@ -28,7 +28,7 @@ void TunerManager::setDisplay(DisplayManager* disp) {
         // Pattern: registerPage(name, callback, title, weight)
         display->registerPage("Tuner", [this](Adafruit_SSD1306& oled) {
             this->drawTunerPage(oled);
-        }, "TUNER", 50);
+        }, "TUNER", 1);
 
         DEBUG_PRINTLN("[Tuner] Display page registered");
     }
@@ -140,13 +140,23 @@ void TunerManager::drawTunerPage(Adafruit_SSD1306& oled) {
     oled.setCursor(0, y);
     oled.println();
 
-    // Display frequency
+    // Display frequency and cents on one line, centered
     oled.setTextSize(1);
     oled.println();
-    oled.print(currentFrequency, 1);  // 1 decimal place
-    oled.print(" Hz / ");
+
+    // Build the complete string to calculate its width
+    String freqCentsLine = String(currentFrequency, 1) + " Hz / ";
     if (cents > 0) {
-      oled.print("+");
-    };
-    oled.println(cents);
+        freqCentsLine += "+";
+    }
+    freqCentsLine += String(cents);
+
+    // Center the line on screen
+    // Each character is 6 pixels wide at textSize(1)
+    int16_t lineWidth = freqCentsLine.length() * 6;
+    int16_t lineX = (128 - lineWidth) / 2;  // Center on 128-pixel screen
+    int16_t lineY = oled.getCursorY();
+
+    oled.setCursor(lineX, lineY);
+    oled.println(freqCentsLine);
 }

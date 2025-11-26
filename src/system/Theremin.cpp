@@ -32,22 +32,22 @@ Theremin::Theremin(PerformanceMonitor* perfMon, DisplayManager* displayMgr)
     // Register oscillators page with title (weight 2)
     display->registerPage("Oscillators", [this](Adafruit_SSD1306& oled) {
       this->drawOscillatorsPage(oled);
-    }, "Oscillators", 1);
+    }, "Oscillators", 2);
 
     // Register effects page with title (weight 2)
     display->registerPage("Effects", [this](Adafruit_SSD1306& oled) {
       this->drawEffectsPage(oled);
-    }, "Effects", 2);
+    }, "Effects", 3);
 
     // Register audio range page with title (weight 3)
     display->registerPage("Range", [this](Adafruit_SSD1306& oled) {
       this->drawAudioRangePage(oled);
-    }, "Range", 3);
+    }, "Range", 4);
 
     // Register smooth page with title (weight 4)
     display->registerPage("Smooth", [this](Adafruit_SSD1306& oled) {
       this->drawSmoothPage(oled);
-    }, "Smooth", 4);
+    }, "Smooth", 5);
   }
 }
 
