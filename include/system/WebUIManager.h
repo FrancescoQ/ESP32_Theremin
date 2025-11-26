@@ -36,7 +36,7 @@ class WebUIManager {
   Theremin* theremin;
 
   unsigned long lastUpdate;
-  static const int UPDATE_INTERVAL = 100;  // 10 Hz broadcast rate (ms)
+  static const int UPDATE_INTERVAL = 200;  // 5 Hz broadcast rate (ms) - Reduced to prevent WebSocket queue overflow
 
   // WebSocket event handlers
   static void onWebSocketEvent(AsyncWebSocket* server, AsyncWebSocketClient* client,
@@ -59,6 +59,7 @@ class WebUIManager {
   void sendSensorState(AsyncWebSocketClient* client = nullptr);
   void sendPerformanceState(AsyncWebSocketClient* client = nullptr);
   void sendSystemState(AsyncWebSocketClient* client = nullptr);
+  void sendCompleteState(AsyncWebSocketClient* client = nullptr);
 
  public:
   /**

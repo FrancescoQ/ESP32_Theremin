@@ -270,22 +270,8 @@ void WebUIManager::handleSystemCommand(JsonDocument& doc) {
 void WebUIManager::sendFullState(AsyncWebSocketClient* client) {
   DEBUG_PRINTF("[WebUI] Sending full state to client #%u\n", client->id());
 
-  // Send all oscillator states
-  for (int i = 1; i <= 3; i++) {
-    sendOscillatorState(i, client);
-  }
-
-  // Send all effect states
-  sendEffectState("delay", client);
-  sendEffectState("chorus", client);
-  sendEffectState("reverb", client);
-
-  // Send initial sensor and performance data
-  sendSensorState(client);
-  sendPerformanceState(client);
-
-  // Send system/preset state
-  sendSystemState(client);
+  // Send complete state as a single batched message
+  sendCompleteState(client);
 }
 
 void WebUIManager::sendOscillatorState(int oscNum, AsyncWebSocketClient* client) {
@@ -423,6 +409,97 @@ void WebUIManager::broadcastUpdate(const char* type, JsonDocument& doc) {
   ws.textAll(output);
 }
 
+void WebUIManager::sendCompleteState(AsyncWebSocketClient* client) {
+  AudioEngine* audio = theremin->getAudioEngine();
+  EffectsChain* effects = audio->getEffectsChain();
+  SensorManager* sensors = theremin->getSensorManager();
+  PerformanceMonitor* perfMon = audio->getPerformanceMonitor();
+
+  JsonDocument doc;
+  doc["type"] = "complete";
+
+  // Oscillators
+  JsonObject oscillators = doc["oscillators"].to<JsonObject>();
+  for (int i = 1; i <= 3; i++) {
+    JsonObject osc = oscillators[String(i)].to<JsonObject>();
+
+    Oscillator::Waveform wf = audio->getOscillatorWaveform(i);
+    const char* wfStr = "OFF";
+    switch (wf) {
+      case Oscillator::SINE: wfStr = "SINE"; break;
+      case Oscillator::SQUARE: wfStr = "SQUARE"; break;
+      case Oscillator::TRIANGLE: wfStr = "TRIANGLE"; break;
+      case Oscillator::SAW: wfStr = "SAW"; break;
+      default: wfStr = "OFF"; break;
+    }
+
+    osc["waveform"] = wfStr;
+    osc["octave"] = audio->getOscillatorOctave(i);
+    osc["volume"] = audio->getOscillatorVolume(i);
+  }
+
+  // Effects
+  JsonObject effectsObj = doc["effects"].to<JsonObject>();
+
+  // Delay
+  DelayEffect* delay = effects->getDelay();
+  JsonObject delayObj = effectsObj["delay"].to<JsonObject>();
+  delayObj["enabled"] = delay->isEnabled();
+  delayObj["time"] = delay->getDelayTime();
+  delayObj["feedback"] = delay->getFeedback();
+  delayObj["mix"] = delay->getMix();
+
+  // Chorus
+  ChorusEffect* chorus = effects->getChorus();
+  JsonObject chorusObj = effectsObj["chorus"].to<JsonObject>();
+  chorusObj["enabled"] = chorus->isEnabled();
+  chorusObj["rate"] = chorus->getRate();
+  chorusObj["depth"] = chorus->getDepth();
+  chorusObj["mix"] = chorus->getMix();
+
+  // Reverb
+  ReverbEffect* reverb = effects->getReverb();
+  JsonObject reverbObj = effectsObj["reverb"].to<JsonObject>();
+  reverbObj["enabled"] = reverb->isEnabled();
+  reverbObj["roomSize"] = reverb->getRoomSize();
+  reverbObj["damping"] = reverb->getDamping();
+  reverbObj["mix"] = reverb->getMix();
+
+  // Sensor
+  JsonObject sensor = doc["sensor"].to<JsonObject>();
+  sensor["pitch"] = sensors->getPitchDistance();
+  sensor["volume"] = sensors->getVolumeDistance();
+
+  // Performance
+  JsonObject performance = doc["performance"].to<JsonObject>();
+  performance["cpu"] = 0.0;
+  performance["ram"] = ESP.getFreeHeap();
+  performance["uptime"] = millis();
+
+  if (perfMon) {
+    performance["audioTime"] = perfMon->getAudioTimeMs();
+  } else {
+    performance["audioTime"] = 0.0;
+  }
+  performance["maxAudioTime"] = AudioEngine::getMaxAudioTimeMs();
+
+  // System
+  JsonObject system = doc["system"].to<JsonObject>();
+  system["pitchSmoothing"] = (int)theremin->getPitchSmoothingPreset();
+  system["volumeSmoothing"] = (int)theremin->getVolumeSmoothingPreset();
+  system["frequencyRange"] = (int)theremin->getFrequencyRangePreset();
+
+  // Send the complete state
+  String output;
+  serializeJson(doc, output);
+
+  if (client) {
+    client->text(output);
+  } else {
+    ws.textAll(output);
+  }
+}
+
 void WebUIManager::update() {
   // Clean up dead connections
   ws.cleanupClients();
@@ -434,13 +511,8 @@ void WebUIManager::update() {
 
     // Only broadcast if there are connected clients
     if (ws.count() > 0) {
-      // Broadcast oscillator states so hardware changes are reflected in UI
-      for (int i = 1; i <= 3; i++) {
-        sendOscillatorState(i);
-      }
-
-      sendSensorState();
-      sendPerformanceState();
+      // Broadcast complete state as a single batched message
+      sendCompleteState();
     }
   }
 }

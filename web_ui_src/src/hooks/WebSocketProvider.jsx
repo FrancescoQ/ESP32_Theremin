@@ -37,7 +37,17 @@ export function WebSocketProvider({ children, url }) {
             const parsed = JSON.parse(event.data);
 
             // Handle different message types
-            if (parsed.type === 'oscillator') {
+            if (parsed.type === 'complete') {
+              // New batched message format - update all state at once
+              setData({
+                oscillators: parsed.oscillators || {},
+                effects: parsed.effects || {},
+                sensor: parsed.sensor || {},
+                performance: parsed.performance || {},
+                system: parsed.system || {}
+              });
+            } else if (parsed.type === 'oscillator') {
+              // Individual oscillator update (backward compatibility)
               setData(prev => ({
                 ...prev,
                 oscillators: {
@@ -46,6 +56,7 @@ export function WebSocketProvider({ children, url }) {
                 }
               }));
             } else if (parsed.type === 'effect') {
+              // Individual effect update (backward compatibility)
               setData(prev => ({
                 ...prev,
                 effects: {
