@@ -108,29 +108,45 @@ void TunerManager::drawTunerPage(Adafruit_SSD1306& oled) {
         return;
     }
 
-    // Display note name (large)
+    // Display note name (large) with directional indicators
+    // Use multiple setCursor calls to place indicators at fixed positions
+    // and center the note name dynamically based on its width
     oled.setTextSize(2);
-    oled.print("Note: ");
-    oled.println(currentNote);
+
+    int16_t y = oled.getCursorY();
+
+    // Calculate centered position for note name
+    // Each character is 12 pixels wide at textSize(2)
+    int16_t noteWidth = currentNoteName.length() * 12;
+    int16_t noteX = (128 - noteWidth) / 2;  // Center on 128-pixel screen
+
+    // Draw left indicator at fixed position if needed
+    if (inTune || cents < 0) {
+        oled.setCursor(35, y);  // Fixed X position for <
+        oled.print("<");
+    }
+
+    // Draw the centered note name
+    oled.setCursor(noteX, y);
+    oled.print(currentNoteName);
+
+    // Draw right indicator at fixed position if needed
+    if (inTune || cents > 0) {
+        oled.setCursor(80, y);  // Fixed X position for >
+        oled.print(">");
+    }
+
+    // Move to next line (size 2 text is 16 pixels tall)
+    oled.setCursor(0, y);
+    oled.println();
 
     // Display frequency
     oled.setTextSize(1);
-    oled.print("Freq: ");
-    oled.print(currentFrequency, 1);  // 1 decimal place
-    oled.println(" Hz");
     oled.println();
-
-    // Display cents deviation
-    oled.print("Cents: ");
-    if (cents > 0) oled.print("+");
-    oled.print(cents);
-
-    // In tune indicator
-    if (inTune) {
-        oled.print("  [IN TUNE]");
-    } else if (cents < 0) {
-        oled.print("  [FLAT]");
-    } else {
-        oled.print("  [SHARP]");
-    }
+    oled.print(currentFrequency, 1);  // 1 decimal place
+    oled.print(" Hz / ");
+    if (cents > 0) {
+      oled.print("+");
+    };
+    oled.println(cents);
 }
