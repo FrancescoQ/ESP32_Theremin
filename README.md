@@ -29,11 +29,15 @@ Built with PlatformIO and Arduino framework through an **AI-assisted development
 
 **Core Features:**
 - Sensor input smoothing for stable control
-- Real audio synthesis using ESP32 internal DAC (early iterations used basic PWM and Wokwi simulation for proof-of-concept)
+- Real audio synthesis using PCM5102 external I2S DAC (16-bit stereo, professional quality)
 - **Audio effects system** - Delay, Chorus, AND Reverb effects with excellent performance (14.5% CPU, 85% headroom!)
 - **Multi-oscillator support** - 3 oscillators with 4 waveform types (Sine, Square, Triangle, Sawtooth)
-- Modular component design (SensorManager, AudioEngine, EffectsChain, Theremin controller)
-- OTA update capability
+- **Web control interface** - Modern Preact-based UI with real-time WebSocket communication (~30KB bundle)
+- **Visual tuner** - Real-time frequency-to-note conversion with cents deviation (shared between OLED and Web UI)
+- **Network features** - WiFi with captive portal, mDNS (theremin.local), OTA updates
+- **OLED display** - SSD1306 with page navigation and notification overlays
+- Modular component design (SensorManager, AudioEngine, EffectsChain, NetworkManager, WebUIManager, TunerManager)
+- Multiple control methods: Physical switches (MCP23017), serial commands, and web interface
 - Comprehensive debug logging
 
 **Note on Simulation:** Wokwi simulator was useful for initial validation but has limited utility beyond basic proof-of-concept (Step 0).
@@ -53,16 +57,19 @@ This approach demonstrates how modern AI tools can accelerate embedded systems d
 
 ## Current Status
 
-**🎉 Phase 4 COMPLETE - Three-Effect Audio Engine! 🎉**
+**🎉 MAJOR UPDATE - Complete Web Control Interface! 🎉**
 - ✓ Dual sensor control working
-- ✓ Real-time audio synthesis with I2S DAC
+- ✓ Real-time audio synthesis with PCM5102 I2S DAC (16-bit)
 - ✓ **3 oscillators** with 4 waveform types
 - ✓ **Delay, Chorus, AND Reverb effects** (14.5% CPU, 85% headroom!)
-- ✓ Serial command control for all effects
-- ✓ Stable, responsive operation
+- ✓ **Web UI with real-time WebSocket control** (Preact + Tailwind)
+- ✓ **Visual tuner** - frequency-to-note conversion (OLED + Web)
+- ✓ **Network features** - WiFi, mDNS (theremin.local), captive portal
+- ✓ Physical controls (MCP23017) + serial commands + web interface
+- ✓ SSD1306 OLED display with page navigation
 - ✓ OTA update support (with optional button activation)
 
-**Next:** Phase 3 hardware (controls + display) when parts arrive, or optional Phase G quality polish
+**Next:** Phase 5 polish, LED meters, or advanced web features
 
 See `productbrief.md` for v2.0 roadmap and `memory-bank/progress.md` for detailed status.
 

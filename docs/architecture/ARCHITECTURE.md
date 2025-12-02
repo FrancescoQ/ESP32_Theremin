@@ -99,6 +99,41 @@ The ESP32 Theremin has been refactored from a single monolithic file into a clea
 │   Sensors, Effects     │ • Any parameter feedback                     │
 └────────────────────────┴──────────────────────────────────────────────┘
 
+┌──────────────────────────────────────────────────────────────────────────┐
+│             Web UI System (November-December 2025) ⭐ NEW                 │
+├────────────────────┬────────────────────┬───────────────────────────────┤
+│  NetworkManager    │  WebUIManager      │  TunerManager                 │
+│  .h/cpp            │  .h/cpp            │  .h/cpp                       │
+├────────────────────┼────────────────────┼───────────────────────────────┤
+│ - WiFiManager lib  │ - AsyncWebSocket   │ - Freq→Note conversion        │
+│ - Captive portal   │ - JSON protocol    │ - Shared: OLED + Web UI       │
+│ - mDNS registration│ - State broadcast  │ - Musical note names          │
+│ - OTA coordination │ - Multi-client     │ - Cents deviation             │
+│ - Network status   │ - Command parser   │ - In-tune detection           │
+│ - Auto-reconnect   │ - 10 Hz updates    │ - <1% CPU overhead            │
+│                    │                    │                               │
+│ Features:          │ WebSocket Flow:    │ Data Provided:                │
+│ • AP+STA modes     │ • /ws endpoint     │ • Note name (e.g. "C#4")      │
+│ • theremin.local   │ • Client connect   │ • Frequency (Hz)              │
+│ • WiFi reset       │   → send state     │ • Cents (-50 to +50)          │
+│ • System reboot    │ • Command recv     │ • In-tune bool                │
+│                    │   → execute action │ • Update: 100ms (10 Hz)       │
+│                    │ • Periodic update  │                               │
+│                    │   → broadcast all  │                               │
+└────────────────────┴────────────────────┴───────────────────────────────┘
+                              ↓
+                    ┌─────────────────────┐
+                    │  Preact Frontend    │
+                    │  (web_ui_src/)      │
+                    ├─────────────────────┤
+                    │ - Vite build system │
+                    │ - Tailwind CSS      │
+                    │ - WebSocket context │
+                    │ - 5 Views + 8 Comp. │
+                    │ - ~30KB bundle      │
+                    │ - Hot-reload dev    │
+                    └─────────────────────┘
+
 Signal Flow:
   Sensors → Theremin → AudioEngine → [3 Oscillators] → [Mix]
                                                           ↓
@@ -129,6 +164,9 @@ theremin/
 │       ├── DisplayManager.h      # Page-based OLED display
 │       ├── DisplayPage.h         # Page structure
 │       ├── NotificationManager.h # Time-limited overlays
+│       ├── NetworkManager.h      # Web UI network infrastructure ⭐ NEW
+│       ├── WebUIManager.h        # WebSocket backend ⭐ NEW
+│       ├── TunerManager.h        # Frequency-to-note conversion ⭐ NEW
 │       ├── PerformanceMonitor.h  # CPU/RAM monitoring
 │       ├── OTAManager.h          # OTA updates (conditional)
 │       ├── PinConfig.h           # Hardware pin definitions
@@ -149,8 +187,24 @@ theremin/
 │       ├── Theremin.cpp
 │       ├── DisplayManager.cpp    # Display implementation
 │       ├── NotificationManager.cpp # Notification implementation
+│       ├── NetworkManager.cpp    # Network infrastructure ⭐ NEW
+│       ├── WebUIManager.cpp      # WebSocket backend ⭐ NEW
+│       ├── TunerManager.cpp      # Note conversion ⭐ NEW
 │       ├── PerformanceMonitor.cpp
 │       └── OTAManager.cpp
+│
+├── web_ui_src/                   # Preact frontend ⭐ NEW
+│   ├── src/
+│   │   ├── app.jsx               # Main entry point
+│   │   ├── styles.css            # Tailwind CSS
+│   │   ├── components/           # UI components (8 total)
+│   │   ├── hooks/                # WebSocket provider
+│   │   └── views/                # Pages (5 total)
+│   ├── dist/                     # Build output (served by ESP32)
+│   ├── index.html                # HTML shell
+│   ├── package.json              # Dependencies
+│   ├── vite.config.js            # Build config
+│   └── tailwind.config.js        # Tailwind config
 │
 ├── docs/                         # Documentation
 │   ├── architecture/
@@ -159,6 +213,7 @@ theremin/
 │   │   ├── OTA_SETUP.md
 │   │   └── DEBUG_GUIDE.md
 │   └── improvements/             # Implementation plans
+│       └── WEBUI_IMPLEMENTATION_PLAN.md # Web UI docs ⭐ NEW
 └── memory-bank/                  # Project knowledge base
 ```
 
@@ -350,6 +405,117 @@ notificationManager->show("ERROR", 5000);  // 5 seconds
 - Station mode as alternative to AP mode
 - mDNS support (access via theremin.local)
 - Auto-timeout after X minutes of inactivity
+
+### NetworkManager ⭐ NEW
+**Purpose:** Unified network infrastructure for WiFi and web services
+
+**Public Interface:**
+- `bool begin(Theremin* theremin)` - Initialize network subsystems
+- `void update()` - Process network events
+- `bool isConnected()` - Check WiFi connection status
+
+**Current Implementation:**
+- WiFiManager library integration (tzapu) for auto-connect and captive portal
+- mDNS registration (theremin.local)
+- OTAManager coordination (shared AsyncWebServer)
+- WebUIManager coordination
+- DisplayManager integration (network status page)
+
+**Features:**
+- **Unified Interface:** Single class coordinates all network features
+- **Auto-configuration:** Captive portal on first boot
+- **Persistent:** WiFi credentials saved to flash
+- **Fallback:** AP mode if STA connection fails
+- **Display Integration:** Network status shown on OLED
+
+**Bonus Features:**
+- WiFi credentials reset (special state + button during boot)
+- System reboot (10s button hold with accidental-reboot protection)
+
+**Example Usage:**
+```cpp
+NetworkManager network;
+network.begin(&theremin);  // Pass Theremin instance for WebUI
+network.update();           // Call in loop()
+```
+
+### WebUIManager ⭐ NEW
+**Purpose:** Real-time WebSocket communication for web control interface
+
+**Public Interface:**
+- `void begin()` - Initialize WebSocket endpoint
+- `void update()` - Broadcast periodic state updates
+- `void sendTunerUpdate(...)` - Send tuner data
+
+**Current Implementation:**
+- AsyncWebSocket endpoint at `/ws`
+- JSON command protocol (bidirectional)
+- 10 Hz state broadcast (100ms interval)
+- Multi-client support with auto state sync
+- Static callback bridge pattern
+
+**Features:**
+- **Real-time:** WebSocket updates at 10 Hz
+- **Bidirectional:** Client commands + server broadcasts
+- **Multi-client:** Multiple browsers simultaneously
+- **Auto-sync:** New clients receive full state on connect
+- **Complete Control:** All oscillators, effects, sensors
+
+**JSON Protocol Examples:**
+```json
+// Client → ESP32 (Command)
+{"cmd": "setWaveform", "osc": 1, "value": "SINE"}
+
+// ESP32 → Client (Update)
+{"type": "oscillator", "osc": 1, "waveform": "SINE", "octave": 0, "volume": 1.0}
+{"type": "tuner", "note": "C#4", "frequency": 277.18, "cents": -5, "inTune": true}
+```
+
+**Performance:**
+- <1ms per WebSocket broadcast
+- No impact on audio (runs on Core 0)
+- Handles 5+ simultaneous clients
+
+### TunerManager ⭐ NEW
+**Purpose:** Real-time frequency-to-note conversion for tuner displays
+
+**Public Interface:**
+- `void setDisplay(DisplayManager* disp)` - Register OLED page
+- `void update()` - Calculate tuner data (10 Hz)
+- `const String& getCurrentNote()` - Get note with octave (e.g., "C#4")
+- `int getCents()` - Get cents deviation (-50 to +50)
+- `bool isInTune()` - Check if within ±10 cents
+
+**Current Implementation:**
+- Logarithmic frequency-to-MIDI conversion
+- Musical note name lookup (12-tone equal temperament)
+- Cents deviation calculation
+- In-tune threshold detection
+- Shared between OLED display and Web UI
+
+**Features:**
+- **Dual Output:** Single calculation, dual display (OLED + Web)
+- **Efficient:** <1% CPU overhead
+- **Accurate:** Standard 12-tone equal temperament
+- **Real-time:** 10 Hz update rate (100ms)
+
+**Data Provided:**
+- Note name with octave ("C#4", "A3", etc.)
+- Frequency in Hz (floating point)
+- Cents deviation (-50 to +50)
+- In-tune boolean (within ±10 cents)
+
+**Example Usage:**
+```cpp
+TunerManager tuner(&audioEngine);
+tuner.setDisplay(&displayManager);  // Register OLED page
+tuner.update();                      // Call in loop()
+
+// Access data
+String note = tuner.getCurrentNote();  // "C#4"
+int cents = tuner.getCents();           // -5 (slightly flat)
+bool inTune = tuner.isInTune();        // true (within threshold)
+```
 
 ## Benefits of New Architecture
 

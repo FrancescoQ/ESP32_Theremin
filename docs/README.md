@@ -48,12 +48,24 @@ Detailed documentation of major improvements, optimizations, and implementation 
 
 ### System Components
 
-- **DisplayManager** - SSD1306 OLED Integration ⭐ NEW (November 5, 2025)
-  - Basic implementation complete with text rendering
+- **Web UI System** - Complete Web Control Interface ⭐ NEW (November-December 2025)
+  - **[WEBUI_IMPLEMENTATION_PLAN.md](improvements/WEBUI_IMPLEMENTATION_PLAN.md)** - Complete web interface implementation
+    - Modern Preact + Vite + Tailwind frontend (~30KB bundle, 10KB gzipped)
+    - Real-time WebSocket communication (10 Hz update rate)
+    - Views: Dashboard, Oscillators, Effects, Sensors, Tuner
+    - NetworkManager with WiFiManager integration, mDNS (theremin.local), captive portal
+    - WebUIManager for WebSocket backend with JSON command protocol
+    - TunerManager for frequency-to-note conversion (shared OLED + Web UI)
+    - Multi-client support, automatic state synchronization
+    - Development mode with hot-reload and ESP32 connection override
+
+- **DisplayManager** - SSD1306 OLED Integration ⭐ (November 5, 2025)
+  - Page-based display system with navigation
   - TomThumb font support (3x5px - very compact)
   - Visual feedback for multi-function button (circle indicator)
+  - NotificationManager for time-limited overlays
   - API: `showText()`, `showCenteredText()`, `clear()`, `update()`
-  - Future: Status pages, metrics display, page navigation
+  - Pages: Splash (build info), Performance monitoring
 
 ### Audio System
 
@@ -194,13 +206,15 @@ Current documentation covers:
 - ✅ System architecture
 - ✅ OTA update system
 - ✅ Audio system improvements (waveforms, DAC, continuous generation)
-- ✅ **Audio effects system (Delay, Chorus, Reverb)** ⭐ NEW
+- ✅ Audio effects system (Delay, Chorus, Reverb)
+- ✅ **Web UI system (NetworkManager, WebUIManager, TunerManager, Preact frontend)** ⭐ NEW
+- ✅ Display system (OLED with page navigation and notifications)
 - ✅ Sensor optimizations
 - ✅ System performance monitoring
 - ✅ Debug workflows
 - ✅ Virtual prototyping
 
-**Latest Achievement:** Phase 4 complete - Three-effect audio engine running on hardware with 14.5% CPU usage!
+**Latest Achievement:** Web UI complete - Full web control interface with modern Preact frontend and real-time WebSocket communication! Access via theremin.local
 
 See [memory-bank/progress.md](../memory-bank/progress.md) for detailed project status.
 
@@ -234,4 +248,4 @@ When adding new documentation:
 
 ---
 
-**Last Updated:** November 4, 2025
+**Last Updated:** December 2, 2025
