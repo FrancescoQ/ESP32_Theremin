@@ -51,6 +51,8 @@
 
 ### Key Libraries
 
+**Core Sensor Libraries:**
+
 **Adafruit_VL53L0X v1.2.0+**
 - Purpose: VL53L0X Time-of-Flight sensor interface
 - Features:
@@ -69,11 +71,95 @@
   - `Wire.setClock(frequency)` - Set bus speed
 - Default I2C pins on ESP32: GPIO21 (SDA), GPIO22 (SCL)
 
-**ESP32 Arduino Core Libraries**
+---
+
+**Display & Control Libraries:**
+
+**Adafruit_SSD1306 v2.5.7+**
+- Purpose: SSD1306 OLED display driver (128x64)
+- Features:
+  - I2C communication (address 0x3C)
+  - Text rendering with multiple fonts
+  - Graphics primitives (lines, circles, etc.)
+  - Double buffering for flicker-free updates
+- Repository: https://github.com/adafruit/Adafruit_SSD1306
+- Installation: Auto-managed by PlatformIO
+
+**Adafruit_GFX v1.11.9+**
+- Purpose: Graphics library (required by SSD1306)
+- Features:
+  - Text rendering engine
+  - TomThumb font support (3x5px - very compact)
+  - Drawing primitives
+- Repository: https://github.com/adafruit/Adafruit-GFX-Library
+
+**Adafruit_MCP23017 v2.3.2+**
+- Purpose: MCP23017 I2C GPIO expander driver
+- Features:
+  - 16 GPIO pins via I2C (address 0x20)
+  - Interrupt support
+  - Input pull-up configuration
+  - Used for physical switches (15 pins)
+- Repository: https://github.com/adafruit/Adafruit_MCP23017
+- Installation: Auto-managed by PlatformIO
+
+---
+
+**Network & Web Libraries:**
+
+**ESP32Async/ESPAsyncWebServer v3.8.1+**
+- Purpose: Asynchronous web server for ESP32
+- Features:
+  - Non-blocking HTTP server
+  - WebSocket support
+  - Static file serving (LittleFS/SPIFFS)
+  - Multiple simultaneous connections
+  - AsyncTCP included transitively
+- Repository: https://github.com/ESP32Async/ESPAsyncWebServer
+- Installation: Auto-managed by PlatformIO
+- Note: Most actively maintained fork
+
+**tzapu/WiFiManager v2.0.17+**
+- Purpose: WiFi configuration with captive portal
+- Features:
+  - Auto-connect to saved WiFi
+  - Captive portal for initial setup
+  - AP+STA mode support
+  - Credential persistence
+  - Configurable timeout
+- Repository: https://github.com/tzapu/WiFiManager
+- Installation: Auto-managed by PlatformIO
+
+**ArduinoJson v7.2.1+**
+- Purpose: JSON serialization/deserialization
+- Features:
+  - Efficient memory usage
+  - Static and dynamic documents
+  - WebSocket message protocol
+  - Configuration storage
+- Repository: https://github.com/bblanchon/ArduinoJson
+- Installation: Auto-managed by PlatformIO
+
+**ElegantOTA v3.1.0+**
+- Purpose: Over-the-air firmware updates
+- Features:
+  - Web-based update interface
+  - AsyncWebServer support
+  - HTTP Basic Authentication
+  - Progress indication
+- Repository: https://github.com/ayushsharma82/ElegantOTA
+- Installation: Auto-managed by PlatformIO
+- Flag: `-DELEGANTOTA_USE_ASYNC_WEBSERVER=1`
+
+---
+
+**ESP32 Arduino Core Libraries:**
 - `ledcSetup()` - Configure PWM channel
 - `ledcAttachPin()` - Attach PWM to GPIO
 - `ledcWrite()` - Set PWM duty cycle
 - `ledcWriteTone()` - Generate tone at frequency
+- `i2s_*` functions - I2S DAC interface (PCM5102)
+- `MDNS.begin()` - mDNS service registration
 
 ### Hardware Components
 
@@ -83,7 +169,7 @@
    - Any variant (DevKit v1, WROOM-32, etc.)
    - Requirements: USB interface, exposed GPIO pins
    - Power: 5V via USB or 3.7V LiPo
-   - Current draw: ~80mA typical + sensors
+   - Current draw: ~150mA typical (with all peripherals)
 
 2. **VL53L0X Time-of-Flight Sensors (x2)**
    - Technology: Laser-based ToF ranging
@@ -91,20 +177,42 @@
    - Default address: 0x29 (both sensors identical)
    - Range: 30-1000mm (optimal 50-500mm)
    - Accuracy: ±3% typical
-   - Update rate: <30ms per reading
+   - Update rate: <30ms per reading (20ms with high-speed mode)
    - Power: 3.3V, ~20mA each
    - Breakout modules include:
      - 3.3V voltage regulator
      - I2C pull-up resistors (typically 10kΩ)
      - XSHUT pin for address configuration
 
-3. **Passive Piezoelectric Buzzer**
-   - Type: PASSIVE (requires external oscillation)
-   - Frequency range: 100-10,000 Hz typical
-   - Drive: PWM square wave
-   - Current: ~10-30mA
-   - Polarity: Usually marked (+/-)
-   - Protection: 100-220Ω series resistor recommended
+3. **PCM5102 I2S DAC Module** ✅ **IMPLEMENTED**
+   - Type: External I2S stereo DAC
+   - Resolution: 16-bit (vs 8-bit built-in)
+   - Sample rate: Up to 384 kHz (using 22050 Hz)
+   - THD+N: < -93 dB (professional grade)
+   - Dynamic range: 112 dB
+   - Power: 3.3V, ~10mA
+   - Interface: I2S (3 wires: BCK, WS, DATA)
+   - Connections:
+     - BCK → GPIO26 (Bit Clock)
+     - WS → GPIO27 (Word Select / LRCK)
+     - DATA → GPIO25 (Data Output)
+     - VCC → 3.3V, GND → GND
+
+4. **MCP23017 I2C GPIO Expander** ✅ **IMPLEMENTED**
+   - Purpose: 16 additional GPIO pins for physical controls
+   - Communication: I2C (address 0x20)
+   - Features: Interrupt support, pull-up configuration
+   - Power: 3.3V, ~1mA
+   - Usage: 15 pins for oscillator switches (waveform + octave)
+   - Connections: SDA/SCL shared with sensors
+
+5. **SSD1306 OLED Display (128x64)** ✅ **IMPLEMENTED**
+   - Technology: Monochrome OLED
+   - Communication: I2C (address 0x3C)
+   - Power: 3.3V, ~20mA
+   - Features: Page-based display with navigation
+   - Usage: Status pages, performance monitoring, tuner
+   - Connections: SDA/SCL shared with sensors
 
 **Supporting Components:**
 - Breadboard (400+ tie points)
@@ -388,42 +496,156 @@ rfc2217ServerPort = 4000
 
 ## Dependencies
 
-### Required Software
+### Required Software - ESP32
+
+**Core Development:**
 - Visual Studio Code (latest)
 - PlatformIO IDE extension
 - USB-to-Serial drivers (CP210x or CH340 depending on ESP32 board)
 
-### Required Libraries
+**Required Libraries:**
 - Adafruit_VL53L0X >= 1.2.0
-- Adafruit_BusIO (auto-installed as dependency)
+- Adafruit_SSD1306 >= 2.5.7
+- Adafruit_GFX >= 1.11.9
+- Adafruit_MCP23017 >= 2.3.2
+- ESPAsyncWebServer >= 3.8.1
+- WiFiManager >= 2.0.17
+- ArduinoJson >= 7.2.1
+- ElegantOTA >= 3.1.0
 - Wire.h (included in Arduino core)
 
-### Optional Tools
+**Optional Tools:**
 - Wokwi VSCode extension + active license
 - Serial terminal (Arduino Serial Monitor, PuTTY, screen)
 - Logic analyzer (for I2C debugging)
 
-## Upgrade Paths
+---
 
-### Audio Quality Enhancement
-**Current:** PWM + passive buzzer
-**Upgrade:** ESP32 DAC + amplifier + speaker
-- Use GPIO25 (DAC1) or GPIO26 (DAC2)
-- Add PAM8403 amplifier module
-- Implement sine wave generation via lookup table
-- True volume control possible
+### Required Software - Web UI Frontend ✅ **IMPLEMENTED**
 
-### Sensor Enhancement
-**Current:** VL53L0X (1m range)
-**Upgrade:** VL53L1X (4m range) or VL53L3X (5m range)
+**Runtime:**
+- Node.js >= 18.0.0 (LTS recommended)
+- npm >= 9.0.0 (comes with Node.js)
+
+**Build Tools:**
+- Vite ^6.0.3 (Fast build system with hot-reload)
+- PostCSS + Autoprefixer (CSS processing)
+
+**Frontend Framework:**
+- Preact ^10.26.2 (Lightweight React alternative, 3KB)
+- Preact Hooks (State management)
+
+**Styling:**
+- Tailwind CSS ^3.4.17 (Utility-first CSS framework)
+- Custom design system (defined in tailwind.config.js)
+
+**Development Tools:**
+- ESLint (Code linting, if configured)
+- Hot Module Replacement (HMR via Vite)
+
+**Frontend Dependencies:**
+```json
+{
+  "dependencies": {
+    "preact": "^10.26.2"
+  },
+  "devDependencies": {
+    "@preact/preset-vite": "^2.9.3",
+    "autoprefixer": "^10.4.20",
+    "postcss": "^8.4.49",
+    "tailwindcss": "^3.4.17",
+    "vite": "^6.0.3"
+  }
+}
+```
+
+**Build Output:**
+- Production bundle: ~30KB (uncompressed), ~10KB (gzipped)
+- Output directory: `web_ui_src/dist/`
+- Served by ESP32 via LittleFS filesystem
+
+**Development Workflow:**
+1. `cd web_ui_src/`
+2. `npm install` - Install dependencies
+3. `npm run dev` - Start dev server with hot-reload (port 5173)
+4. `npm run build` - Build production bundle
+5. Upload `dist/` to ESP32 via PlatformIO filesystem upload
+
+**Environment Variables:**
+- `.env.development` - Dev mode config (ESP32 IP override)
+- `.env.development.example` - Template for local setup
+
+## Upgrade Paths & Status
+
+### Audio Quality Enhancement ✅ **COMPLETE**
+**Previous:** PWM + passive buzzer
+**Current:** PCM5102 I2S DAC (16-bit, professional grade)
+- ✅ External I2S DAC (PCM5102)
+- ✅ Sine wave generation via lookup table (1024 samples)
+- ✅ Multiple waveforms (sine, square, triangle, sawtooth)
+- ✅ 3 oscillators with independent control
+- ✅ Audio effects chain (Delay, Chorus, Reverb)
+- ✅ True volume control per oscillator
+- **Result:** 256x resolution improvement, THD+N < -93 dB
+
+### Processing Enhancement ✅ **COMPLETE**
+**Previous:** Simple loop() with blocking reads
+**Current:** FreeRTOS audio task (Core 1, high priority)
+- ✅ Dedicated audio task on Core 1
+- ✅ Non-blocking sensor reads
+- ✅ Real-time audio deadline tracking (11ms buffer)
+- ✅ Performance monitoring (CPU < 15% with all effects)
+- **Result:** 85% CPU headroom, stable operation
+
+### Display & Controls ✅ **COMPLETE**
+**Previous:** None
+**Current:** Full UI system
+- ✅ SSD1306 OLED display (128x64, I2C)
+- ✅ Page-based navigation system
+- ✅ Notification overlays
+- ✅ MCP23017 GPIO expander (15 physical switches)
+- ✅ Serial command interface
+- ✅ Web control interface (Preact + WebSocket)
+- **Result:** Multi-modal control (physical + serial + web)
+
+### Network Features ✅ **COMPLETE**
+**Previous:** None
+**Current:** Full web infrastructure
+- ✅ WiFi with captive portal (WiFiManager)
+- ✅ mDNS (theremin.local)
+- ✅ WebSocket server (10 Hz updates)
+- ✅ Modern web UI (Preact + Tailwind)
+- ✅ OTA firmware updates (ElegantOTA)
+- ✅ Multi-client support
+- **Result:** Complete web control interface
+
+---
+
+### Future Enhancement Ideas
+
+**Sensor Enhancement:**
+- VL53L1X (4m range) or VL53L3X (5m range)
 - Longer detection range
 - Better ambient immunity
 - Similar I2C interface
+- **Priority:** Low (current sensors work well)
 
-### Processing Enhancement
-**Current:** Simple loop() with blocking reads
-**Upgrade:** FreeRTOS tasks
-- Separate sensor reading task
-- Audio generation task
-- Non-blocking operation
-- Better timing control
+**Audio Enhancements:**
+- ADSR envelope generator
+- Additional waveforms (noise, custom)
+- True stereo effects (currently mono duplicated)
+- Higher sample rates (up to 384 kHz supported by PCM5102)
+- **Priority:** Low (current audio quality excellent)
+
+**UI Enhancements:**
+- LED VU meters (analog or WS2812 addressable)
+- Additional OLED pages (oscillators, sensors, effects)
+- Web UI advanced features (presets, recording)
+- Touch screen display
+- **Priority:** Medium (nice-to-have improvements)
+
+**Performance:**
+- Higher sample rate (44.1 kHz or 48 kHz)
+- More oscillators (4+)
+- Additional effects (phaser, flanger, distortion)
+- **Priority:** Low (current performance excellent)

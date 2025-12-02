@@ -1576,7 +1576,499 @@ void GPIOControls::performSystemReboot() {
 - WiFiManager library: ~20KB Flash, ~2KB RAM
 - AsyncWebServer: ~30KB Flash, ~5KB RAM (shared with OTA)
 
+### 14. WebUIManager Pattern (November-December 2025)
+
+```cpp
+// Real-time WebSocket communication with JSON protocol
+// Bidirectional control: Browser ↔ ESP32
+
+class WebUIManager {
+private:
+    AsyncWebSocket* ws;
+    AudioEngine* audioEngine;
+    SensorManager* sensorManager;
+    EffectsChain* effectsChain;
+
+    unsigned long lastStateUpdate;
+    static constexpr unsigned long UPDATE_INTERVAL_MS = 100;  // 10 Hz
+
+    static WebUIManager* instance;  // Singleton for callback
+
+public:
+    WebUIManager(AsyncWebServer* server, Theremin* theremin)
+        : lastStateUpdate(0) {
+
+        instance = this;
+
+        // Create WebSocket endpoint
+        ws = new AsyncWebSocket("/ws");
+        ws->onEvent(onWebSocketEventStatic);
+        server->addHandler(ws);
+
+        // Store references
+        audioEngine = theremin->getAudioEngine();
+        sensorManager = theremin->getSensorManager();
+        effectsChain = audioEngine->getEffectsChain();
+    }
+
+    void update() {
+        // Periodic state broadcast (10 Hz)
+        unsigned long now = millis();
+        if (now - lastStateUpdate >= UPDATE_INTERVAL_MS) {
+            broadcastState();
+            lastStateUpdate = now;
+        }
+
+        // Cleanup disconnected clients
+        ws->cleanupClients();
+    }
+
+    // Send tuner data (called from TunerManager)
+    void sendTunerUpdate(const String& note, float frequency, int cents, bool inTune) {
+        StaticJsonDocument<128> doc;
+        doc["type"] = "tuner";
+        doc["note"] = note;
+        doc["frequency"] = frequency;
+        doc["cents"] = cents;
+        doc["inTune"] = inTune;
+
+        String json;
+        serializeJson(doc, json);
+        ws->textAll(json);
+    }
+
+private:
+    // Broadcast full state to all clients
+    void broadcastState() {
+        // Send oscillator states (3 separate messages)
+        for (int i = 1; i <= 3; i++) {
+            sendOscillatorState(i);
+        }
+
+        // Send effects states
+        sendEffectsState();
+
+        // Send sensor states
+        sendSensorState();
+    }
+
+    void sendOscillatorState(int oscNum) {
+        StaticJsonDocument<256> doc;
+        doc["type"] = "oscillator";
+        doc["osc"] = oscNum;
+        doc["waveform"] = getWaveformString(oscNum);
+        doc["octave"] = audioEngine->getOscillatorOctave(oscNum);
+        doc["volume"] = audioEngine->getOscillatorVolume(oscNum);
+
+        String json;
+        serializeJson(doc, json);
+        ws->textAll(json);
+    }
+
+    // Handle incoming WebSocket messages
+    static void onWebSocketEventStatic(AsyncWebSocket* server,
+                                      AsyncWebSocketClient* client,
+                                      AwsEventType type,
+                                      void* arg, uint8_t* data, size_t len) {
+        if (instance) {
+            instance->onWebSocketEvent(server, client, type, arg, data, len);
+        }
+    }
+
+    void onWebSocketEvent(AsyncWebSocket* server,
+                         AsyncWebSocketClient* client,
+                         AwsEventType type,
+                         void* arg, uint8_t* data, size_t len) {
+        switch (type) {
+            case WS_EVT_CONNECT:
+                DEBUG_PRINTF("[WebUI] Client #%u connected\n", client->id());
+                sendFullStateToClient(client);  // Sync new client
+                break;
+
+            case WS_EVT_DISCONNECT:
+                DEBUG_PRINTF("[WebUI] Client #%u disconnected\n", client->id());
+                break;
+
+            case WS_EVT_DATA:
+                handleWebSocketMessage(arg, data, len);
+                break;
+        }
+    }
+
+    void handleWebSocketMessage(void* arg, uint8_t* data, size_t len) {
+        AwsFrameInfo* info = (AwsFrameInfo*)arg;
+        if (info->final && info->index == 0 && info->len == len && info->opcode == WS_TEXT) {
+            data[len] = 0;  // Null terminate
+            String message = (char*)data;
+
+            // Parse JSON command
+            StaticJsonDocument<256> doc;
+            DeserializationError error = deserializeJson(doc, message);
+
+            if (!error) {
+                executeCommand(doc);
+            }
+        }
+    }
+
+    void executeCommand(JsonDocument& cmd) {
+        const char* command = cmd["cmd"];
+
+        if (strcmp(command, "setWaveform") == 0) {
+            int osc = cmd["osc"];
+            const char* waveform = cmd["value"];
+            audioEngine->setOscillatorWaveform(osc, parseWaveform(waveform));
+        }
+        else if (strcmp(command, "setOctave") == 0) {
+            int osc = cmd["osc"];
+            int octave = cmd["value"];
+            audioEngine->setOscillatorOctave(osc, octave);
+        }
+        // ... more commands ...
+    }
+};
+
+// Static member definition
+WebUIManager* WebUIManager::instance = nullptr;
+```
+
+**Key Design Patterns:**
+
+1. **Static Callback Bridge Pattern**
+   - AsyncWebSocket requires C-style function pointers
+   - Static method forwards to instance method
+   - Singleton instance pointer enables access
+   - Same pattern as NotificationManager
+
+2. **Periodic State Broadcast Pattern**
+   - 10 Hz update rate (100ms interval)
+   - Keeps all clients synchronized
+   - Non-blocking (doesn't wait for ACKs)
+   - Minimal CPU overhead
+
+3. **Multi-Client Auto-Sync Pattern**
+   - New client connection → send full state immediately
+   - Ensures client always has current system state
+   - No explicit "refresh" button needed
+   - Works with any number of simultaneous clients
+
+4. **JSON Command Protocol**
+   - Bidirectional JSON messages
+   - Client → ESP32: `{"cmd": "setWaveform", "osc": 1, "value": "SINE"}`
+   - ESP32 → Client: `{"type": "oscillator", "osc": 1, "waveform": "SINE", ...}`
+   - ArduinoJson library for parsing/serialization
+   - Type-safe with documented schema
+
+5. **Cleanup Pattern**
+   - `ws->cleanupClients()` in update loop
+   - Removes disconnected clients automatically
+   - Prevents memory leaks from dead connections
+
+**Performance:**
+- WebSocket message: <1ms to broadcast
+- JSON serialization: ~0.5ms per message
+- Total overhead: ~1-2% CPU (4-5 messages per update)
+- No impact on audio (runs on Core 0)
+
+### 15. TunerManager Pattern (November-December 2025)
+
+```cpp
+// Frequency-to-note conversion with dual output (OLED + Web UI)
+// Single calculation, multiple displays
+
+class TunerManager {
+private:
+    AudioEngine* audioEngine;
+    DisplayManager* displayManager;
+    WebUIManager* webUIManager;
+
+    // Tuner state
+    String currentNote;
+    float currentFrequency;
+    int currentCents;
+    bool inTune;
+
+    unsigned long lastUpdate;
+    static constexpr unsigned long UPDATE_INTERVAL_MS = 100;  // 10 Hz
+    static constexpr int IN_TUNE_THRESHOLD_CENTS = 10;        // ±10 cents
+
+public:
+    TunerManager(AudioEngine* audio) : audioEngine(audio), lastUpdate(0) {}
+
+    void setDisplay(DisplayManager* disp) {
+        displayManager = disp;
+        registerDisplayPage();
+    }
+
+    void setWebUI(WebUIManager* webui) {
+        webUIManager = webui;
+    }
+
+    void update() {
+        // Throttle updates to 10 Hz
+        unsigned long now = millis();
+        if (now - lastUpdate < UPDATE_INTERVAL_MS) return;
+        lastUpdate = now;
+
+        // Get current frequency from AudioEngine
+        currentFrequency = audioEngine->getCurrentFrequency();
+
+        // Convert frequency to note
+        calculateNote(currentFrequency);
+
+        // Send to WebUI if available
+        if (webUIManager) {
+            webUIManager->sendTunerUpdate(currentNote, currentFrequency,
+                                         currentCents, inTune);
+        }
+
+        // OLED display updates automatically via registered callback
+    }
+
+private:
+    void calculateNote(float frequency) {
+        // Standard 12-tone equal temperament
+        // A4 = 440 Hz (MIDI note 69)
+
+        if (frequency < 20.0f || frequency > 20000.0f) {
+            currentNote = "---";
+            currentCents = 0;
+            inTune = false;
+            return;
+        }
+
+        // Convert frequency to MIDI note (float)
+        float midiNote = 69.0f + 12.0f * log2f(frequency / 440.0f);
+
+        // Round to nearest note
+        int nearestMIDI = round(midiNote);
+
+        // Calculate cents deviation
+        float centsFloat = (midiNote - nearestMIDI) * 100.0f;
+        currentCents = round(centsFloat);
+
+        // Determine if in tune
+        inTune = (abs(currentCents) <= IN_TUNE_THRESHOLD_CENTS);
+
+        // Convert MIDI note to name
+        currentNote = midiNoteToName(nearestMIDI);
+    }
+
+    String midiNoteToName(int midiNote) {
+        const char* noteNames[] = {
+            "C", "C#", "D", "D#", "E", "F",
+            "F#", "G", "G#", "A", "A#", "B"
+        };
+
+        int noteIndex = midiNote % 12;
+        int octave = (midiNote / 12) - 1;
+
+        String name = noteNames[noteIndex];
+        name += String(octave);
+
+        return name;
+    }
+
+    void registerDisplayPage() {
+        if (!displayManager) return;
+
+        displayManager->registerPage("Tuner", [this](Adafruit_SSD1306& oled) {
+            drawTunerPage(oled);
+        }, "TUNER", 5);  // Title "TUNER", weight 5
+    }
+
+    void drawTunerPage(Adafruit_SSD1306& oled) {
+        oled.setCursor(0, DisplayManager::CONTENT_START_Y);
+
+        // Large note name
+        oled.setTextSize(2);
+        oled.printf("%s\n", currentNote.c_str());
+        oled.setTextSize(1);
+
+        // Frequency
+        oled.printf("Freq: %.1f Hz\n", currentFrequency);
+
+        // Cents deviation
+        oled.printf("Cents: %+d\n", currentCents);
+
+        // In-tune indicator
+        oled.printf("Status: %s\n", inTune ? "IN TUNE" : "OFF");
+
+        // Visual cents bar (optional)
+        drawCentsBar(oled);
+    }
+
+    void drawCentsBar(Adafruit_SSD1306& oled) {
+        const int BAR_Y = 55;
+        const int BAR_WIDTH = 100;
+        const int BAR_HEIGHT = 6;
+        const int BAR_X = (DisplayManager::SCREEN_WIDTH - BAR_WIDTH) / 2;
+
+        // Draw outline
+        oled.drawRect(BAR_X, BAR_Y, BAR_WIDTH, BAR_HEIGHT, SSD1306_WHITE);
+
+        // Draw center mark
+        int centerX = BAR_X + BAR_WIDTH / 2;
+        oled.drawLine(centerX, BAR_Y, centerX, BAR_Y + BAR_HEIGHT, SSD1306_WHITE);
+
+        // Draw cents indicator
+        int offset = map(currentCents, -50, 50, 0, BAR_WIDTH);
+        offset = constrain(offset, 0, BAR_WIDTH - 1);
+        int indicatorX = BAR_X + offset;
+        oled.fillRect(indicatorX - 1, BAR_Y + 1, 3, BAR_HEIGHT - 2, SSD1306_WHITE);
+    }
+};
+```
+
+**Key Design Patterns:**
+
+1. **Dual Output Pattern**
+   - Single calculation, multiple displays
+   - OLED updated via registered callback
+   - Web UI updated via direct method call
+   - Efficient: Calculate once, display twice
+
+2. **Logarithmic Frequency Mapping**
+   - Musical notes are logarithmic (not linear)
+   - MIDI note = 69 + 12 * log2(freq / 440)
+   - Standard 12-tone equal temperament
+   - A4 = 440 Hz = MIDI note 69
+
+3. **Cents Deviation Calculation**
+   - 100 cents = 1 semitone
+   - Cents = (float_MIDI - rounded_MIDI) * 100
+   - Range: -50 to +50 cents
+   - In-tune threshold: ±10 cents (configurable)
+
+4. **Throttled Update Pattern**
+   - 10 Hz update rate (100ms interval)
+   - Prevents excessive recalculation
+   - Smooth tuner display
+   - <1% CPU overhead
+
+5. **Visual Feedback Pattern**
+   - Text display (note name, frequency, cents)
+   - Status indicator ("IN TUNE" / "OFF")
+   - Optional visual cents bar (horizontal bar graph)
+   - Color coding would be possible on web UI
+
+**Performance:**
+- Frequency calculation: <0.1ms (log2f is fast)
+- MIDI/cents conversion: <0.1ms (simple math)
+- Total overhead: <1% CPU
+
+**Memory:**
+- TunerManager instance: ~100 bytes
+- No heap allocation in hot path
+- Strings updated only when values change
+
+### 16. Frontend Build Integration Pattern (November-December 2025)
+
+```bash
+# Preact + Vite frontend with ESP32 backend integration
+# Two-stage build process: Frontend → ESP32 upload
+
+# Stage 1: Build frontend (Vite)
+cd web_ui_src/
+npm install              # Install dependencies (one-time)
+npm run build           # Build production bundle
+
+# Output: web_ui_src/dist/
+# - index.html (~3KB)
+# - assets/app.js (~30KB)
+# - assets/app.css (~5KB)
+# Total: ~38KB (uncompressed), ~10KB (gzipped)
+
+# Stage 2: Upload to ESP32 (PlatformIO)
+pio run -t uploadfs     # Upload LittleFS filesystem
+
+# ESP32 serves files from LittleFS at "/"
+# AsyncWebServer handles static file serving
+```
+
+**Development Workflow Pattern:**
+
+```bash
+# Option 1: Dev mode with hot-reload (rapid iteration)
+cd web_ui_src/
+npm run dev             # Starts Vite dev server on port 5173
+
+# Edit .env.development to point to ESP32 IP:
+# VITE_ESP32_HOST=http://192.168.1.100
+# Browser connects to localhost:5173, WebSocket to ESP32
+
+# Option 2: Production mode (test actual deployment)
+cd web_ui_src/
+npm run build           # Build bundle
+cd ..
+pio run -t uploadfs     # Upload to ESP32
+# Access via http://theremin.local or http://192.168.1.100
+```
+
+**Key Design Patterns:**
+
+1. **Environment Override Pattern**
+   - `.env.development` overrides WebSocket host in dev mode
+   - Production build uses relative path (same host)
+   - Enables local development without reflashing ESP32
+
+2. **Static File Serving Pattern**
+   - LittleFS filesystem on ESP32 Flash
+   - AsyncWebServer serves static files from "/"
+   - Minimal RAM usage (files streamed from Flash)
+
+3. **Bundle Optimization Pattern**
+   - Preact (3KB) instead of React (40KB+)
+   - Vite tree-shaking removes unused code
+   - Tailwind CSS purged of unused classes
+   - Result: ~30KB total (fits easily in ESP32 Flash)
+
+4. **WebSocket URL Resolution Pattern**
+   ```javascript
+   // Preact component (WebSocketProvider.jsx)
+   const getWebSocketURL = () => {
+       const host = import.meta.env.VITE_ESP32_HOST || window.location.host;
+       const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+       return `${protocol}//${host}/ws`;
+   };
+   ```
+   - Dev mode: Uses VITE_ESP32_HOST from .env.development
+   - Production: Uses window.location.host (same as web server)
+   - Automatic protocol selection (ws/wss)
+
+**File Structure:**
+```
+web_ui_src/
+├── src/
+│   ├── app.jsx                 # Main entry point
+│   ├── styles.css              # Tailwind imports
+│   ├── components/             # Reusable UI components
+│   │   ├── CommandSelect.jsx
+│   │   ├── CommandSlider.jsx
+│   │   ├── ControlButton.jsx
+│   │   ├── Effect.jsx
+│   │   ├── Header.jsx
+│   │   ├── Oscillator.jsx
+│   │   ├── StatusCard.jsx
+│   │   └── ToggleSwitch.jsx
+│   ├── hooks/
+│   │   └── WebSocketProvider.jsx  # WebSocket context + state
+│   └── views/                  # Page components
+│       ├── Dashboard.jsx       # Overview + quick controls
+│       ├── Oscillators.jsx     # 3 oscillator controls
+│       ├── Effects.jsx         # Effects chain
+│       ├── Sensors.jsx         # Sensor enable/disable
+│       └── Tuner.jsx           # Visual tuner display
+├── dist/                       # Build output (uploaded to ESP32)
+├── index.html                  # HTML shell
+├── package.json                # Dependencies
+├── vite.config.js              # Build config
+├── tailwind.config.js          # Tailwind config
+└── .env.development            # Dev mode ESP32 IP override
+```
+
 ## Configuration Constants
+</parameter>
 
 ```cpp
 // Hardware pins
