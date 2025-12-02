@@ -112,20 +112,82 @@ void NetworkManager::setupWiFi(uint8_t connectTimeout, uint16_t portalTimeout, b
 
   if (forcePortal) {
     // FORCE PORTAL MODE: Button pressed during boot
-    // Show captive portal for WiFi configuration with timeout
+    // Show captive portal for WiFi configuration with button exit option
     DEBUG_PRINTLN("[WiFi] Force portal mode - button pressed during boot");
-    DEBUG_PRINTLN("[WiFi] Starting captive portal for WiFi configuration...");
+    DEBUG_PRINTLN("[WiFi] Starting non-blocking captive portal...");
 
-    wifiManager.setConfigPortalTimeout(300);  // 5 minute timeout
+    // Update display to show WiFi config message (Option B)
+    if (display) {
+      Adafruit_SSD1306& oled = display->getDisplay();
+      oled.clearDisplay();
+      oled.setTextSize(1);
+      oled.setTextColor(SSD1306_WHITE);
+      oled.setCursor(0, 0);
+      oled.println("WiFi Setup...");
+      oled.println("");
+      oled.println("Connect to:");
+      oled.println("192.168.4.1");
+      oled.println("");
+      oled.println("Push btn to exit");
+      oled.println("and start local AP");
+      oled.println("for Web UI");
+      oled.display();
+    }
+
+    // Configure non-blocking portal
+    wifiManager.setConfigPortalBlocking(false);
+    wifiManager.setConfigPortalTimeout(0);  // No automatic timeout
     wifiManager.setConnectTimeout(connectTimeout);
 
-    if (!wifiManager.startConfigPortal(apName.c_str())) {
-      DEBUG_PRINTLN("[WiFi] Config portal timed out");
+    // Start the config portal
+    wifiManager.startConfigPortal(apName.c_str());
+
+    // Monitor loop - check button and portal status
+    unsigned long startTime = millis();
+    unsigned long maxDuration = 300000;  // 5 minutes maximum
+    bool portalActive = true;
+
+    DEBUG_PRINTLN("[WiFi] Portal active - press button to exit");
+
+    while (portalActive && (millis() - startTime < maxDuration)) {
+      // Process WiFiManager events
+      wifiManager.process();
+
+      // Check if WiFi connected (user configured via portal)
+      if (WiFi.isConnected()) {
+        DEBUG_PRINTLN("[WiFi] WiFi configured via portal");
+        portalActive = false;
+        break;
+      }
+
+      // Check button state (via Theremin instance)
+      if (theremin && theremin->getMCP().digitalRead(PIN_MULTI_BUTTON) == LOW) {
+        DEBUG_PRINTLN("[WiFi] Button pressed - exiting portal");
+        wifiManager.stopConfigPortal();
+        portalActive = false;
+        delay(500);  // Debounce
+        break;
+      }
+
+      delay(100);  // Check every 100ms
+    }
+
+    // Check for timeout
+    if (millis() - startTime >= maxDuration) {
+      DEBUG_PRINTLN("[WiFi] Config portal timed out after 5 minutes");
+      wifiManager.stopConfigPortal();
+    }
+
+    // Restore loading screen
+    if (display) {
+      display->showLoadingScreen();
+    }
+
+    // If not connected, start AP mode
+    if (!WiFi.isConnected()) {
       DEBUG_PRINTLN("[WiFi] Starting AP mode without portal...");
       WiFi.mode(WIFI_AP);
       WiFi.softAP(apName.c_str());
-    } else {
-      DEBUG_PRINTLN("[WiFi] WiFi configured via portal");
     }
   } else {
     // NORMAL MODE: Non-blocking WiFi setup
