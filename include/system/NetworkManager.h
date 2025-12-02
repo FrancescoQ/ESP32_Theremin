@@ -58,7 +58,8 @@ class NetworkManager {
   void renderNetworkPage(Adafruit_SSD1306& display);
 
   // Internal setup methods
-  void setupWiFi(uint8_t connectTimeout, uint16_t portalTimeout, bool resetCredentials);
+  void setupWiFi(uint8_t connectTimeout, uint16_t portalTimeout, bool resetCredentials,
+                  bool forcePortal);
   void setupMDNS(const char* hostname);
   void setupOTA(const char* user, const char* pass);
   void setupStaticFiles();
@@ -89,11 +90,14 @@ class NetworkManager {
      * @param otaPass OTA authentication password
      * @param connectTimeout Seconds to try connecting to saved WiFi (default: 15)
      * @param portalTimeout Seconds before portal times out (0 = never, default: 0)
+     * @param resetCredentials Reset saved WiFi credentials before starting
+     * @param forcePortal Force captive portal mode (button pressed during boot)
      * @return true if initialization successful
      */
   bool begin(const char* apName = "Theremin-Setup", const char* otaUser = "admin",
              const char* otaPass = "theremin", uint8_t connectTimeout = 15,
-             uint16_t portalTimeout = 0, bool resetCredentials = false);
+             uint16_t portalTimeout = 0, bool resetCredentials = false,
+             bool forcePortal = false);
 
   /**
      * Non-blocking update for network monitoring

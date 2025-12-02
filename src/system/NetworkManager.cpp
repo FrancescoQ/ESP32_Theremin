@@ -47,14 +47,15 @@ void NetworkManager::setTheremin(Theremin* thmn) {
 
 // Initialize all network services
 bool NetworkManager::begin(const char* apName, const char* otaUser, const char* otaPass,
-                           uint8_t connectTimeout, uint16_t portalTimeout, bool resetCredentials) {
+                           uint8_t connectTimeout, uint16_t portalTimeout, bool resetCredentials,
+                           bool forcePortal) {
   DEBUG_PRINTLN("\n[Network] Initializing NetworkManager...");
 
   // Store configuration
   this->apName = apName;
 
   // Setup WiFi connection
-  setupWiFi(connectTimeout, portalTimeout, resetCredentials);
+  setupWiFi(connectTimeout, portalTimeout, resetCredentials, forcePortal);
 
   // Setup mDNS if connected to WiFi
   if (WiFi.isConnected()) {
@@ -88,7 +89,8 @@ bool NetworkManager::begin(const char* apName, const char* otaUser, const char* 
 }
 
 // Setup WiFi connection with WiFiManager
-void NetworkManager::setupWiFi(uint8_t connectTimeout, uint16_t portalTimeout, bool resetCredentials) {
+void NetworkManager::setupWiFi(uint8_t connectTimeout, uint16_t portalTimeout, bool resetCredentials,
+                                bool forcePortal) {
   DEBUG_PRINTLN("[WiFi] Configuring WiFiManager...");
 
   // Reset saved WiFi credentials if requested
@@ -98,12 +100,8 @@ void NetworkManager::setupWiFi(uint8_t connectTimeout, uint16_t portalTimeout, b
     DEBUG_PRINTLN("[WiFi] Credentials cleared - will start in AP mode");
   }
 
-  // Configure timeouts
-  wifiManager.setConnectTimeout(connectTimeout);
-  wifiManager.setConfigPortalTimeout(portalTimeout);
-
   // Configure AP callback for status updates
-  wifiManager.setAPCallback([](WiFiManager* myWiFiManager) {
+  wifiManager.setAPCallback([this](WiFiManager* myWiFiManager) {
     DEBUG_PRINTLN("[WiFi] Entered config portal mode");
     DEBUG_PRINT("[WiFi] AP Name: ");
     DEBUG_PRINTLN(myWiFiManager->getConfigPortalSSID());
@@ -112,19 +110,47 @@ void NetworkManager::setupWiFi(uint8_t connectTimeout, uint16_t portalTimeout, b
     DEBUG_PRINTLN("[WiFi] Connect to this AP to configure WiFi");
   });
 
-  // Attempt to auto-connect to saved WiFi or start config portal
-  DEBUG_PRINT("[WiFi] Attempting to connect");
-  if (connectTimeout > 0) {
-    DEBUG_PRINT(" (timeout: ");
-    DEBUG_PRINT(connectTimeout);
-    DEBUG_PRINT("s)");
-  }
-  DEBUG_PRINTLN("...");
+  if (forcePortal) {
+    // FORCE PORTAL MODE: Button pressed during boot
+    // Show captive portal for WiFi configuration with timeout
+    DEBUG_PRINTLN("[WiFi] Force portal mode - button pressed during boot");
+    DEBUG_PRINTLN("[WiFi] Starting captive portal for WiFi configuration...");
 
-  if (!wifiManager.autoConnect(apName.c_str())) {
-    DEBUG_PRINTLN("[WiFi] Failed to connect to WiFi");
-    // With portalTimeout=0, this should not happen
-    // But if it does, we continue (AP mode is running)
+    wifiManager.setConfigPortalTimeout(300);  // 5 minute timeout
+    wifiManager.setConnectTimeout(connectTimeout);
+
+    if (!wifiManager.startConfigPortal(apName.c_str())) {
+      DEBUG_PRINTLN("[WiFi] Config portal timed out");
+      DEBUG_PRINTLN("[WiFi] Starting AP mode without portal...");
+      WiFi.mode(WIFI_AP);
+      WiFi.softAP(apName.c_str());
+    } else {
+      DEBUG_PRINTLN("[WiFi] WiFi configured via portal");
+    }
+  } else {
+    // NORMAL MODE: Non-blocking WiFi setup
+    // Try to connect, fallback to AP mode without blocking portal
+    DEBUG_PRINTLN("[WiFi] Normal mode - non-blocking WiFi setup");
+
+    wifiManager.setConnectTimeout(connectTimeout);
+    wifiManager.setConfigPortalTimeout(0);  // No portal timeout
+
+    DEBUG_PRINT("[WiFi] Attempting to connect");
+    if (connectTimeout > 0) {
+      DEBUG_PRINT(" (timeout: ");
+      DEBUG_PRINT(connectTimeout);
+      DEBUG_PRINT("s)");
+    }
+    DEBUG_PRINTLN("...");
+
+    if (!wifiManager.autoConnect(apName.c_str())) {
+      DEBUG_PRINTLN("[WiFi] Failed to connect to WiFi");
+      DEBUG_PRINTLN("[WiFi] Starting AP mode for web access...");
+
+      // Start AP mode without captive portal
+      WiFi.mode(WIFI_AP);
+      WiFi.softAP(apName.c_str());
+    }
   }
 
   // Print connection status

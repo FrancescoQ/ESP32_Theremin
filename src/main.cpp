@@ -120,11 +120,17 @@ void setup() {
 
   #if ENABLE_NETWORK
     // Initialize network manager (WiFi, OTA, web server)
+    // Check if multi-function button is pressed during boot
+    bool forceWiFiConfig = (theremin.getMCP().digitalRead(PIN_MULTI_BUTTON) == LOW);
+
+    if (forceWiFiConfig) {
+      DEBUG_PRINTLN("[NETWORK] Multi-function button pressed - forcing WiFi config mode");
+    }
+
     // Check for WiFi reset condition (special state + button held)
     bool resetWiFi = false;
     if (theremin.getAudioEngine()->getSpecialState(1)) {
-      // Special state detected - check if multi-function button is held
-      if (theremin.getMCP().digitalRead(PIN_MULTI_BUTTON) == LOW) {
+      if (forceWiFiConfig) {
         resetWiFi = true;
         DEBUG_PRINTLN("[NETWORK] WiFi reset requested (special state + button held)");
       } else {
@@ -134,9 +140,9 @@ void setup() {
     }
 
     // Start network if not disabled
-    if (!theremin.getAudioEngine()->getSpecialState(1) || resetWiFi) {
+    if (!theremin.getAudioEngine()->getSpecialState(1) || resetWiFi || forceWiFiConfig) {
       DEBUG_PRINTLN("[NETWORK] Enabling network.");
-      network.begin("Theremin-Setup", "admin", "theremin", 15, 0, resetWiFi);
+      network.begin("Theremin-Setup", "admin", "theremin", 15, 0, resetWiFi, forceWiFiConfig);
     }
   #endif
 
