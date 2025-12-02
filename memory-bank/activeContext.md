@@ -63,6 +63,59 @@ Successfully completed **Web UI Phase 2 (Network Infrastructure)** with bonus fe
 
 ## Recent Changes
 
+**Web UI Phase 3 & 4 Complete - Full WebSocket Backend + Preact Frontend (November-December 2025 - ✅ COMPLETE):**
+- **Achievement:** Completed full Web UI implementation with modern Preact frontend!
+- **WebUIManager Class Created:**
+  - WebSocket endpoint at `/ws` for real-time bidirectional communication
+  - JSON command protocol for oscillators, effects, and system settings
+  - Complete state broadcasting (oscillators, effects, sensors, performance, tuner)
+  - 10 Hz update rate (100ms interval)
+  - Multi-client support with automatic state synchronization
+  - Static callback bridge pattern for AsyncWebSocket integration
+  - Integration with TunerManager for frequency-to-note conversion
+- **TunerManager Class Created (Bonus Feature):**
+  - Real-time frequency-to-note conversion with cents deviation
+  - Shared between OLED display and Web UI
+  - <1% CPU overhead (simple logarithmic calculations)
+  - Updates at 10 Hz (100ms interval)
+  - Provides musical note name, octave, frequency, cents, in-tune status
+  - Displays on OLED as separate tuner page
+  - Broadcasts via WebSocket for web UI tuner view
+- **Modern Preact Frontend (web_ui_src/):**
+  - **Framework:** Preact + Vite build system (not vanilla JS as originally planned)
+  - **Styling:** Tailwind CSS with custom dark theme
+  - **Architecture:** Component-based with global WebSocket context
+  - **Bundle:** ~30KB (~10KB gzipped) - extremely lightweight
+  - **Views:** Dashboard, Oscillators, Effects, Sensors, Tuner
+  - **Components:** CommandSelect, CommandSlider, ControlButton, Effect, Header, Oscillator, StatusCard, ToggleSwitch
+  - **Development:** Hot-reload dev server with ESP32 connection override (.env.local or URL parameter)
+  - **Deployment:** Build to dist/, served via AsyncWebServer
+- **Files Created:**
+  - include/system/WebUIManager.h (95 lines)
+  - src/system/WebUIManager.cpp (435 lines)
+  - include/system/TunerManager.h (89 lines)
+  - src/system/TunerManager.cpp (implementation)
+  - web_ui_src/ (complete Preact application)
+- **Files Modified:**
+  - include/system/NetworkManager.h: WebUIManager integration
+  - src/system/NetworkManager.cpp: Initialize and update WebUIManager
+  - src/main.cpp: Pass Theremin instance to NetworkManager
+  - include/system/Theremin.h: Added TunerManager support
+  - src/system/Theremin.cpp: TunerManager initialization and updates
+- **Results:**
+  - ✅ WebSocket backend fully operational
+  - ✅ Complete state synchronization on client connect
+  - ✅ Real-time control of all parameters via web interface
+  - ✅ Multi-client support working (multiple browsers simultaneously)
+  - ✅ Visual tuner displaying notes accurately
+  - ✅ Modern responsive UI (desktop + mobile)
+  - ✅ Build successful - RAM: 51 KB (15.6%), Flash: 1.15 MB (87.6%)
+- **Build Impact:** ~4 KB RAM, ~300 KB Flash for WebSocket + frontend libraries
+- **Performance:** No impact on audio performance (network code runs on Core 0)
+- **User Experience:** Professional web interface with real-time control and monitoring
+- **Documentation:** WEBUI_IMPLEMENTATION_PLAN.md fully updated with Phase 3 & 4 completion details
+- **Next Steps:** Optional Phase 5 testing and validation
+
 **Web UI Phase 2 - Network Infrastructure Complete (November 9, 2025 - ✅ COMPLETE):**
 - **Achievement:** Completed full network infrastructure for Web UI with bonus features!
 - **NetworkManager Class Created:**

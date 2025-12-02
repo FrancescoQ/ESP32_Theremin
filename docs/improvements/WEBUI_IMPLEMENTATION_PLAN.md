@@ -447,7 +447,7 @@ DEBUG_PRINTLN("[WiFi] AP+STA mode active");
 
 ---
 
-## Phase 3: WebUI Backend (WebSocket Server) ✅ COMPLETE
+## Phase 3: WebUI Backend (WebSocket Server) ✅ COMPLETE (November 2025)
 
 ### Goal
 Implement real-time bidirectional communication between ESP32 and web clients
@@ -461,6 +461,7 @@ Implement real-time bidirectional communication between ESP32 and web clients
 - Real-time sensor and performance monitoring
 - 10 Hz broadcast rate (100ms interval)
 - Multi-client support with automatic state sync
+- **TunerManager integration** for real-time frequency-to-note conversion
 
 ### Technical Implementation Details
 
@@ -681,26 +682,77 @@ void WebUIManager::handleWebSocketMessage(AsyncWebSocketClient *client,
 - [x] JSON command parser working
 - [x] Integration with Theremin subsystems
 - [x] Broadcast system operational
+- [x] TunerManager class created (frequency-to-note conversion)
+- [x] Complete state synchronization on client connect
 
 ### Testing Checklist
-- [ ] WebSocket connection established from browser
-- [ ] Commands parsed and executed correctly
-- [ ] State changes broadcast to all clients
-- [ ] Multiple clients can connect simultaneously
-- [ ] Reconnection works after disconnect
+- [x] WebSocket connection established from browser
+- [x] Commands parsed and executed correctly
+- [x] State changes broadcast to all clients
+- [x] Multiple clients can connect simultaneously
+- [x] Reconnection works after disconnect
 
 ---
 
-## Phase 4: Web Frontend (Dashboard UI)
+## Phase 4: Web Frontend (Dashboard UI) ✅ COMPLETE (November-December 2025)
 
 ### Goal
 Build responsive web interface with real-time controls and real-time tuner visualization
 
-### Tasks
+### Implementation Summary
+**IMPLEMENTED:** Modern Preact-based single-page application with real-time WebSocket integration:
+- **Framework:** Preact (lightweight React alternative) + Vite build system
+- **Styling:** Tailwind CSS for responsive design
+- **Architecture:** Component-based with global WebSocket context
+- **Views:** Dashboard, Oscillators, Effects, Sensors, Tuner
+- **Bundle Size:** ~30KB (~10KB gzipped)
+- **Development:** Hot-reload dev server with ESP32 connection override
+- **Deployment:** Build to `dist/` directory, served via AsyncWebServer
 
-#### 4.1 HTML Structure
+### Implementation Details
 
-**File: `data/index.html`**
+**Note:** The actual implementation differs from the original plan. Instead of vanilla HTML/CSS/JS in the `data/` directory, a modern Preact application was built in the `web_ui_src/` directory.
+
+#### 4.1 Frontend Architecture
+
+**Directory Structure: `web_ui_src/`**
+
+```
+web_ui_src/
+├── src/
+│   ├── app.jsx                   # Main entry point
+│   ├── styles.css                # Tailwind CSS imports
+│   ├── components/               # Reusable UI components
+│   │   ├── CommandSelect.jsx     # Dropdown select control
+│   │   ├── CommandSlider.jsx     # Slider with value display
+│   │   ├── ControlButton.jsx     # Action button
+│   │   ├── Effect.jsx            # Effect control panel
+│   │   ├── Header.jsx            # Top navigation bar
+│   │   ├── Oscillator.jsx        # Oscillator control panel
+│   │   ├── StatusCard.jsx        # Metric display card
+│   │   └── ToggleSwitch.jsx      # On/off toggle
+│   ├── hooks/
+│   │   └── WebSocketProvider.jsx # Global WebSocket context
+│   └── views/                    # Full-page views
+│       ├── Dashboard.jsx         # Overview page
+│       ├── Oscillators.jsx       # Oscillator controls
+│       ├── Effects.jsx           # Effects controls
+│       ├── Sensors.jsx           # Sensor monitoring
+│       └── Tuner.jsx             # Visual tuner display
+├── dist/                         # Build output (served by ESP32)
+├── index.html                    # HTML shell
+├── package.json                  # Dependencies
+├── vite.config.js                # Build configuration
+├── tailwind.config.js            # Tailwind customization
+└── README.md                     # Frontend documentation
+```
+
+#### 4.2 WebSocket Integration
+
+**Original Plan:** Custom vanilla JS WebSocket client
+**Actual Implementation:** Preact context provider with hooks
+
+**File: `web_ui_src/src/hooks/WebSocketProvider.jsx`**
 
 ```html
 <!DOCTYPE html>
@@ -829,9 +881,16 @@ Build responsive web interface with real-time controls and real-time tuner visua
 </html>
 ```
 
-#### 4.2 JavaScript WebSocket Client
+**Key Features:**
+- Automatic connection and reconnection
+- Global state management via Preact context
+- Development mode override (connect to ESP32 IP during local dev)
+- Message queuing for reliability
+- Connection status tracking
 
-**File: `data/scripts.js`**
+#### 4.3 Component System
+
+**Built Components:**
 
 ```javascript
 let ws;
@@ -1010,9 +1069,26 @@ function updateConnectionStatus(connected) {
 }
 ```
 
-#### 4.3 CSS Styling
+1. **CommandSelect** - Dropdown with WebSocket command dispatch
+2. **CommandSlider** - Range slider with real-time updates
+3. **ControlButton** - Action button for commands
+4. **Effect** - Complete effect control panel (enable + parameters)
+5. **Header** - Navigation with connection status
+6. **Oscillator** - Complete oscillator control (waveform + octave + volume)
+7. **StatusCard** - Metric display with icon
+8. **ToggleSwitch** - On/off toggle with state sync
 
-**File: `data/styles.css`**
+#### 4.4 Views Implementation
+
+**Dashboard View** - System overview with key metrics
+**Oscillators View** - 3-column grid of oscillator controls
+**Effects View** - Effect panels (Delay, Chorus, Reverb)
+**Sensors View** - Real-time sensor distance monitoring
+**Tuner View** - Visual frequency-to-note display
+
+#### 4.5 Styling with Tailwind CSS
+
+**Configuration: `web_ui_src/tailwind.config.js`**
 
 ```css
 /* Variables */
@@ -1233,20 +1309,59 @@ input[type="checkbox"] {
 }
 ```
 
+**Custom Theme:**
+- Dark mode design (matches hardware aesthetic)
+- Custom color palette for theremin branding
+- Responsive breakpoints for mobile/tablet/desktop
+- Component-specific utilities
+
+#### 4.6 Build Process
+
+**Development:**
+```bash
+cd web_ui_src
+npm install
+npm run dev        # Hot-reload dev server on localhost:5173
+```
+
+**Production Build:**
+```bash
+npm run build      # Outputs to dist/ directory
+```
+
+**Deployment to ESP32:**
+The build output (`dist/`) is served by AsyncWebServer:
+```cpp
+server.serveStatic("/", LittleFS, "/").setDefaultFile("index.html");
+```
+
+**Bundle Optimization:**
+- Minified and tree-shaken by Vite
+- Preact (3KB) instead of React (40KB)
+- Tailwind CSS purged of unused styles
+- Final bundle: ~30KB (~10KB gzipped)
+
 ### Deliverables
-- [x] Responsive HTML dashboard
-- [x] WebSocket client implementation
-- [x] Real-time UI updates
-- [x] Mobile-friendly design
-- [x] Visual feedback for all controls
+- [x] Preact application with Vite build system
+- [x] WebSocket client with context provider
+- [x] Real-time UI updates across all views
+- [x] Mobile-responsive design
+- [x] Complete component library
+- [x] Visual tuner with frequency-to-note conversion
+- [x] Development mode with ESP32 connection override
+- [x] Production build process
+- [x] Comprehensive README documentation
 
 ### Testing Checklist
-- [ ] UI loads correctly on desktop
-- [ ] UI responsive on mobile/tablet
-- [ ] All controls send commands correctly
-- [ ] Real-time updates display properly
-- [ ] Sensor bars animate smoothly
-- [ ] Performance metrics update regularly
+- [x] UI loads correctly on desktop
+- [x] UI responsive on mobile/tablet
+- [x] All controls send commands correctly
+- [x] Real-time updates display properly
+- [x] Sensor monitoring updates smoothly
+- [x] Performance metrics update regularly
+- [x] Visual tuner displays notes accurately
+- [x] Multi-client support working
+- [x] Development mode connection override functional
 
 #### 4.4 Visual Tuner Component
 

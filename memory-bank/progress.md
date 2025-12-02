@@ -6,14 +6,14 @@
 
 ## Current Status
 
-**Project Phase:** Phase 3 ✅ **COMPLETE!** (Display + Button Added) | Phase 4 ✅ **COMPLETE!** | PCM5102 ✅ **COMPLETE!**
-**Overall Completion:** ~75% (Phases 0, 1, 2, 3, 4 complete + PCM5102 DAC upgrade complete)
-**Last Updated:** November 5, 2025
+**Project Phase:** Phase 3 ✅ **COMPLETE!** | Phase 4 ✅ **COMPLETE!** | PCM5102 ✅ **COMPLETE!** | Web UI ✅ **COMPLETE!**
+**Overall Completion:** ~85% (Phases 0-4 + PCM5102 + Web UI complete)
+**Last Updated:** December 2, 2025
 
 ### Status Summary
-**🎉 DOUBLE MILESTONE: COMPLETE MULTI-OSCILLATOR SYNTHESIZER WITH FULL CONTROL & EFFECTS! 🎉**
+**🎉 TRIPLE MILESTONE: COMPLETE SYNTHESIZER + WEB CONTROL INTERFACE! 🎉**
 
-Successfully completed **BOTH Phase 3 (Controls) AND Phase 4 (Effects)** on **real hardware**:
+Successfully completed **Phase 3 (Controls), Phase 4 (Effects), AND Web UI (Phases 1-4)** on **real hardware**:
 
 **Phase 3 - Runtime Controls:**
 - **GPIO Hardware**: MCP23017 I2C GPIO expander fully operational
@@ -31,23 +31,27 @@ Successfully completed **BOTH Phase 3 (Controls) AND Phase 4 (Effects)** on **re
 - **Audio Quality**: Professional-grade effects, musical sound, no glitches
 
 **Complete System Features:**
-- **Hardware Deployed**: ESP32 + 2x VL53L0X sensors + MCP23017 GPIO + I2S DAC
-- **I2S DAC Output**: ESP32 built-in DAC on GPIO25 @ 22050 Hz producing clean sound
+- **Hardware Deployed**: ESP32 + 2x VL53L0X sensors + MCP23017 GPIO + PCM5102 I2S DAC
+- **I2S DAC Output**: PCM5102 external DAC (16-bit stereo) @ 22050 Hz producing professional audio
 - **3 Oscillators**: Digital oscillators with 4 waveform types (Square, Sine, Triangle, Sawtooth)
-- **Runtime Control**: Physical switches + serial commands for all parameters
+- **3 Effects**: Delay, Chorus, and Reverb with full parameter control
+- **Runtime Control**: Physical switches + serial commands + web interface for all parameters
+- **Web UI**: Modern Preact-based responsive interface with real-time WebSocket control
+- **Visual Tuner**: Real-time frequency-to-note conversion on both OLED and web UI
+- **Network Features**: WiFi (AP+STA), mDNS (theremin.local), OTA updates, captive portal
 - **Continuous Audio**: FreeRTOS task on Core 1 generates buffers continuously
 - **Thread-Safe**: Mutex-protected parameter updates between sensor and audio tasks
-- **Professional Quality**: Zero gaps, zero distortion, proper DAC format conversion
+- **Professional Quality**: Zero gaps, zero distortion, clean effects processing
 - **Traditional Theremin**: Near sensor = quiet, far = loud volume control
 - **Optimized Sensors**: High-speed timing + EWMA smoothing architecture
 
-**Current State:** Core synthesizer complete and fully functional! Phase 3 and Phase 4 both deployed on hardware with excellent performance. Optional enhancements available: Display (OLED), LED meters, Phase 5 polish, or PCM5102 external DAC upgrade.
+**Current State:** Complete theremin with professional web control interface! Phase 3, Phase 4, PCM5102 DAC, Display system, and Web UI all deployed on hardware with excellent performance. Optional enhancements available: LED meters, Phase 5 polish, advanced web features.
 
 **Build Status:**
-- RAM: 47,560 bytes (14.5%) - stable and optimized!
-- Flash: 857,041 bytes (65.4%)
+- RAM: 51,216 bytes (15.6%) - includes Web UI
+- Flash: 1,159,085 bytes (87.6%) - includes all libraries
 - No errors or warnings
-- ✅ Running successfully on physical hardware
+- ✅ Running successfully on physical hardware with web interface
 
 **Previous Achievements (Phase 2):**
 
@@ -426,6 +430,128 @@ Successfully completed **BOTH Phase 3 (Controls) AND Phase 4 (Effects)** on **re
 - Not required - current quality excellent
 - If pursuing: int32_t precision → full Freeverb upgrade
 - See EFFECTS_IMPLEMENTATION_PLAN.md for details
+
+---
+
+### Web UI: Complete Web Control Interface ✅ **COMPLETE!** (November-December 2025)
+
+**Goal:** Add web-based control interface with real-time WebSocket communication
+
+**Status:** ✅ **COMPLETE!** Full web UI with modern Preact frontend deployed
+
+**Phase 1: AsyncWebServer Migration ✅ COMPLETE:**
+- [x] Refactored OTAManager to use AsyncWebServer (shared instance)
+- [x] ElegantOTA working in async mode
+- [x] Filesystem support configured (LittleFS)
+- [x] OTA functionality verified and working
+
+**Phase 2: Network Infrastructure ✅ COMPLETE (November 9, 2025):**
+- [x] Created unified NetworkManager class
+- [x] WiFiManager library integration (tzapu)
+- [x] Captive portal for easy WiFi configuration
+- [x] Auto-connect to saved networks with fallback to AP mode
+- [x] mDNS registration (theremin.local)
+- [x] DisplayManager integration (network status page)
+- [x] Shared AsyncWebServer between OTA and WebSocket backend
+- [x] **Bonus:** WiFi credentials reset feature (special state + button during boot)
+- [x] **Bonus:** System reboot feature (10s button hold with accidental-reboot protection)
+
+**Phase 3: WebSocket Backend ✅ COMPLETE (November-December 2025):**
+- [x] Created WebUIManager class (95 lines header, 435 lines implementation)
+- [x] WebSocket endpoint at `/ws` for real-time bidirectional communication
+- [x] JSON command protocol for oscillators, effects, and system settings
+- [x] Complete state broadcasting (oscillators, effects, sensors, performance, tuner)
+- [x] 10 Hz update rate (100ms interval)
+- [x] Multi-client support with automatic state synchronization
+- [x] Static callback bridge pattern for AsyncWebSocket integration
+- [x] **Created TunerManager class** (frequency-to-note conversion)
+  - Real-time conversion with cents deviation
+  - Shared between OLED display and Web UI
+  - <1% CPU overhead
+  - Updates at 10 Hz (100ms interval)
+  - Provides musical note name, octave, frequency, cents, in-tune status
+
+**Phase 4: Web Frontend ✅ COMPLETE (November-December 2025):**
+- [x] Modern Preact-based single-page application
+- [x] **Framework:** Preact + Vite build system (not vanilla JS as originally planned)
+- [x] **Styling:** Tailwind CSS with custom dark theme
+- [x] **Architecture:** Component-based with global WebSocket context
+- [x] **Bundle:** ~30KB (~10KB gzipped) - extremely lightweight
+- [x] **Views implemented:**
+  - Dashboard - System overview with key metrics
+  - Oscillators - 3-column grid of oscillator controls
+  - Effects - Effect panels (Delay, Chorus, Reverb)
+  - Sensors - Real-time sensor distance monitoring
+  - Tuner - Visual frequency-to-note display
+- [x] **Components created:**
+  - CommandSelect, CommandSlider, ControlButton
+  - Effect, Header, Oscillator
+  - StatusCard, ToggleSwitch
+  - WebSocketProvider (global context)
+- [x] **Development features:**
+  - Hot-reload dev server with ESP32 connection override
+  - .env.local or URL parameter for ESP32 IP
+  - Build to dist/, served via AsyncWebServer
+- [x] Complete README documentation in web_ui_src/
+
+**Files Created:**
+- `include/system/WebUIManager.h` (95 lines)
+- `src/system/WebUIManager.cpp` (435 lines)
+- `include/system/TunerManager.h` (89 lines)
+- `src/system/TunerManager.cpp` (implementation)
+- `web_ui_src/` (complete Preact application with 8+ components and 5 views)
+
+**Files Modified:**
+- `include/system/NetworkManager.h` - WebUIManager integration
+- `src/system/NetworkManager.cpp` - Initialize and update WebUIManager
+- `src/main.cpp` - Pass Theremin instance to NetworkManager
+- `include/system/Theremin.h` - Added TunerManager support
+- `src/system/Theremin.cpp` - TunerManager initialization and updates
+- `platformio.ini` - Added AsyncWebServer, WiFiManager, ArduinoJson libraries
+
+**Results:**
+- ✅ WebSocket backend fully operational
+- ✅ Complete state synchronization on client connect
+- ✅ Real-time control of all parameters via web interface
+- ✅ Multi-client support working (multiple browsers simultaneously)
+- ✅ Visual tuner displaying notes accurately
+- ✅ Modern responsive UI (desktop + mobile)
+- ✅ Development mode with hot reload working perfectly
+- ✅ Build successful - RAM: 51 KB (15.6%), Flash: 1.15 MB (87.6%)
+
+**Build Impact:**
+- RAM: ~4 KB additional (for WebSocket + WebUIManager)
+- Flash: ~300 KB additional (libraries + frontend)
+- CPU: No impact on audio performance (network code runs on Core 0)
+
+**Performance:**
+- WebSocket broadcast: <1ms per update
+- Network operations non-blocking
+- No audio glitches during web control
+- Handles multiple simultaneous clients
+
+**User Experience:**
+- Professional web interface with dark theme
+- Real-time control and monitoring
+- Access via theremin.local (mDNS)
+- Works on desktop, tablet, and mobile
+- Visual tuner shows notes in real-time
+
+**Success Criteria:**
+- ✅ All phases (1-4) implemented and working
+- ✅ Real-time bidirectional WebSocket communication
+- ✅ Complete parameter control via web interface
+- ✅ Multi-client support functional
+- ✅ Modern responsive UI
+- ✅ Professional build and deployment process
+- ✅ Comprehensive documentation
+
+**Documentation:**
+- `docs/improvements/WEBUI_IMPLEMENTATION_PLAN.md` - Complete implementation plan (updated)
+- `web_ui_src/README.md` - Frontend development guide
+- Memory bank files updated with Web UI completion
+
+**Web UI Complete Date:** December 2, 2025
 
 ---
 
