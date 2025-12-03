@@ -14,13 +14,13 @@ import { useWebSocket } from '../hooks/WebSocketProvider';
  * - Starts from C4 (MIDI 60 - middle C)
  */
 
-// Octave configuration options
+// Octave configuration options with custom starting notes
 const OCTAVE_CONFIGS = [
-  { value: 1.5, label: '1.5 Octaves', notes: 19 },  // C to F# (1.5 octaves)
-  { value: 2, label: '2 Octaves', notes: 25 },      // C to C (2 full octaves + 1)
-  { value: 2.5, label: '2.5 Octaves', notes: 31 },  // C to F# (2.5 octaves)
-  { value: 3, label: '3 Octaves', notes: 37 },      // C to C (3 full octaves + 1)
-  { value: 4, label: '4 Octaves', notes: 49 }       // C to C (4 full octaves + 1)
+  { value: 1.5, label: '1.5 Octaves - C4-F#5', notes: 19, baseNote: 60 },  // Mid-range
+  { value: 2, label: '2 Octaves - F3-F5', notes: 25, baseNote: 53 },       // Slightly lower
+  { value: 2.5, label: '2.5 Octaves - C3-F#5', notes: 31, baseNote: 48 },  // Lower-mid
+  { value: 3, label: '3 Octaves - G2-G5', notes: 37, baseNote: 43 },       // Wide range
+  { value: 4, label: '4 Octaves - C2-C6', notes: 49, baseNote: 36 }        // Full range
 ];
 
 // Note names in chromatic order (C to B)
@@ -61,10 +61,10 @@ const KEY_MAP = {
 
 export default function Keyboard() {
   const { send, state } = useWebSocket();
-  const [octaveRange, setOctaveRange] = useState(2); // Default: 2 octaves
+  const [octaveRange, setOctaveRange] = useState(1.5);
   const [activeNote, setActiveNote] = useState(null);
   const [pressedKeys, setPressedKeys] = useState(new Set());
-  const [volume, setVolume] = useState(60); // Default: 60%
+  const [volume, setVolume] = useState(100);
   const [keyboardShortcutsEnabled, setKeyboardShortcutsEnabled] = useState(true);
   const [originalFreqRange, setOriginalFreqRange] = useState(null);
 
@@ -74,12 +74,12 @@ export default function Keyboard() {
   // Get configuration for current octave range
   const config = OCTAVE_CONFIGS.find(c => c.value === octaveRange) || OCTAVE_CONFIGS[1];
 
-  // Generate array of MIDI notes for current range
-  const notes = Array.from({ length: config.notes }, (_, i) => BASE_MIDI_NOTE + i);
+  // Generate array of MIDI notes for current range (using config's baseNote)
+  const notes = Array.from({ length: config.notes }, (element, i) => config.baseNote + i);
 
   // Get keyboard shortcut label for a MIDI note
   const getKeyLabel = (midiNote) => {
-    const keyEntry = Object.entries(KEY_MAP).find(([_, note]) => note === midiNote);
+    const keyEntry = Object.entries(KEY_MAP).find(([key, note]) => note === midiNote);
     return keyEntry ? keyEntry[0].toUpperCase() : '';
   };
 
@@ -87,8 +87,8 @@ export default function Keyboard() {
   // MIDI to frequency: f = 440 * 2^((midiNote - 69) / 12)
   const calculateFrequencyRange = (octaveValue) => {
     const config = OCTAVE_CONFIGS.find(c => c.value === octaveValue) || OCTAVE_CONFIGS[1];
-    const firstMidiNote = BASE_MIDI_NOTE;
-    const lastMidiNote = BASE_MIDI_NOTE + config.notes - 1;
+    const firstMidiNote = config.baseNote;
+    const lastMidiNote = config.baseNote + config.notes - 1;
 
     const minFreq = Math.round(440 * Math.pow(2, (firstMidiNote - 69) / 12));
     const maxFreq = Math.round(440 * Math.pow(2, (lastMidiNote - 69) / 12));
@@ -159,11 +159,9 @@ export default function Keyboard() {
 
   // Update frequency range when octave selection changes
   useEffect(() => {
-    if (originalFreqRange) {  // Only if we've captured the original range
-      const { minFreq, maxFreq } = calculateFrequencyRange(octaveRange);
-      send({ cmd: 'setFrequencyRange', minFreq, maxFreq });
-    }
-  }, [octaveRange, originalFreqRange]);
+    const { minFreq, maxFreq } = calculateFrequencyRange(octaveRange);
+    send({ cmd: 'setFrequencyRange', minFreq, maxFreq });
+  }, [octaveRange]);
 
   // Keyboard shortcuts event listeners
   useEffect(() => {
@@ -210,7 +208,7 @@ export default function Keyboard() {
   // Render white keys
   const renderWhiteKeys = () => {
     return notes
-      .filter((note) => !isBlackKey(note - BASE_MIDI_NOTE))
+      .filter((note) => !isBlackKey(note - config.baseNote))
       .map((midiNote) => {
         const isActive = activeNote === midiNote;
         const noteName = getNoteName(midiNote);
@@ -243,16 +241,16 @@ export default function Keyboard() {
   // Render black keys
   const renderBlackKeys = () => {
     return notes
-      .filter((note) => isBlackKey(note - BASE_MIDI_NOTE))
+      .filter((note) => isBlackKey(note - config.baseNote))
       .map((midiNote) => {
         const isActive = activeNote === midiNote;
         const noteName = getNoteName(midiNote);
 
         // Calculate position relative to white keys
-        const noteIndex = (midiNote - BASE_MIDI_NOTE) % 12;
+        const noteIndex = (midiNote - config.baseNote) % 12;
         const whiteKeysBefore = notes
-          .slice(0, midiNote - BASE_MIDI_NOTE)
-          .filter((n) => !isBlackKey(n - BASE_MIDI_NOTE)).length;
+          .slice(0, midiNote - config.baseNote)
+          .filter((n) => !isBlackKey(n - config.baseNote)).length;
 
         // Position black key between white keys
         const left = `calc(${whiteKeysBefore * 100 / (config.notes - Math.floor(config.notes / 12) * 5)}% + 3.5%)`;
