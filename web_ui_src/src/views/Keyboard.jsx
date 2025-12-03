@@ -16,9 +16,9 @@ import { useWebSocket } from '../hooks/WebSocketProvider';
 
 // Octave configuration options with custom starting notes
 const OCTAVE_CONFIGS = [
-  { value: 1.5, label: '1.5 Octaves - C4-F#5', notes: 19, baseNote: 60 },  // Mid-range
+  { value: 1.5, label: '1.5 Octaves - C4-G5', notes: 20, baseNote: 60 },  // Mid-range
   { value: 2, label: '2 Octaves - F3-F5', notes: 25, baseNote: 53 },       // Slightly lower
-  { value: 2.5, label: '2.5 Octaves - C3-F#5', notes: 31, baseNote: 48 },  // Lower-mid
+  { value: 2.5, label: '2.5 Octaves - C3-G5', notes: 32, baseNote: 48 },  // Lower-mid
   { value: 3, label: '3 Octaves - G2-G5', notes: 37, baseNote: 43 },       // Wide range
   { value: 4, label: '4 Octaves - C2-C6', notes: 49, baseNote: 36 }        // Full range
 ];
@@ -240,26 +240,33 @@ export default function Keyboard() {
 
   // Render black keys
   const renderBlackKeys = () => {
+    // Calculate total white keys for proper spacing
+    const totalWhiteKeys = notes.filter((n) => !isBlackKey(n - config.baseNote)).length;
+    const whiteKeyWidth = 100 / totalWhiteKeys;
+
+    // Calculate black key width as percentage of white key width (60% looks natural)
+    const blackKeyWidth = whiteKeyWidth * 0.6;
+
     return notes
       .filter((note) => isBlackKey(note - config.baseNote))
       .map((midiNote) => {
         const isActive = activeNote === midiNote;
         const noteName = getNoteName(midiNote);
 
-        // Calculate position relative to white keys
-        const noteIndex = (midiNote - config.baseNote) % 12;
+        // Calculate how many white keys come before this black key
         const whiteKeysBefore = notes
           .slice(0, midiNote - config.baseNote)
           .filter((n) => !isBlackKey(n - config.baseNote)).length;
 
-        // Position black key between white keys
-        const left = `calc(${whiteKeysBefore * 100 / (config.notes - Math.floor(config.notes / 12) * 5)}% + 3.5%)`;
+        // Position black key relative to white key width (65% offset for natural piano look)
+        // Subtract 1 because we want to position relative to the previous white key, not the next one
+        const left = `${(whiteKeysBefore - 1) * whiteKeyWidth + whiteKeyWidth * 0.65}%`;
 
         return (
           <button
             key={midiNote}
             class={`black-key ${isActive ? 'active' : ''}`}
-            style={{ left }}
+            style={{ left, width: `${blackKeyWidth}%` }}
             onMouseDown={() => handleKeyDown(midiNote)}
             onMouseUp={handleKeyUp}
             onMouseLeave={handleKeyUp}
