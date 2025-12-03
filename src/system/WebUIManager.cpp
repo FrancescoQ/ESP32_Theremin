@@ -137,6 +137,13 @@ void WebUIManager::handleWebSocketMessage(AsyncWebSocketClient* client, uint8_t*
     AudioEngine* audio = theremin->getAudioEngine();
     audio->setAmplitude(amplitude);
     DEBUG_PRINTF("[WebUI] Amplitude set to %d%%\n", amplitude);
+  } else if (strcmp(cmd, "setFrequencyRange") == 0) {
+    // Set frequency range (keyboard view)
+    int minFreq = doc["minFreq"] | 220;
+    int maxFreq = doc["maxFreq"] | 880;
+    AudioEngine* audio = theremin->getAudioEngine();
+    audio->setFrequencyRange(minFreq, maxFreq);
+    DEBUG_PRINTF("[WebUI] Frequency range set to %d-%d Hz\n", minFreq, maxFreq);
   } else {
     DEBUG_PRINTF("[WebUI] Unknown command: %s\n", cmd);
   }
@@ -422,11 +429,15 @@ void WebUIManager::sendPerformanceState(AsyncWebSocketClient* client) {
 }
 
 void WebUIManager::sendSystemState(AsyncWebSocketClient* client) {
+  AudioEngine* audio = theremin->getAudioEngine();
+
   JsonDocument doc;
   doc["type"] = "system";
   doc["pitchSmoothing"] = (int)theremin->getPitchSmoothingPreset();
   doc["volumeSmoothing"] = (int)theremin->getVolumeSmoothingPreset();
   doc["frequencyRange"] = (int)theremin->getFrequencyRangePreset();
+  doc["minFrequency"] = audio->getMinFrequency();
+  doc["maxFrequency"] = audio->getMaxFrequency();
 
   String output;
   serializeJson(doc, output);
@@ -523,6 +534,8 @@ void WebUIManager::sendCompleteState(AsyncWebSocketClient* client) {
   system["pitchSmoothing"] = (int)theremin->getPitchSmoothingPreset();
   system["volumeSmoothing"] = (int)theremin->getVolumeSmoothingPreset();
   system["frequencyRange"] = (int)theremin->getFrequencyRangePreset();
+  system["minFrequency"] = audio->getMinFrequency();
+  system["maxFrequency"] = audio->getMaxFrequency();
 
   // Tuner
   TunerManager* tuner = theremin->getTunerManager();

@@ -60,12 +60,13 @@ const KEY_MAP = {
 };
 
 export default function Keyboard() {
-  const { send } = useWebSocket();
-  const [octaveRange, setOctaveRange] = useState(1.5);
+  const { send, state } = useWebSocket();
+  const [octaveRange, setOctaveRange] = useState(2); // Default: 2 octaves
   const [activeNote, setActiveNote] = useState(null);
   const [pressedKeys, setPressedKeys] = useState(new Set());
-  const [volume, setVolume] = useState(100);
+  const [volume, setVolume] = useState(60); // Default: 60%
   const [keyboardShortcutsEnabled, setKeyboardShortcutsEnabled] = useState(true);
+  const [originalFreqRange, setOriginalFreqRange] = useState(null);
 
   // Base MIDI note (C4 = 60, middle C)
   const BASE_MIDI_NOTE = 60;
@@ -80,6 +81,19 @@ export default function Keyboard() {
   const getKeyLabel = (midiNote) => {
     const keyEntry = Object.entries(KEY_MAP).find(([_, note]) => note === midiNote);
     return keyEntry ? keyEntry[0].toUpperCase() : '';
+  };
+
+  // Calculate frequency range for octave selection
+  // MIDI to frequency: f = 440 * 2^((midiNote - 69) / 12)
+  const calculateFrequencyRange = (octaveValue) => {
+    const config = OCTAVE_CONFIGS.find(c => c.value === octaveValue) || OCTAVE_CONFIGS[1];
+    const firstMidiNote = BASE_MIDI_NOTE;
+    const lastMidiNote = BASE_MIDI_NOTE + config.notes - 1;
+
+    const minFreq = Math.round(440 * Math.pow(2, (firstMidiNote - 69) / 12));
+    const maxFreq = Math.round(440 * Math.pow(2, (lastMidiNote - 69) / 12));
+
+    return { minFreq, maxFreq };
   };
 
   // Play note
@@ -108,17 +122,48 @@ export default function Keyboard() {
     stopNote();
   };
 
-  // Disable sensors when keyboard loads, re-enable on unmount
+  // Capture original frequency range from WebSocket state
+  useEffect(() => {
+    if (state?.system?.minFrequency && state?.system?.maxFrequency && !originalFreqRange) {
+      setOriginalFreqRange({
+        min: state.system.minFrequency,
+        max: state.system.maxFrequency
+      });
+    }
+  }, [state]);
+
+  // Disable sensors and set frequency range when keyboard loads
   useEffect(() => {
     // Disable both sensors when entering keyboard mode
     send({ cmd: 'setSensorEnabled', sensor: 'both', enabled: false });
 
+    // Set frequency range for current octave selection
+    const { minFreq, maxFreq } = calculateFrequencyRange(octaveRange);
+    send({ cmd: 'setFrequencyRange', minFreq, maxFreq });
+
     return () => {
+      // Restore original frequency range
+      if (originalFreqRange) {
+        send({
+          cmd: 'setFrequencyRange',
+          minFreq: originalFreqRange.min,
+          maxFreq: originalFreqRange.max
+        });
+      }
+
       // Re-enable sensors when leaving keyboard view
       send({ cmd: 'setSensorEnabled', sensor: 'both', enabled: true });
       stopNote();
     };
-  }, []);
+  }, [originalFreqRange]);
+
+  // Update frequency range when octave selection changes
+  useEffect(() => {
+    if (originalFreqRange) {  // Only if we've captured the original range
+      const { minFreq, maxFreq } = calculateFrequencyRange(octaveRange);
+      send({ cmd: 'setFrequencyRange', minFreq, maxFreq });
+    }
+  }, [octaveRange, originalFreqRange]);
 
   // Keyboard shortcuts event listeners
   useEffect(() => {
