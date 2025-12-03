@@ -102,6 +102,41 @@ void WebUIManager::handleWebSocketMessage(AsyncWebSocketClient* client, uint8_t*
     handleEffectCommand(doc);
   } else if (strncmp(cmd, "setSmoothing", 12) == 0 || strncmp(cmd, "setRange", 8) == 0) {
     handleSystemCommand(doc);
+  } else if (strcmp(cmd, "playNote") == 0) {
+    // Play MIDI note (keyboard view)
+    uint8_t midiNote = doc["note"] | 60;  // Default to middle C
+    AudioEngine* audio = theremin->getAudioEngine();
+    audio->playMIDINote(midiNote);
+    DEBUG_PRINTF("[WebUI] Play MIDI note %d\n", midiNote);
+  } else if (strcmp(cmd, "stopNote") == 0) {
+    // Stop current note (keyboard view)
+    AudioEngine* audio = theremin->getAudioEngine();
+    audio->stopNote();
+    DEBUG_PRINTLN("[WebUI] Stop note");
+  } else if (strcmp(cmd, "setSensorEnabled") == 0) {
+    // Enable/disable sensors (keyboard view)
+    const char* sensor = doc["sensor"];
+    bool enabled = doc["enabled"] | true;
+
+    SensorManager* sensors = theremin->getSensorManager();
+
+    if (strcmp(sensor, "pitch") == 0) {
+      sensors->setPitchEnabled(enabled);
+      DEBUG_PRINTF("[WebUI] Pitch sensor %s\n", enabled ? "enabled" : "disabled");
+    } else if (strcmp(sensor, "volume") == 0) {
+      sensors->setVolumeEnabled(enabled);
+      DEBUG_PRINTF("[WebUI] Volume sensor %s\n", enabled ? "enabled" : "disabled");
+    } else if (strcmp(sensor, "both") == 0) {
+      sensors->setPitchEnabled(enabled);
+      sensors->setVolumeEnabled(enabled);
+      DEBUG_PRINTF("[WebUI] Both sensors %s\n", enabled ? "enabled" : "disabled");
+    }
+  } else if (strcmp(cmd, "setAmplitude") == 0) {
+    // Set amplitude (keyboard view)
+    int amplitude = doc["value"] | 50;  // Default to 50%
+    AudioEngine* audio = theremin->getAudioEngine();
+    audio->setAmplitude(amplitude);
+    DEBUG_PRINTF("[WebUI] Amplitude set to %d%%\n", amplitude);
   } else {
     DEBUG_PRINTF("[WebUI] Unknown command: %s\n", cmd);
   }

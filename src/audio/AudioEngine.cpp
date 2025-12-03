@@ -126,6 +126,45 @@ void AudioEngine::setFrequency(int freq) {
   }
 }
 
+// Convert MIDI note number to frequency (Hz)
+// Static helper function - can be called without AudioEngine instance
+float AudioEngine::midiNoteToFrequency(uint8_t midiNote) {
+  // Standard equal temperament tuning
+  // A4 = 440 Hz = MIDI note 69
+  // Formula: freq = 440 * 2^((note - 69) / 12)
+
+  // Calculate semitones from A4
+  float semitones = (float)midiNote - 69.0f;
+
+  // Apply equal temperament formula
+  float frequency = 440.0f * powf(2.0f, semitones / 12.0f);
+
+  return frequency;
+}
+
+// Play a MIDI note
+void AudioEngine::playMIDINote(uint8_t midiNote) {
+  // Convert MIDI note to frequency
+  float frequency = midiNoteToFrequency(midiNote);
+
+  // Apply frequency (uses existing thread-safe setFrequency)
+  setFrequency((int)frequency);
+
+  DEBUG_PRINT("[AUDIO] Play MIDI note ");
+  DEBUG_PRINT(midiNote);
+  DEBUG_PRINT(" (");
+  DEBUG_PRINT(frequency);
+  DEBUG_PRINTLN(" Hz)");
+}
+
+// Stop the current note
+void AudioEngine::stopNote() {
+  // Set frequency to 0 (silence)
+  setFrequency(0);
+
+  DEBUG_PRINTLN("[AUDIO] Stop note");
+}
+
 // Set amplitude (thread-safe)
 void AudioEngine::setAmplitude(int amplitude) {
   if (paramMutex != NULL && xSemaphoreTake(paramMutex, portMAX_DELAY) == pdTRUE) {

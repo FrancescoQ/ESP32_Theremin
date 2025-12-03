@@ -126,6 +126,19 @@ class AudioEngine {
   void setFrequency(int freq);
 
   /**
+   * Play a MIDI note (0-127)
+   * Converts MIDI note number to frequency and applies it to the audio engine
+   * @param midiNote MIDI note number (60 = Middle C, 69 = A4 440Hz)
+   */
+  void playMIDINote(uint8_t midiNote);
+
+  /**
+   * Stop the current note
+   * Sets frequency to 0 (silence)
+   */
+  void stopNote();
+
+  /**
    * Set the audio amplitude (0-100%)
    * @param amplitude Amplitude percentage (0-100)
    */
@@ -440,6 +453,14 @@ class AudioEngine {
    * Called continuously by audio task
    */
   void generateAudioBuffer();
+
+  /**
+   * Convert MIDI note number to frequency (Hz)
+   * Uses standard equal temperament tuning: A4 = 440 Hz (MIDI note 69)
+   * @param midiNote MIDI note number (0-127)
+   * @return Frequency in Hz
+   */
+  static float midiNoteToFrequency(uint8_t midiNote);
 
   /**
    * Static wrapper for FreeRTOS task
